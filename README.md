@@ -36,7 +36,7 @@ one caused the incident — using OpenSearch to analyse OpenSearch.
 ## Install
 
 ```bash
-composer require mrdlef/os-query-digest
+composer require mr-dlef/os-query-digest
 ```
 
 ## Usage
