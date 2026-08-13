@@ -1,0 +1,24 @@
+{
+    "index": "logs-2026.08.13",
+    "request": {
+        "query": {
+            "bool": {
+                "filter": [
+                    { "term": { "env": "prod" } },
+                    { "range": { "@timestamp": { "gte": "now-24h" } } }
+                ]
+            }
+        },
+        "aggs": {
+            "by_host": {
+                "terms": { "field": "host", "size": 10 },
+                "aggs": {
+                    "p95": { "percentiles": { "field": "latency_ms", "percents": [ 95 ] } },
+                    "errors": { "sum": { "field": "error_count" } }
+                }
+            }
+        },
+        "size": 0,
+        "track_total_hits": false
+    }
+}

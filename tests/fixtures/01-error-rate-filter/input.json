@@ -1,0 +1,19 @@
+{
+    "index": "logs-2026.08.13",
+    "request": {
+        "query": {
+            "bool": {
+                "filter": [
+                    { "term": { "service": "api" } },
+                    { "range": { "@timestamp": { "gte": "now-15m", "lt": "now" } } }
+                ],
+                "must_not": [
+                    { "term": { "status": 200 } }
+                ]
+            }
+        },
+        "size": 50,
+        "sort": [ { "@timestamp": "desc" } ],
+        "_source": [ "@timestamp", "message", "status" ]
+    }
+}

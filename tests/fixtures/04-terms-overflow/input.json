@@ -1,0 +1,13 @@
+{
+    "index": "orders",
+    "request": {
+        "query": {
+            "bool": {
+                "filter": [
+                    { "terms": { "status": [ "new", "paid", "shipped", "cancelled", "refunded", "pending", "failed", "draft" ] } },
+                    { "term": { "country": "FR" } }
+                ]
+            }
+        }
+    }
+}

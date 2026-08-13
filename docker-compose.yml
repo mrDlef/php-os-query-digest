@@ -1,0 +1,37 @@
+services:
+  php:
+    # Per-version tag. Without it every PHP_VERSION would share one image name
+    # and a run without --build would silently reuse whichever version was
+    # built last — green results from the wrong interpreter.
+    image: os-query-digest:php${PHP_VERSION:-8.3}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        PHP_VERSION: ${PHP_VERSION:-8.3}
+    working_dir: /app
+    # Run as the host user, otherwise everything written into the bind mount
+    # lands owned by root and the host can no longer update it.
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    volumes:
+      - .:/app
+    environment:
+      COMPOSER_HOME: /tmp/composer
+      # One vendor dir per PHP version: PHPUnit differs between 7.4 and 8.5, and
+      # a shared one would make every run downgrade the previous version's
+      # packages. It lives in the bind mount so it inherits host ownership —
+      # a named volume would be created root-owned and unwritable here.
+      COMPOSER_VENDOR_DIR: /app/.vendor/php${PHP_VERSION:-8.3}
+    # composer.lock is shared by every version through the bind mount, so it is
+    # dropped before resolving and again afterwards: each PHP gets its own
+    # highest-compatible PHPUnit, and no version-specific lock is left behind to
+    # confuse the next run. The lock is gitignored and disposable here — this is
+    # a library, it does not commit one.
+    command: >
+      sh -c "php -v | head -1 &&
+             rm -f composer.lock &&
+             composer update --no-progress &&
+             $$COMPOSER_VENDOR_DIR/bin/phpunit --bootstrap $$COMPOSER_VENDOR_DIR/autoload.php;
+             status=$$?;
+             rm -f composer.lock;
+             exit $$status"

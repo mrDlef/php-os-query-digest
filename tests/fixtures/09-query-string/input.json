@@ -1,0 +1,14 @@
+{
+    "index": "logs-*",
+    "request": {
+        "query": {
+            "bool": {
+                "filter": [
+                    { "query_string": { "query": "status:500 AND host:web-*" } },
+                    { "wildcard": { "path": "/api/v1/*" } }
+                ]
+            }
+        },
+        "size": 100
+    }
+}

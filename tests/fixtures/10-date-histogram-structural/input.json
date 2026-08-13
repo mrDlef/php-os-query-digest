@@ -1,0 +1,26 @@
+{
+    "index": "logs-2026.08.13",
+    "options": {
+        "normalization": "structural",
+        "aggNames": true
+    },
+    "request": {
+        "query": {
+            "bool": {
+                "filter": [
+                    { "terms": { "service": [ "api", "worker", "cron" ] } },
+                    { "range": { "@timestamp": { "gte": "2026-08-13T00:00:00Z", "lt": "2026-08-14T00:00:00Z" } } }
+                ]
+            }
+        },
+        "aggs": {
+            "over_time": {
+                "date_histogram": { "field": "@timestamp", "fixed_interval": "1h" },
+                "aggs": {
+                    "unique_users": { "cardinality": { "field": "user_id" } }
+                }
+            }
+        },
+        "size": 0
+    }
+}

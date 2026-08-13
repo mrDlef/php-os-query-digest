@@ -1,0 +1,6 @@
+{
+    "idx": "logs-*",
+    "q": "logs-* | q=(@timestamp >= \"2026-08-13T00:00:00Z\" and @timestamp < \"2026-08-14T00:00:00Z\" and service:(api or worker or cron)) | aggs=over_time:date_histogram(@timestamp,1h)>unique_users:cardinality(user_id) | size=0",
+    "sig": "logs-* | q=(@timestamp >= ? and @timestamp < ? and service:(?)) | aggs=over_time:date_histogram(@timestamp,1h)>unique_users:cardinality(user_id) | size=0",
+    "hash": "q1:8b4c9e9aebc2"
+}

@@ -1,0 +1,14 @@
+# Keep the distributed package to the library itself.
+/.github            export-ignore
+/docker             export-ignore
+/tests              export-ignore
+/tools              export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/docker-compose.yml export-ignore
+/Makefile           export-ignore
+/phpstan.neon       export-ignore
+/phpunit.xml.dist   export-ignore
+
+# resources/ ships: it documents which OpenSearch version the library was
+# verified against.

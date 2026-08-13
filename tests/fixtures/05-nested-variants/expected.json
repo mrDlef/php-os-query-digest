@@ -1,0 +1,6 @@
+{
+    "idx": "catalog-v2",
+    "q": "catalog-v2 | q=(variants:{ variants.color:red and variants.price <= 100 })",
+    "sig": "catalog-v2 | q=(variants:{ variants.color:? and variants.price <= ? })",
+    "hash": "q1:24d5e6929ac3"
+}

@@ -1,0 +1,9 @@
+{
+    "idx": "catalog-v2",
+    "q": "catalog-v2 | q=(in_stock:true and price >= 20 and price <= 150 and title:\"chaussures de running\") | size=20 from=40 sort=_score:desc,price:asc | should=2",
+    "sig": "catalog-v2 | q=(in_stock:? and price >= ? and price <= ? and title:~?) | size=20 from=40 sort=_score:desc,price:asc | should=2",
+    "hash": "q1:cde7babeb8a7",
+    "notes": [
+        "should=2"
+    ]
+}

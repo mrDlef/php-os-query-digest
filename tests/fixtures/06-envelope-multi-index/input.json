@@ -1,0 +1,16 @@
+{
+    "request": {
+        "index": [ "logs-2026.08.12", "logs-2026.08.13" ],
+        "body": {
+            "query": {
+                "bool": {
+                    "should": [
+                        { "match_phrase": { "message": "connection reset by peer" } },
+                        { "match": { "message": "timeout" } }
+                    ]
+                }
+            },
+            "size": 10
+        }
+    }
+}

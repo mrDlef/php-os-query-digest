@@ -1,0 +1,18 @@
+{
+    "index": "catalog-v2",
+    "request": {
+        "query": {
+            "nested": {
+                "path": "variants",
+                "query": {
+                    "bool": {
+                        "filter": [
+                            { "term": { "variants.color": "red" } },
+                            { "range": { "variants.price": { "lte": 100 } } }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}

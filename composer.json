@@ -1,0 +1,48 @@
+{
+    "name": "mrdlef/os-query-digest",
+    "description": "Human-readable, loggable digests and stable fingerprints for OpenSearch / Elasticsearch DSL queries.",
+    "type": "library",
+    "license": "LGPL-3.0-or-later",
+    "keywords": [
+        "opensearch",
+        "elasticsearch",
+        "dsl",
+        "dql",
+        "logging",
+        "fingerprint",
+        "observability",
+        "debug"
+    ],
+    "authors": [
+        {
+            "name": "Denis Favreau",
+            "homepage": "https://github.com/mrDlef"
+        }
+    ],
+    "require": {
+        "php": "^7.4 || ^8.0",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^9.6 || ^10.5 || ^11.5",
+        "symfony/yaml": "^5.4 || ^6.0 || ^7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "MrDlef\\OsQueryDigest\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "MrDlef\\OsQueryDigest\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "stan": "phpstan analyse"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

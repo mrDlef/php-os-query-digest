@@ -1,0 +1,16 @@
+{
+    "index": "docs",
+    "request": {
+        "query": {
+            "bool": {
+                "filter": [ { "term": { "lang": "fr" } } ],
+                "should": [
+                    { "match": { "body": "alpha" } },
+                    { "match": { "body": "beta" } },
+                    { "match": { "body": "gamma" } }
+                ],
+                "minimum_should_match": 2
+            }
+        }
+    }
+}

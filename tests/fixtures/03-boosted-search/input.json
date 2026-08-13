@@ -1,0 +1,23 @@
+{
+    "index": "catalog-v2",
+    "request": {
+        "query": {
+            "bool": {
+                "must": [
+                    { "match": { "title": "chaussures de running" } }
+                ],
+                "filter": [
+                    { "term": { "in_stock": true } },
+                    { "range": { "price": { "gte": 20, "lte": 150 } } }
+                ],
+                "should": [
+                    { "term": { "brand": "acme" } },
+                    { "term": { "promoted": true } }
+                ]
+            }
+        },
+        "size": 20,
+        "from": 40,
+        "sort": [ "_score", { "price": { "order": "asc" } } ]
+    }
+}
