@@ -72,12 +72,17 @@ The digest serialises to a compact object:
 ### Reading the line
 
 ```
-logs-* | q=(service:api and status:(500 or 502)) | aggs=terms(host,10)>p95(rt) | size=0 sort=@timestamp:desc | +highlight
-└ index  └ DQL query                              └ aggregation pipeline        └ options                    └ notes
+logs-* | q=(service:api and status:(500 or 502)) | post=(host:web-1) | aggs=terms(host,10)>p95(rt) | size=0 sort=@timestamp:desc | +highlight
+└ index  └ DQL query                              └ post_filter       └ aggregation pipeline        └ options                    └ notes
 ```
 
 The `q=(…)` segment is DQL: select it and paste it into OpenSearch Dashboards.
 Aggregations use `>` to read as "then, per bucket".
+
+`post=(…)` is the `post_filter`, kept apart from `q=(…)` on purpose: it runs
+*after* the aggregations, so it narrows the hits while the buckets keep counting
+the whole result set. That is the faceted-search pattern, and folding the two
+together would describe a query nobody sent.
 
 The last segment lists what was acknowledged but not rendered inline — a
 boost-only `should` group, an unsupported top-level section. Nothing is ever
@@ -216,8 +221,8 @@ All **65 aggregation types** are rendered; 12 of them get a shape tuned for
 readability (`terms(host,10)`, `date_histogram(@ts,1h)`, `p95(latency)`), the
 rest render generically as `type(field)`.
 
-Top-level sections that are not modelled (`highlight`, `collapse`,
-`post_filter`, …) are listed in the notes.
+Top-level sections that are not modelled (`highlight`, `collapse`, `rescore`, …)
+are listed in the notes.
 
 ### Which OpenSearch version
 

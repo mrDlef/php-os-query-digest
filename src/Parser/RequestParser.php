@@ -25,7 +25,7 @@ final class RequestParser
         'explain', 'profile', 'preference', 'ext', 'stats',
     ];
 
-    private const RENDERED = ['query', 'aggs', 'aggregations', 'size', 'from', 'sort'];
+    private const RENDERED = ['query', 'post_filter', 'aggs', 'aggregations', 'size', 'from', 'sort'];
 
     /** @var QueryParser */
     private $queryParser;
@@ -69,6 +69,15 @@ final class RequestParser
             $notes = array_merge($notes, $this->queryParser->notes());
         }
 
+        // Parsed second, and its notes collected right away: the parser resets
+        // them on every call.
+        $postFilter = null;
+        $rawPostFilter = Arr::get($body, 'post_filter');
+        if (is_array($rawPostFilter) && $rawPostFilter !== []) {
+            $postFilter = $this->queryParser->parse($rawPostFilter, $trace);
+            $notes = array_merge($notes, $this->queryParser->notes());
+        }
+
         $aggs = [];
         foreach (['aggs', 'aggregations'] as $slot) {
             $rawAggs = Arr::get($body, $slot);
@@ -94,6 +103,7 @@ final class RequestParser
         return new QueryModel(
             $index !== null ? $index : '',
             $query,
+            $postFilter,
             $aggs,
             $this->intOrNull(Arr::get($body, 'size')),
             $this->intOrNull(Arr::get($body, 'from')),

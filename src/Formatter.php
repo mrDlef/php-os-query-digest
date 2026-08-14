@@ -148,8 +148,10 @@ final class Formatter
         $model = $this->parser->parse($request, $index, $trace);
 
         $query = $model->query();
+        $postFilter = $model->postFilter();
         $model = $model->withTree(
             $query !== null ? $this->canonicalizer->node($query, $trace) : null,
+            $postFilter !== null ? $this->canonicalizer->node($postFilter, $trace) : null,
             $this->canonicalizer->aggs($model->aggs(), $trace)
         );
 

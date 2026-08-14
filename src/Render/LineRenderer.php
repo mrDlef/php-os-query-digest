@@ -41,6 +41,15 @@ final class LineRenderer
             $segments[] = 'q=(' . $this->dql->render($query, $profile) . ')';
         }
 
+        // Its own segment rather than folded into `q=(…)`: post_filter runs
+        // after the aggregations, so it narrows the hits while the buckets keep
+        // counting the whole result set. Merging the two would describe a query
+        // nobody sent.
+        $postFilter = $model->postFilter();
+        if ($postFilter !== null) {
+            $segments[] = 'post=(' . $this->dql->render($postFilter, $profile) . ')';
+        }
+
         if ($model->aggs() !== []) {
             $segments[] = 'aggs=' . $this->aggs->render($model->aggs(), $profile);
         }
