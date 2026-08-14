@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Parser;
 
+use MrDlef\OsQueryDigest\Explain\Rule;
+use MrDlef\OsQueryDigest\Explain\Trace;
 use MrDlef\OsQueryDigest\Tree\QueryModel;
 use MrDlef\OsQueryDigest\Support\Arr;
 
@@ -42,8 +44,9 @@ final class RequestParser
      *                                     `['index' => …, 'body' => …]` envelope
      *                                     as produced by opensearch-php
      */
-    public function parse(array $request, ?string $index = null): QueryModel
+    public function parse(array $request, ?string $index = null, ?Trace $trace = null): QueryModel
     {
+        $trace = $trace !== null ? $trace : new Trace();
         $body = $request;
 
         if (array_key_exists('body', $request) && is_array($request['body'])) {
@@ -62,7 +65,7 @@ final class RequestParser
         $query = null;
         $rawQuery = Arr::get($body, 'query');
         if (is_array($rawQuery) && $rawQuery !== []) {
-            $query = $this->queryParser->parse($rawQuery);
+            $query = $this->queryParser->parse($rawQuery, $trace);
             $notes = array_merge($notes, $this->queryParser->notes());
         }
 
@@ -76,7 +79,11 @@ final class RequestParser
 
         foreach (array_keys($body) as $key) {
             $key = (string) $key;
-            if (in_array($key, self::RENDERED, true) || in_array($key, self::NOISE, true)) {
+            if (in_array($key, self::RENDERED, true)) {
+                continue;
+            }
+            if (in_array($key, self::NOISE, true)) {
+                $trace->record(Rule::SECTION_IGNORED, $key);
                 continue;
             }
             $notes[] = '+' . $key;

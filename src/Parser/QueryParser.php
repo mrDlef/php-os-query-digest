@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Parser;
 
+use MrDlef\OsQueryDigest\Explain\Rule;
+use MrDlef\OsQueryDigest\Explain\Trace;
 use MrDlef\OsQueryDigest\Support\Arr;
 use MrDlef\OsQueryDigest\Tree\AndNode;
 use MrDlef\OsQueryDigest\Tree\LeafNode;
@@ -25,12 +27,21 @@ final class QueryParser
     /** @var array<int,string> */
     private $notes = [];
 
+    /** @var Trace */
+    private $trace;
+
+    public function __construct()
+    {
+        $this->trace = new Trace();
+    }
+
     /**
      * @param array<string,mixed> $query
      */
-    public function parse(array $query): Node
+    public function parse(array $query, ?Trace $trace = null): Node
     {
         $this->notes = [];
+        $this->trace = $trace !== null ? $trace : new Trace();
 
         return $this->clause($query);
     }
@@ -117,13 +128,18 @@ final class QueryParser
 
             case 'constant_score':
                 $filter = Arr::get($body, 'filter');
+                if (!is_array($filter)) {
+                    return new OpaqueNode('constant_score');
+                }
+                $this->trace->record(Rule::CONSTANT_SCORE_UNWRAPPED);
 
-                return is_array($filter) ? $this->clause($filter) : new OpaqueNode('constant_score');
+                return $this->clause($filter);
 
             case 'function_score':
                 // Only the inner query filters; the functions merely rescore.
                 $inner = Arr::get($body, 'query');
                 $this->note('function_score');
+                $this->trace->record(Rule::FUNCTION_SCORE_UNWRAPPED);
 
                 return is_array($inner) ? $this->clause($inner) : new MatchAllNode();
 
@@ -131,6 +147,7 @@ final class QueryParser
                 // `negative` only demotes, it does not exclude.
                 $positive = Arr::get($body, 'positive');
                 $this->note('boosting');
+                $this->trace->record(Rule::BOOSTING_UNWRAPPED);
 
                 return is_array($positive) ? $this->clause($positive) : new MatchAllNode();
 
@@ -158,10 +175,19 @@ final class QueryParser
         $and = [];
 
         // must and filter differ only in scoring, not in which documents match.
+        $slotsUsed = 0;
         foreach (['must', 'filter'] as $slot) {
+            $before = count($and);
             foreach (Arr::clauses(Arr::get($body, $slot, [])) as $sub) {
                 $and[] = $this->clause($sub);
             }
+            if (count($and) > $before) {
+                ++$slotsUsed;
+            }
+        }
+
+        if ($slotsUsed === 2) {
+            $this->trace->record(Rule::MUST_FILTER_MERGED);
         }
 
         // must_not: [A, B] means (NOT A) AND (NOT B), *not* NOT (A AND B).
@@ -190,6 +216,10 @@ final class QueryParser
                 $and[] = new OrNode($should, $msm !== null && $msm > 1 ? $msm : null);
             } else {
                 $this->note('should=' . count($should));
+                $this->trace->record(
+                    Rule::SHOULD_BOOST_ONLY,
+                    count($should) . (count($should) === 1 ? ' clause' : ' clauses')
+                );
             }
         }
 
@@ -197,7 +227,13 @@ final class QueryParser
             return new MatchAllNode();
         }
 
-        return count($and) === 1 ? $and[0] : new AndNode($and);
+        if (count($and) === 1) {
+            $this->trace->record(Rule::UNWRAP, 'bool');
+
+            return $and[0];
+        }
+
+        return new AndNode($and);
     }
 
     /**
@@ -209,10 +245,15 @@ final class QueryParser
     {
         foreach ($body as $field => $value) {
             if ($field === 'boost') {
+                $this->trace->record(Rule::BOOST_DROPPED);
                 continue;
             }
 
             if (is_array($value)) {
+                if (array_key_exists('boost', $value)) {
+                    $this->trace->record(Rule::BOOST_DROPPED, (string) $field);
+                }
+
                 $value = array_key_exists('value', $value)
                     ? $value['value']
                     : (array_key_exists('query', $value) ? $value['query'] : null);
@@ -230,7 +271,12 @@ final class QueryParser
     private function terms(array $body): Node
     {
         foreach ($body as $field => $value) {
-            if ($field === 'boost' || $field === 'minimum_should_match_field') {
+            if ($field === 'boost') {
+                $this->trace->record(Rule::BOOST_DROPPED);
+                continue;
+            }
+
+            if ($field === 'minimum_should_match_field') {
                 continue;
             }
 
@@ -241,6 +287,7 @@ final class QueryParser
             if (is_array($value)) {
                 // terms lookup: {"terms": {"user": {"index": …, "id": …}}}
                 $this->note('terms_lookup');
+                $this->trace->record(Rule::TERMS_LOOKUP, (string) $field);
 
                 return new LeafNode((string) $field, LeafNode::OP_RAW, ['<terms-lookup>']);
             }
@@ -257,7 +304,12 @@ final class QueryParser
     private function range(array $body): Node
     {
         foreach ($body as $field => $bounds) {
-            if ($field === 'boost' || !is_array($bounds)) {
+            if ($field === 'boost') {
+                $this->trace->record(Rule::BOOST_DROPPED);
+                continue;
+            }
+
+            if (!is_array($bounds)) {
                 continue;
             }
 

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace MrDlef\OsQueryDigest;
 
 use MrDlef\OsQueryDigest\Exception\InvalidQueryException;
+use MrDlef\OsQueryDigest\Explain\Explanation;
+use MrDlef\OsQueryDigest\Explain\Rule;
+use MrDlef\OsQueryDigest\Explain\Trace;
 use MrDlef\OsQueryDigest\Fingerprint\Hasher;
 use MrDlef\OsQueryDigest\Normalizer\Canonicalizer;
 use MrDlef\OsQueryDigest\Parser\RequestParser;
@@ -64,8 +67,27 @@ final class Formatter
      */
     public function describe($request, ?string $index = null): Digest
     {
-        $model = $this->model($this->toArray($request), $index);
+        return $this->digest($this->model($this->toArray($request), $index, new Trace()));
+    }
 
+    /**
+     * The same digest, plus the list of normalisation rules that produced it.
+     *
+     * Use it to answer "why do these two queries share a hash?" — diff the two
+     * explanations and the rule that merged them is named.
+     *
+     * @param array<string,mixed>|string $request
+     */
+    public function explain($request, ?string $index = null): Explanation
+    {
+        $trace = new Trace();
+        $model = $this->model($this->toArray($request), $index, $trace);
+
+        return new Explanation($this->digest($model), $trace->rules());
+    }
+
+    private function digest(QueryModel $model): Digest
+    {
         $textProfile = new RenderProfile(
             new LiteralValueRenderer($this->options->redactor()),
             false,
@@ -121,17 +143,22 @@ final class Formatter
     /**
      * @param array<string,mixed> $request
      */
-    private function model(array $request, ?string $index): QueryModel
+    private function model(array $request, ?string $index, Trace $trace): QueryModel
     {
-        $model = $this->parser->parse($request, $index);
+        $model = $this->parser->parse($request, $index, $trace);
 
         $query = $model->query();
         $model = $model->withTree(
-            $query !== null ? $this->canonicalizer->node($query) : null,
-            $this->canonicalizer->aggs($model->aggs())
+            $query !== null ? $this->canonicalizer->node($query, $trace) : null,
+            $this->canonicalizer->aggs($model->aggs(), $trace)
         );
 
-        return $model->withIndex($this->options->indexNormalizer()->normalize($model->index()));
+        $pattern = $this->options->indexNormalizer()->normalize($model->index());
+        if ($pattern !== $model->index()) {
+            $trace->record(Rule::INDEX_PATTERN, $model->index() . ' -> ' . $pattern);
+        }
+
+        return $model->withIndex($pattern);
     }
 
     /**
