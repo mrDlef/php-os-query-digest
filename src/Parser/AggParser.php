@@ -20,7 +20,7 @@ final class AggParser
     private const RESERVED = ['aggs', 'aggregations', 'meta'];
 
     /**
-     * @param array<string,mixed> $aggs
+     * @param array<mixed> $aggs
      *
      * @return AggNode[]
      */
@@ -43,12 +43,12 @@ final class AggParser
     }
 
     /**
-     * @param array<string,mixed> $definition
+     * @param array<mixed> $definition
      */
     private function one(string $name, array $definition): ?AggNode
     {
         $type = null;
-        /** @var array<string,mixed> $body */
+        /** @var array<mixed> $body */
         $body = [];
 
         foreach ($definition as $key => $value) {
@@ -78,7 +78,7 @@ final class AggParser
     }
 
     /**
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      *
      * @return array{0:string,1:string|null,2:array<int,string>}
      */
@@ -119,10 +119,14 @@ final class AggParser
                 $percents = Arr::get($body, 'percents');
                 if (is_array($percents) && count($percents) === 1) {
                     // The common single-percentile case reads much better as p95.
-                    return ['p' . $this->trimNumber((string) reset($percents)), $field, []];
+                    return ['p' . $this->trimNumber(Arr::str(reset($percents))), $field, []];
                 }
                 if (is_array($percents) && $percents !== []) {
-                    $params[] = '[' . implode(',', array_map(fn($p): string => $this->trimNumber((string) $p), $percents)) . ']';
+                    $trimmed = [];
+                    foreach (Arr::strings($percents) as $percent) {
+                        $trimmed[] = $this->trimNumber($percent);
+                    }
+                    $params[] = '[' . implode(',', $trimmed) . ']';
                 }
                 break;
 

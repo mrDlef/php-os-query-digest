@@ -101,7 +101,7 @@ final class Rule implements \JsonSerializable
 
     public function description(): string
     {
-        return isset(self::DESCRIPTIONS[$this->id]) ? self::DESCRIPTIONS[$this->id] : '';
+        return self::DESCRIPTIONS[$this->id] ?? '';
     }
 
     /**

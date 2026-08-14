@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Render;
 
+use MrDlef\OsQueryDigest\Support\Arr;
+
 /**
  * Renders real values, quoting only when DQL requires it, and running them
  * through the optional redactor first.
@@ -38,7 +40,7 @@ final class LiteralValueRenderer implements ValueRenderer
             return '<object>';
         }
 
-        $string = (string) $value;
+        $string = Arr::str($value);
         if ($string === '') {
             return '""';
         }

@@ -47,7 +47,7 @@ final class Formatter
 
     public static function create(?Options $options = null): self
     {
-        return new self($options !== null ? $options : Options::create());
+        return new self($options ?? Options::create());
     }
 
     public function options(): Options
@@ -56,9 +56,9 @@ final class Formatter
     }
 
     /**
-     * @param array<string,mixed>|string $request a search body, an
-     *                                            `['index' => …, 'body' => …]`
-     *                                            envelope, or the JSON of either
+     * @param array<mixed>|string $request a search body, an
+     *                                     `['index' => …, 'body' => …]`
+     *                                     envelope, or the JSON of either
      */
     public function describe($request, ?string $index = null): Digest
     {
@@ -71,7 +71,7 @@ final class Formatter
      * Use it to answer "why do these two queries share a hash?" — diff the two
      * explanations and the rule that merged them is named.
      *
-     * @param array<string,mixed>|string $request
+     * @param array<mixed>|string $request
      */
     public function explain($request, ?string $index = null): Explanation
     {
@@ -126,7 +126,7 @@ final class Formatter
     /**
      * Same as {@see describe()} but nothing is parsed until the value is read.
      *
-     * @param array<string,mixed>|string $request
+     * @param array<mixed>|string $request
      */
     public function lazy($request, ?string $index = null): LazyDigest
     {
@@ -134,7 +134,7 @@ final class Formatter
     }
 
     /**
-     * @param array<string,mixed> $request
+     * @param array<mixed> $request
      */
     private function model(array $request, ?string $index, Trace $trace): QueryModel
     {
@@ -159,7 +159,7 @@ final class Formatter
     /**
      * @param mixed $request
      *
-     * @return array<string,mixed>
+     * @return array<mixed>
      */
     private function toArray($request): array
     {
@@ -171,13 +171,11 @@ final class Formatter
             throw InvalidQueryException::unexpectedType(gettype($request));
         }
 
-        /** @var mixed $decoded */
         $decoded = json_decode($request, true);
         if (!is_array($decoded)) {
             throw InvalidQueryException::notDecodable(json_last_error_msg());
         }
 
-        /** @var array<string,mixed> $decoded */
         return $decoded;
     }
 }

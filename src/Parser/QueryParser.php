@@ -46,12 +46,12 @@ final class QueryParser
     }
 
     /**
-     * @param array<string,mixed> $query
+     * @param array<mixed> $query
      */
     public function parse(array $query, ?Trace $trace = null): Node
     {
         $this->notes = [];
-        $this->trace = $trace !== null ? $trace : new Trace();
+        $this->trace = $trace ?? new Trace();
 
         return $this->clause($query);
     }
@@ -65,7 +65,7 @@ final class QueryParser
     }
 
     /**
-     * @param array<string,mixed> $clause
+     * @param array<mixed> $clause
      */
     private function clause(array $clause): Node
     {
@@ -205,7 +205,7 @@ final class QueryParser
     /**
      * `{"bool": {...}}` → and / or / not.
      *
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      */
     private function bool(array $body): Node
     {
@@ -276,7 +276,7 @@ final class QueryParser
     /**
      * `{"term": {"field": value}}` and every other single-field clause.
      *
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      */
     private function single(array $body, string $op): Node
     {
@@ -303,7 +303,7 @@ final class QueryParser
     }
 
     /**
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      */
     private function terms(array $body): Node
     {
@@ -336,7 +336,7 @@ final class QueryParser
     }
 
     /**
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      */
     private function range(array $body): Node
     {
@@ -370,18 +370,18 @@ final class QueryParser
     }
 
     /**
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      */
     private function multiMatch(array $body): Node
     {
         $fields = Arr::get($body, 'fields', []);
-        $field = is_array($fields) && $fields !== [] ? implode('|', array_map('strval', $fields)) : '*';
+        $field = is_array($fields) && $fields !== [] ? implode('|', Arr::strings($fields)) : '*';
 
         return new LeafNode($field, LeafNode::OP_MATCH, [Arr::get($body, 'query')]);
     }
 
     /**
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      */
     private function queryString(array $body, string $type): Node
     {
@@ -391,7 +391,7 @@ final class QueryParser
         }
 
         $fields = Arr::get($body, 'fields', []);
-        $field = is_array($fields) && $fields !== [] ? implode('|', array_map('strval', $fields)) : '';
+        $field = is_array($fields) && $fields !== [] ? implode('|', Arr::strings($fields)) : '';
 
         // The payload is already Lucene-ish syntax: keep it verbatim so the
         // rendered line stays pasteable.
@@ -399,7 +399,7 @@ final class QueryParser
     }
 
     /**
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      */
     private function nested(array $body): Node
     {
@@ -419,8 +419,8 @@ final class QueryParser
      * a base64 blob for no diagnostic gain. What is worth reading back is which
      * field is searched, with which cut-off.
      *
-     * @param array<string,mixed> $body
-     * @param array<int,string>   $params
+     * @param array<mixed>      $body
+     * @param array<int,string> $params
      */
     private function vector(array $body, string $op, array $params): Node
     {
@@ -463,7 +463,7 @@ final class QueryParser
     }
 
     /**
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      */
     private function geoDistance(array $body): Node
     {
@@ -488,7 +488,7 @@ final class QueryParser
     }
 
     /**
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      */
     private function geoBoundingBox(array $body): Node
     {
@@ -512,7 +512,7 @@ final class QueryParser
     }
 
     /**
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      */
     private function script(array $body): Node
     {
@@ -537,7 +537,7 @@ final class QueryParser
     }
 
     /**
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      */
     private function join(array $body, string $kind, string $relationKey): Node
     {
@@ -552,12 +552,12 @@ final class QueryParser
     }
 
     /**
-     * @param array<string,mixed> $body
+     * @param array<mixed> $body
      */
     private function moreLikeThis(array $body): Node
     {
         $fields = Arr::get($body, 'fields', []);
-        $field = is_array($fields) && $fields !== [] ? implode('|', array_map('strval', $fields)) : '*';
+        $field = is_array($fields) && $fields !== [] ? implode('|', Arr::strings($fields)) : '*';
 
         $like = Arr::get($body, 'like');
         $entries = is_array($like) && Arr::isList($like) ? $like : [$like];

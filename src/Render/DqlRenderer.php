@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Render;
 
+use MrDlef\OsQueryDigest\Support\Arr;
 use MrDlef\OsQueryDigest\Tree\AndNode;
 use MrDlef\OsQueryDigest\Tree\JoinNode;
 use MrDlef\OsQueryDigest\Tree\LeafNode;
@@ -25,6 +26,9 @@ use MrDlef\OsQueryDigest\Tree\OrNode;
  */
 final class DqlRenderer
 {
+    /** How each range bound reads once rendered. */
+    private const RANGE_SYMBOLS = ['gte' => '>=', 'gt' => '>', 'lte' => '<=', 'lt' => '<'];
+
     private const PREC_OR = 1;
     private const PREC_AND = 2;
     private const PREC_NOT = 3;
@@ -150,7 +154,7 @@ final class DqlRenderer
                 return $field . ':/' . $renderer->scalar($field, reset($values)) . '/';
 
             case LeafNode::OP_RAW:
-                $raw = $renderer->raw($field, (string) reset($values));
+                $raw = $renderer->raw($field, Arr::str(reset($values)));
                 // With sigils on, the payload has been erased to `?` and needs
                 // a marker to stay distinguishable from a plain term.
                 $raw = $sigils ? 'raw(' . $raw . ')' : '(' . $raw . ')';
@@ -179,7 +183,7 @@ final class DqlRenderer
             case LeafNode::OP_SCRIPT:
                 // The source is a value: it holds thresholds and parameters, so
                 // leaving it in would mint a fingerprint per threshold.
-                return 'script(' . $renderer->raw($field, (string) reset($values)) . ')';
+                return 'script(' . $renderer->raw($field, Arr::str(reset($values))) . ')';
         }
 
         return $field . ':?';
@@ -237,14 +241,12 @@ final class DqlRenderer
 
     private function range(LeafNode $leaf, RenderProfile $profile, int $parentPrecedence): string
     {
-        static $symbols = ['gte' => '>=', 'gt' => '>', 'lte' => '<=', 'lt' => '<'];
-
         $field = $leaf->field();
         $renderer = $profile->values();
         $parts = [];
 
         foreach ($leaf->values() as $bound => $value) {
-            $symbol = isset($symbols[$bound]) ? $symbols[$bound] : '=';
+            $symbol = self::RANGE_SYMBOLS[$bound] ?? '=';
             $parts[] = $field . ' ' . $symbol . ' ' . $renderer->scalar($field, $value);
         }
 

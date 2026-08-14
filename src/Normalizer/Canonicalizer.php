@@ -41,7 +41,7 @@ final class Canonicalizer
 {
     public function node(Node $node, ?Trace $trace = null): Node
     {
-        return $this->walk($node, $trace !== null ? $trace : new Trace());
+        return $this->walk($node, $trace ?? new Trace());
     }
 
     /**
@@ -51,7 +51,7 @@ final class Canonicalizer
      */
     public function aggs(array $aggs, ?Trace $trace = null): array
     {
-        return $this->walkAggs($aggs, $trace !== null ? $trace : new Trace());
+        return $this->walkAggs($aggs, $trace ?? new Trace());
     }
 
     private function walk(Node $node, Trace $trace): Node

@@ -186,14 +186,13 @@ final class SpecCoverageTest extends TestCase
     }
 
     /**
-     * @return array<string,mixed>
+     * @return array<mixed>
      */
     private static function readJson(string $file): array
     {
         $contents = file_get_contents($file);
         self::assertIsString($contents, 'Unreadable: ' . $file);
 
-        /** @var array<string,mixed> $decoded */
         $decoded = json_decode($contents, true);
         self::assertIsArray($decoded, 'Invalid JSON: ' . $file);
 

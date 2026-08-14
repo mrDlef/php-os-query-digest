@@ -38,23 +38,22 @@ final class RequestParser
     }
 
     /**
-     * @param array<string,mixed> $request a search body, or an
-     *                                     `['index' => …, 'body' => …]` envelope
-     *                                     as produced by opensearch-php
+     * @param array<mixed> $request a search body, or an
+     *                              `['index' => …, 'body' => …]` envelope
+     *                              as produced by opensearch-php
      */
     public function parse(array $request, ?string $index = null, ?Trace $trace = null): QueryModel
     {
-        $trace = $trace !== null ? $trace : new Trace();
+        $trace ??= new Trace();
         $body = $request;
 
         if (array_key_exists('body', $request) && is_array($request['body'])) {
             $envelopeIndex = Arr::get($request, 'index');
             if ($index === null && $envelopeIndex !== null) {
                 $index = is_array($envelopeIndex)
-                    ? implode(',', array_map('strval', $envelopeIndex))
-                    : (string) $envelopeIndex;
+                    ? implode(',', Arr::strings($envelopeIndex))
+                    : Arr::str($envelopeIndex);
             }
-            /** @var array<string,mixed> $body */
             $body = $request['body'];
         }
 
@@ -99,7 +98,7 @@ final class RequestParser
         sort($notes);
 
         return new QueryModel(
-            $index !== null ? $index : '',
+            $index ?? '',
             $query,
             $postFilter,
             $aggs,
