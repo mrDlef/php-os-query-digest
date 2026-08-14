@@ -60,14 +60,12 @@ final class Rule implements \JsonSerializable
         self::SECTION_IGNORED => 'Top-level sections that say nothing about what a query is for were ignored.',
     ];
 
-    /** @var string */
-    private $id;
+    private string $id;
 
-    /** @var int */
-    private $count;
+    private int $count;
 
     /** @var array<int,string> */
-    private $details;
+    private array $details;
 
     /**
      * @param array<int,string> $details

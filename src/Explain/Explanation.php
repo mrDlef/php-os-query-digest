@@ -15,11 +15,10 @@ use MrDlef\OsQueryDigest\Digest;
  */
 final class Explanation implements \JsonSerializable
 {
-    /** @var Digest */
-    private $digest;
+    private Digest $digest;
 
     /** @var array<int,Rule> */
-    private $rules;
+    private array $rules;
 
     /**
      * @param array<int,Rule> $rules

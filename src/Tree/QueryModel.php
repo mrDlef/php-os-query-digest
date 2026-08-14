@@ -9,29 +9,23 @@ namespace MrDlef\OsQueryDigest\Tree;
  */
 final class QueryModel
 {
-    /** @var string */
-    private $index;
+    private string $index;
 
-    /** @var Node|null */
-    private $query;
+    private ?Node $query;
 
     /**
      * `post_filter` runs after the aggregations, so it narrows the hits without
      * narrowing the buckets. Merging it into the query would describe a
      * different request, hence its own slot.
-     *
-     * @var Node|null
      */
-    private $postFilter;
+    private ?Node $postFilter;
 
     /** @var AggNode[] */
-    private $aggs;
+    private array $aggs;
 
-    /** @var int|null */
-    private $size;
+    private ?int $size;
 
-    /** @var int|null */
-    private $from;
+    private ?int $from;
 
     /**
      * Ordered list of [field, direction] pairs. Order is significant here, so
@@ -39,7 +33,7 @@ final class QueryModel
      *
      * @var array<int,array{0:string,1:string}>
      */
-    private $sort;
+    private array $sort;
 
     /**
      * Everything acknowledged but not rendered inline: non-filtering `should`
@@ -47,7 +41,7 @@ final class QueryModel
      *
      * @var array<int,string>
      */
-    private $notes;
+    private array $notes;
 
     /**
      * @param AggNode[]                           $aggs

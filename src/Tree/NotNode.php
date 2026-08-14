@@ -6,8 +6,7 @@ namespace MrDlef\OsQueryDigest\Tree;
 
 final class NotNode implements Node
 {
-    /** @var Node */
-    private $child;
+    private Node $child;
 
     public function __construct(Node $child)
     {

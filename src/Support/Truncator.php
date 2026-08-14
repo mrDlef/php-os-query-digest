@@ -29,13 +29,13 @@ final class Truncator
 
     private static function length(string $value): int
     {
-        return function_exists('mb_strlen') ? (int) mb_strlen($value, 'UTF-8') : strlen($value);
+        return function_exists('mb_strlen') ? mb_strlen($value, 'UTF-8') : strlen($value);
     }
 
     private static function cut(string $value, int $length): string
     {
         return function_exists('mb_substr')
-            ? (string) mb_substr($value, 0, $length, 'UTF-8')
+            ? mb_substr($value, 0, $length, 'UTF-8')
             : substr($value, 0, $length);
     }
 }

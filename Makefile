@@ -5,7 +5,7 @@ PHP_VERSION  ?= 8.3
 export DOCKER_UID := $(shell id -u)
 export DOCKER_GID := $(shell id -g)
 
-.PHONY: test test-all stan cs cs-check fixtures spec clean
+.PHONY: test test-all stan cs cs-check rector rector-check fixtures spec clean
 
 ## Run the test suite in Docker for one PHP version: make test PHP_VERSION=7.4
 test:
@@ -30,6 +30,13 @@ cs:
 ## Report on it without touching anything — what CI runs.
 cs-check:
 	vendor/bin/php-cs-fixer fix --dry-run --diff
+
+## Apply the Rector rules (native property types, dead code, early returns).
+rector:
+	vendor/bin/rector process
+
+rector-check:
+	vendor/bin/rector process --dry-run
 
 ## Regenerate the golden fixture files (review the diff before committing!)
 fixtures:

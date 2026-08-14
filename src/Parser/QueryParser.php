@@ -36,10 +36,9 @@ final class QueryParser
     ];
 
     /** @var array<int,string> */
-    private $notes = [];
+    private array $notes = [];
 
-    /** @var Trace */
-    private $trace;
+    private Trace $trace;
 
     public function __construct()
     {
@@ -294,7 +293,7 @@ final class QueryParser
 
                 $value = array_key_exists('value', $value)
                     ? $value['value']
-                    : (array_key_exists('query', $value) ? $value['query'] : null);
+                    : ($value['query'] ?? null);
             }
 
             return new LeafNode((string) $field, $op, [$value]);

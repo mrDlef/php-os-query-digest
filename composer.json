@@ -27,6 +27,7 @@
         "friendsofphp/php-cs-fixer": "^3.95",
         "phpstan/phpstan": "^2.1",
         "phpunit/phpunit": "^9.6 || ^10.5 || ^11.5",
+        "rector/rector": "^2.6",
         "symfony/yaml": "^5.4 || ^6.0 || ^7.0"
     },
     "autoload": {
@@ -43,7 +44,9 @@
         "test": "phpunit",
         "stan": "phpstan analyse",
         "cs": "php-cs-fixer fix",
-        "cs-check": "php-cs-fixer fix --dry-run --diff"
+        "cs-check": "php-cs-fixer fix --dry-run --diff",
+        "rector": "rector process",
+        "rector-check": "rector process --dry-run"
     },
     "config": {
         "sort-packages": true

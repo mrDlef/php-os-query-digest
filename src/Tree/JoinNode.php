@@ -18,13 +18,12 @@ final class JoinNode implements Node
     public const HAS_PARENT = 'has_parent';
 
     /** @var string one of the constants above */
-    private $kind;
+    private string $kind;
 
     /** @var string the joined relation: child `type` or `parent_type` */
-    private $relation;
+    private string $relation;
 
-    /** @var Node */
-    private $child;
+    private Node $child;
 
     public function __construct(string $kind, string $relation, Node $child)
     {

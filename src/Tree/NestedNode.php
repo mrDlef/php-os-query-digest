@@ -10,11 +10,9 @@ namespace MrDlef\OsQueryDigest\Tree;
  */
 final class NestedNode implements Node
 {
-    /** @var string */
-    private $path;
+    private string $path;
 
-    /** @var Node */
-    private $child;
+    private Node $child;
 
     public function __construct(string $path, Node $child)
     {

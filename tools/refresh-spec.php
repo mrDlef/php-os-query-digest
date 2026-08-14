@@ -117,7 +117,7 @@ function namesFrom(array $schemas, array $node, int $depth = 0): array
     }
 
     if (isset($node['properties']) && is_array($node['properties'])) {
-        $names = array_merge($names, array_map('strval', array_keys($node['properties'])));
+        return array_merge($names, array_map('strval', array_keys($node['properties'])));
     }
 
     return $names;
@@ -147,11 +147,9 @@ function maxVersion(array $documents): ?string
     }
 
     $versions = array_keys($found);
-    usort($versions, static function (string $a, string $b): int {
-        return version_compare($a, $b);
-    });
+    usort($versions, static fn(string $a, string $b): int => version_compare($a, $b));
 
-    return (string) end($versions);
+    return end($versions);
 }
 
 /**
@@ -188,7 +186,7 @@ function fetch(string $url): string
         curl_setopt($handle, CURLOPT_USERAGENT, $userAgent);
         curl_setopt($handle, CURLOPT_HTTPHEADER, ['Accept: application/vnd.github+json']);
         $body = curl_exec($handle);
-        $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
+        $status = curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
         $error = curl_error($handle);
         curl_close($handle);
 

@@ -16,8 +16,7 @@ final class Normalization
     public const VALUES = 'values';
     public const STRUCTURAL = 'structural';
 
-    /** @var string */
-    private $level;
+    private string $level;
 
     private function __construct(string $level)
     {

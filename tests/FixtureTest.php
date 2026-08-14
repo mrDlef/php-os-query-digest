@@ -110,7 +110,7 @@ final class FixtureTest extends TestCase
         }
 
         if (!empty($spec['aggNames'])) {
-            $options = $options->withAggNames(true);
+            return $options->withAggNames(true);
         }
 
         return $options;

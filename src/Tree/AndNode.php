@@ -7,7 +7,7 @@ namespace MrDlef\OsQueryDigest\Tree;
 final class AndNode implements Node
 {
     /** @var Node[] */
-    private $children;
+    private array $children;
 
     /**
      * @param Node[] $children

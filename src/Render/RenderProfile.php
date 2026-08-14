@@ -10,26 +10,24 @@ namespace MrDlef\OsQueryDigest\Render;
  */
 final class RenderProfile
 {
-    /** @var ValueRenderer */
-    private $values;
+    private ValueRenderer $values;
 
     /** @var bool render `~`/`*`/`/…/` sigils that tell leaf types apart */
-    private $distinguishTypes;
+    private bool $distinguishTypes;
 
     /** @var int|null max sibling clauses per connector, null = unlimited */
-    private $maxClauses;
+    private ?int $maxClauses;
 
     /** @var int|null max values inside a terms clause, null = unlimited */
-    private $maxValues;
+    private ?int $maxValues;
 
     /** @var bool collapse a terms list to a single placeholder */
-    private $eraseCardinality;
+    private bool $eraseCardinality;
 
     /** @var bool replace non-zero size and from with a placeholder */
-    private $erasePagination;
+    private bool $erasePagination;
 
-    /** @var bool */
-    private $includeAggNames;
+    private bool $includeAggNames;
 
     public function __construct(
         ValueRenderer $values,

@@ -13,8 +13,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class CanonicalizationTest extends TestCase
 {
-    /** @var Formatter */
-    private $formatter;
+    private Formatter $formatter;
 
     protected function setUp(): void
     {

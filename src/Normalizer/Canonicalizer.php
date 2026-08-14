@@ -93,9 +93,7 @@ final class Canonicalizer
 
         $before = self::keys($canonical);
 
-        usort($canonical, static function (AggNode $a, AggNode $b): int {
-            return strcmp($a->sortKey(), $b->sortKey());
-        });
+        usort($canonical, static fn(AggNode $a, AggNode $b): int => strcmp($a->sortKey(), $b->sortKey()));
 
         if (self::keys($canonical) !== $before) {
             $trace->record(Rule::REORDER, 'aggs');
@@ -198,9 +196,7 @@ final class Canonicalizer
 
         $before = self::keys($children);
 
-        usort($children, static function (Node $a, Node $b): int {
-            return strcmp($a->sortKey(), $b->sortKey());
-        });
+        usort($children, static fn(Node $a, Node $b): int => strcmp($a->sortKey(), $b->sortKey()));
 
         if (self::keys($children) !== $before) {
             $trace->record(Rule::REORDER, $kind);

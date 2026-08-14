@@ -16,7 +16,7 @@ namespace MrDlef\OsQueryDigest\Explain;
 final class Trace
 {
     /** @var array<string,array{count:int,details:array<int,string>}> */
-    private $rules = [];
+    private array $rules = [];
 
     public function record(string $rule, string $detail = ''): void
     {

@@ -109,9 +109,7 @@ final class FingerprintTest extends TestCase
     public function testRedactorKeepsSensitiveValuesOutOfTheReadableLine(): void
     {
         $formatter = Formatter::create(Options::create()->withRedactor(
-            static function (string $field, $value) {
-                return $field === 'email' ? '<redacted>' : $value;
-            },
+            static fn(string $field, $value) => $field === 'email' ? '<redacted>' : $value,
         ));
 
         $digest = $formatter->describe(['query' => ['bool' => ['filter' => [

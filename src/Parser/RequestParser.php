@@ -27,11 +27,9 @@ final class RequestParser
 
     private const RENDERED = ['query', 'post_filter', 'aggs', 'aggregations', 'size', 'from', 'sort'];
 
-    /** @var QueryParser */
-    private $queryParser;
+    private QueryParser $queryParser;
 
-    /** @var AggParser */
-    private $aggParser;
+    private AggParser $aggParser;
 
     public function __construct()
     {

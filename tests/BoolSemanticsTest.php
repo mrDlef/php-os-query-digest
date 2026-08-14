@@ -14,8 +14,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class BoolSemanticsTest extends TestCase
 {
-    /** @var Formatter */
-    private $formatter;
+    private Formatter $formatter;
 
     protected function setUp(): void
     {

@@ -13,8 +13,7 @@ namespace MrDlef\OsQueryDigest\Tree;
  */
 final class OpaqueNode implements Node
 {
-    /** @var string */
-    private $type;
+    private string $type;
 
     public function __construct(string $type)
     {

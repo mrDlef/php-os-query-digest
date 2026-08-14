@@ -95,9 +95,7 @@ final class FormatterTest extends TestCase
     public function testHardLengthCapAppliesToTheLineButNotTheHash(): void
     {
         $request = ['query' => ['bool' => ['filter' => array_map(
-            static function (int $i): array {
-                return ['term' => ['field_' . $i => 'some-fairly-long-value-' . $i]];
-            },
+            static fn(int $i): array => ['term' => ['field_' . $i => 'some-fairly-long-value-' . $i]],
             range(1, 30),
         )]]];
 
@@ -107,7 +105,7 @@ final class FormatterTest extends TestCase
         $shortDigest = $short->describe($request);
 
         $length = function_exists('mb_strlen')
-            ? (int) mb_strlen($shortDigest->text(), 'UTF-8')
+            ? mb_strlen($shortDigest->text(), 'UTF-8')
             : strlen($shortDigest->text());
 
         self::assertLessThanOrEqual(80, $length);

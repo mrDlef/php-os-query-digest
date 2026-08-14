@@ -122,9 +122,7 @@ final class AggParser
                     return ['p' . $this->trimNumber((string) reset($percents)), $field, []];
                 }
                 if (is_array($percents) && $percents !== []) {
-                    $params[] = '[' . implode(',', array_map(function ($p): string {
-                        return $this->trimNumber((string) $p);
-                    }, $percents)) . ']';
+                    $params[] = '[' . implode(',', array_map(fn($p): string => $this->trimNumber((string) $p), $percents)) . ']';
                 }
                 break;
 

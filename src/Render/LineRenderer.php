@@ -16,11 +16,9 @@ use MrDlef\OsQueryDigest\Tree\QueryModel;
  */
 final class LineRenderer
 {
-    /** @var DqlRenderer */
-    private $dql;
+    private DqlRenderer $dql;
 
-    /** @var AggRenderer */
-    private $aggs;
+    private AggRenderer $aggs;
 
     public function __construct()
     {

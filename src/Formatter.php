@@ -26,20 +26,15 @@ use MrDlef\OsQueryDigest\Tree\QueryModel;
  */
 final class Formatter
 {
-    /** @var Options */
-    private $options;
+    private Options $options;
 
-    /** @var RequestParser */
-    private $parser;
+    private RequestParser $parser;
 
-    /** @var Canonicalizer */
-    private $canonicalizer;
+    private Canonicalizer $canonicalizer;
 
-    /** @var LineRenderer */
-    private $renderer;
+    private LineRenderer $renderer;
 
-    /** @var Hasher */
-    private $hasher;
+    private Hasher $hasher;
 
     private function __construct(Options $options)
     {
@@ -135,9 +130,7 @@ final class Formatter
      */
     public function lazy($request, ?string $index = null): LazyDigest
     {
-        return new LazyDigest(function () use ($request, $index): Digest {
-            return $this->describe($request, $index);
-        });
+        return new LazyDigest(fn(): Digest => $this->describe($request, $index));
     }
 
     /**

@@ -31,11 +31,9 @@ final class LeafNode implements Node
     /** `more_like_this`. Values are the documents or texts to look like. */
     public const OP_LIKE = 'like';
 
-    /** @var string */
-    private $field;
+    private string $field;
 
-    /** @var string */
-    private $op;
+    private string $op;
 
     /**
      * For OP_RANGE: an ordered map of bound => value (gte/gt/lte/lt).
@@ -43,7 +41,7 @@ final class LeafNode implements Node
      *
      * @var array<string|int,mixed>
      */
-    private $values;
+    private array $values;
 
     /**
      * @param array<string|int,mixed> $values

@@ -9,20 +9,16 @@ namespace MrDlef\OsQueryDigest;
  */
 final class Digest implements \JsonSerializable
 {
-    /** @var string */
-    private $index;
+    private string $index;
 
-    /** @var string */
-    private $text;
+    private string $text;
 
-    /** @var string */
-    private $signature;
+    private string $signature;
 
-    /** @var string */
-    private $hash;
+    private string $hash;
 
     /** @var array<int,string> */
-    private $notes;
+    private array $notes;
 
     /**
      * @param array<int,string> $notes

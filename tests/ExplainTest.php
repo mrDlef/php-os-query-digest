@@ -17,8 +17,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class ExplainTest extends TestCase
 {
-    /** @var Formatter */
-    private $formatter;
+    private Formatter $formatter;
 
     protected function setUp(): void
     {
