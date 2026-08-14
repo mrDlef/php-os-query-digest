@@ -1,0 +1,6 @@
+{
+    "idx": "stores",
+    "q": "stores | q=(delivery_area:geo_bbox() and has_child(review):{ rating >= 4 } and has_parent(chain):{ active:true } and location:geo_distance(25km)) | size=50",
+    "sig": "stores | q=(delivery_area:geo_bbox() and has_child(review):{ rating >= ? } and has_parent(chain):{ active:? } and location:geo_distance(?)) | size=50",
+    "hash": "q1:ccb4fb77328e"
+}

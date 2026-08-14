@@ -1,0 +1,25 @@
+{
+    "index": "metrics-000042",
+    "request": {
+        "query": {
+            "bool": {
+                "filter": [
+                    {
+                        "span_near": {
+                            "clauses": [
+                                { "span_term": { "message": "connection" } },
+                                { "span_term": { "message": "refused" } }
+                            ],
+                            "slop": 2,
+                            "in_order": true
+                        }
+                    },
+                    { "exists": { "field": "host" } },
+                    { "prefix": { "host": "web-" } }
+                ]
+            }
+        },
+        "highlight": { "fields": { "message": {} } },
+        "collapse": { "field": "host" }
+    }
+}

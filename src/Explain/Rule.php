@@ -30,6 +30,7 @@ final class Rule implements JsonSerializable
     public const DEDUPE = 'dedupe';
     public const REORDER = 'reorder';
     public const DROP_MATCH_ALL = 'drop_match_all';
+    public const ABSORB_MATCH_NONE = 'absorb_match_none';
     public const EMPTY_TO_MATCH_ALL = 'empty_to_match_all';
 
     // Request-level rewrites.
@@ -55,6 +56,7 @@ final class Rule implements JsonSerializable
         self::DEDUPE => 'Identical sibling clauses were de-duplicated.',
         self::REORDER => 'Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.',
         self::DROP_MATCH_ALL => 'match_all was dropped from a multi-clause AND: it constrains nothing.',
+        self::ABSORB_MATCH_NONE => 'match_none was absorbed: an AND that contains it matches nothing, and an OR gains nothing from it.',
         self::EMPTY_TO_MATCH_ALL => 'A connector with no clause left became match_all.',
         self::INDEX_PATTERN => 'The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.',
         self::SECTION_IGNORED => 'Top-level sections that say nothing about what a query is for were ignored.',

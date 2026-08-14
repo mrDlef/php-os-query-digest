@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace MrDlef\OsQueryDigest\Render;
 
 use MrDlef\OsQueryDigest\Tree\AndNode;
+use MrDlef\OsQueryDigest\Tree\JoinNode;
 use MrDlef\OsQueryDigest\Tree\LeafNode;
 use MrDlef\OsQueryDigest\Tree\MatchAllNode;
+use MrDlef\OsQueryDigest\Tree\MatchNoneNode;
 use MrDlef\OsQueryDigest\Tree\NestedNode;
 use MrDlef\OsQueryDigest\Tree\Node;
 use MrDlef\OsQueryDigest\Tree\NotNode;
@@ -65,8 +67,19 @@ final class DqlRenderer
             return $node->path() . ':{ ' . $this->node($node->child(), $profile, 0) . ' }';
         }
 
+        if ($node instanceof JoinNode) {
+            // Same shape as a nested clause, because it reads the same way: the
+            // inner expression is evaluated against other documents.
+            return $node->kind() . '(' . $node->relation() . '):{ '
+                . $this->node($node->child(), $profile, 0) . ' }';
+        }
+
         if ($node instanceof MatchAllNode) {
             return '*';
+        }
+
+        if ($node instanceof MatchNoneNode) {
+            return 'none';
         }
 
         if ($node instanceof OpaqueNode) {
@@ -147,8 +160,26 @@ final class DqlRenderer
             case LeafNode::OP_TERMS:
                 return $field . ':(' . $this->termsValues($field, $values, $profile) . ')';
 
+            case LeafNode::OP_LIKE:
+                return $field . ':like(' . $this->termsValues($field, $values, $profile) . ')';
+
             case LeafNode::OP_RANGE:
                 return $this->range($leaf, $profile, $parentPrecedence);
+
+            case LeafNode::OP_KNN:
+            case LeafNode::OP_NEURAL:
+                return $field . ':' . $leaf->op() . '(' . $this->params($field, $values, $profile) . ')';
+
+            case LeafNode::OP_GEO_DISTANCE:
+                return $field . ':geo_distance(' . $renderer->scalar($field, reset($values)) . ')';
+
+            case LeafNode::OP_GEO_BBOX:
+                return $field . ':geo_bbox()';
+
+            case LeafNode::OP_SCRIPT:
+                // The source is a value: it holds thresholds and parameters, so
+                // leaving it in would mint a fingerprint per threshold.
+                return 'script(' . $renderer->raw($field, (string) reset($values)) . ')';
         }
 
         return $field . ':?';
@@ -182,6 +213,26 @@ final class DqlRenderer
         }
 
         return implode(' or ', $parts);
+    }
+
+    /**
+     * `k=10, min_score=0.9` — the keyed parameters of a vector search. They are
+     * values, so they are erased in the signature: what stays is which knobs
+     * the query turned.
+     *
+     * @param array<string|int,mixed> $values
+     */
+    private function params(string $field, array $values, RenderProfile $profile): string
+    {
+        $renderer = $profile->values();
+        $parts = [];
+
+        foreach ($values as $name => $value) {
+            $rendered = $renderer->scalar($field, $value);
+            $parts[] = is_string($name) ? $name . '=' . $rendered : $rendered;
+        }
+
+        return implode(',', $parts);
     }
 
     private function range(LeafNode $leaf, RenderProfile $profile, int $parentPrecedence): string

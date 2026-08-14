@@ -8,7 +8,9 @@ use MrDlef\OsQueryDigest\Explain\Rule;
 use MrDlef\OsQueryDigest\Explain\Trace;
 use MrDlef\OsQueryDigest\Tree\AggNode;
 use MrDlef\OsQueryDigest\Tree\AndNode;
+use MrDlef\OsQueryDigest\Tree\JoinNode;
 use MrDlef\OsQueryDigest\Tree\MatchAllNode;
+use MrDlef\OsQueryDigest\Tree\MatchNoneNode;
 use MrDlef\OsQueryDigest\Tree\NestedNode;
 use MrDlef\OsQueryDigest\Tree\Node;
 use MrDlef\OsQueryDigest\Tree\NotNode;
@@ -29,6 +31,7 @@ use MrDlef\OsQueryDigest\Tree\OrNode;
  *  - unwrap single-child connectors:               AND(a) → a
  *  - drop match_all inside a multi-child AND:      AND(a, *) → a
  *  - de-duplicate identical siblings:              AND(a, a) → a
+ *  - absorb match_none:                            AND(a, none) → none, OR(a, none) → a
  *  - order commutative siblings by their sort key
  *
  * Each one reports itself into a {@see Trace} so `explain()` can say which
@@ -66,6 +69,10 @@ final class Canonicalizer
         }
 
         if ($node instanceof NestedNode) {
+            return $node->withChild($this->walk($node->child(), $trace));
+        }
+
+        if ($node instanceof JoinNode) {
             return $node->withChild($this->walk($node->child(), $trace));
         }
 
@@ -127,6 +134,37 @@ final class Canonicalizer
             }
 
             $children[] = $child;
+        }
+
+        // match_none absorbs an AND outright, and contributes nothing to an OR.
+        // Both directions preserve the result set exactly.
+        if ($isAnd) {
+            foreach ($children as $child) {
+                if ($child instanceof MatchNoneNode) {
+                    $trace->record(Rule::ABSORB_MATCH_NONE, $kind);
+
+                    return new MatchNoneNode();
+                }
+            }
+        } elseif ($msm === null) {
+            $withoutMatchNone = [];
+            foreach ($children as $child) {
+                if (!$child instanceof MatchNoneNode) {
+                    $withoutMatchNone[] = $child;
+                }
+            }
+            if (count($withoutMatchNone) !== count($children)) {
+                $trace->record(Rule::ABSORB_MATCH_NONE, $kind);
+
+                // An OR of nothing but match_none still matches nothing — it
+                // must not fall through to the empty-connector rule below,
+                // which would turn it into match_all.
+                if ($withoutMatchNone === []) {
+                    return new MatchNoneNode();
+                }
+
+                $children = $withoutMatchNone;
+            }
         }
 
         if ($isAnd && count($children) > 1) {

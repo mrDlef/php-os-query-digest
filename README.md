@@ -132,6 +132,8 @@ differently converge. Every rule preserves the result set:
 - commutative siblings are ordered by a stable key
 - `match_all` disappears inside a multi-clause AND
 
+- `match_none` absorbs: `AND(a, none)` → `none`, `OR(a, none)` → `a`
+
 Rules that would only preserve *intent* — merging `.keyword` into its parent
 field, dropping boosts, treating `term` and `match` as one — are deliberately
 **not** applied. Over-normalising makes genuinely different queries collide,
@@ -206,16 +208,27 @@ rather than from memory. `resources/opensearch-spec.json` is a committed
 snapshot of the type names it declares; `resources/coverage.json` records our
 stance on each one, and `SpecCoverageTest` fails if the two ever disagree.
 
-**24 of the 59 query types** are rendered natively: `bool`, `term`, `terms`,
-`terms_set`, `match`, `match_bool_prefix`, `match_phrase`,
-`match_phrase_prefix`, `multi_match`, `prefix`, `wildcard`, `regexp`, `fuzzy`,
-`exists`, `range`, `ids`, `match_all`, `nested`, `query_string`,
-`simple_query_string`, `constant_score`, `dis_max`, `function_score` and
-`boosting` (filtering part).
+**33 of the 59 query types** are rendered natively:
 
-The other 35 — `script`, `knn`, `neural`, `geo_*`, `has_child`, the `span_*`
-family, plugin queries — render as `type(?)`. They are signalled, never dropped,
-and still contribute to the fingerprint.
+| | |
+|---|---|
+| term-level | `term`, `terms`, `terms_set`, `prefix`, `wildcard`, `regexp`, `fuzzy`, `exists`, `range`, `ids` |
+| full text | `match`, `match_bool_prefix`, `match_phrase`, `match_phrase_prefix`, `multi_match`, `query_string`, `simple_query_string`, `more_like_this` |
+| compound | `bool`, `constant_score`, `dis_max`, `function_score`, `boosting` (filtering part) |
+| joining | `nested`, `has_child`, `has_parent` |
+| vector | `knn`, `neural` |
+| geo | `geo_distance`, `geo_bounding_box` |
+| other | `match_all`, `match_none`, `script` |
+
+Vector and geo clauses keep what a reader needs and drop what they cannot use: a
+`knn` renders as `image_embedding:knn(k=20)`, not as a thousand floats, so two
+searches of the same kind share a fingerprint however different their vectors.
+Same for a `geo_distance` — the radius survives, the centre does not.
+
+The other 26 — `geo_shape`, `percolate`, `intervals`, the `span_*` family,
+plugin queries — render as `type(?)`. They are signalled, never dropped, and
+still contribute to the fingerprint. The span family (9 of the 26) is
+deliberately left there: nobody debugs a span query from a log line.
 
 All **65 aggregation types** are rendered; 12 of them get a shape tuned for
 readability (`terms(host,10)`, `date_histogram(@ts,1h)`, `p95(latency)`), the
