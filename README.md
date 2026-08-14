@@ -286,9 +286,38 @@ Tests run in Docker across the whole supported matrix:
 make test                   # PHP 8.3
 make test PHP_VERSION=7.4   # one version
 make test-all               # 7.4 → 8.5
-make stan                   # PHPStan level 8
 make fixtures               # regenerate golden files — review the diff!
 ```
+
+Quality gates, on the dev PHP:
+
+```bash
+make check                  # everything below, in one go
+make stan                   # PHPStan, level max + strict rules
+make cs                     # apply the coding standard
+make rector                 # apply the Rector rules
+make hooks                  # install the pre-push hook
+```
+
+`make hooks` points `core.hooksPath` at `tools/hooks/`, so the hook is versioned
+with the code rather than living in an untracked `.git/hooks` every clone has to
+recreate. It runs the same four checks CI runs — coding standard, Rector,
+PHPStan, tests — on the dev PHP only: the Docker matrix takes minutes, and a
+pre-push hook people wait on is a pre-push hook people bypass. `git push
+--no-verify` skips it.
+
+**PHPStan runs at `level: max` with `phpstan/phpstan-strict-rules` and
+`treatPhpDocTypesAsCertain: true`** — the strictest configuration the tool
+offers. That is not free on a library whose whole job is reading untrusted
+decoded JSON: it forces every `mixed` to be narrowed before use. The parsing
+layer is typed `array<mixed>` rather than `array<string,mixed>` for exactly that
+reason — a JSON object whose key is `"0"` decodes to an *integer* key, and
+claiming otherwise would be a lie the analyser cannot catch.
+
+**Rector is pinned to `PhpVersion::PHP_74`**, the lowest supported release, so
+the type-declaration set never emits syntax the matrix cannot install. Its
+config avoids named arguments for the same reason: Rector installs happily on
+7.4, where `php74: true` would be a parse error.
 
 ## License
 

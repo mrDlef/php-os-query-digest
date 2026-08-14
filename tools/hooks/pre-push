@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# Runs the checks that CI runs, before the push rather than after it.
+#
+# Installed with `make hooks`, which points core.hooksPath at this directory —
+# so the hook is versioned with the code instead of living in an untracked
+# .git/hooks that every clone has to recreate.
+#
+# Deliberately *not* the Docker matrix: that is minutes, and a pre-push hook
+# people wait on is a pre-push hook people bypass. This is the fast pass on the
+# dev PHP; the matrix stays CI's job.
+#
+# Emergency exit: git push --no-verify
+
+set -e
+
+cd "$(git rev-parse --show-toplevel)"
+
+if [ ! -x vendor/bin/phpunit ]; then
+    echo "pre-push: vendor/ is missing — run 'composer install' (or push with --no-verify)." >&2
+    exit 1
+fi
+
+fail() {
+    echo >&2
+    echo "pre-push: $1 failed. Fix it, or push with --no-verify." >&2
+    exit 1
+}
+
+echo "pre-push: coding standard"
+vendor/bin/php-cs-fixer fix --dry-run --diff --quiet || fail "php-cs-fixer (run: composer cs)"
+
+echo "pre-push: rector"
+vendor/bin/rector process --dry-run --no-progress-bar --no-diffs >/dev/null || fail "rector (run: composer rector)"
+
+echo "pre-push: static analysis"
+vendor/bin/phpstan analyse --no-progress || fail "phpstan"
+
+echo "pre-push: tests"
+vendor/bin/phpunit || fail "phpunit"
+
+echo "pre-push: ok"

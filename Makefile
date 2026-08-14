@@ -5,7 +5,7 @@ PHP_VERSION  ?= 8.3
 export DOCKER_UID := $(shell id -u)
 export DOCKER_GID := $(shell id -g)
 
-.PHONY: test test-all stan cs cs-check rector rector-check fixtures spec clean
+.PHONY: test test-all stan cs cs-check rector rector-check check hooks fixtures spec clean
 
 ## Run the test suite in Docker for one PHP version: make test PHP_VERSION=7.4
 test:
@@ -37,6 +37,17 @@ rector:
 
 rector-check:
 	vendor/bin/rector process --dry-run
+
+## Everything the pre-push hook runs, on the dev PHP.
+check: cs-check rector-check
+	vendor/bin/phpstan analyse --no-progress
+	vendor/bin/phpunit
+
+## Install the versioned git hooks. One command, no copying: it points git at
+## tools/hooks, so the hooks stay under version control.
+hooks:
+	git config core.hooksPath tools/hooks
+	@echo "pre-push hook active. Bypass a single push with --no-verify."
 
 ## Regenerate the golden fixture files (review the diff before committing!)
 fixtures:
