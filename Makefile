@@ -5,7 +5,7 @@ PHP_VERSION  ?= 8.3
 export DOCKER_UID := $(shell id -u)
 export DOCKER_GID := $(shell id -g)
 
-.PHONY: test test-all stan fixtures spec clean
+.PHONY: test test-all stan cs cs-check fixtures spec clean
 
 ## Run the test suite in Docker for one PHP version: make test PHP_VERSION=7.4
 test:
@@ -22,6 +22,14 @@ test-all:
 
 stan:
 	PHP_VERSION=8.3 docker compose run --rm -T php sh -c "composer update --no-progress && vendor/bin/phpstan analyse"
+
+## Apply the coding standard.
+cs:
+	vendor/bin/php-cs-fixer fix
+
+## Report on it without touching anything — what CI runs.
+cs-check:
+	vendor/bin/php-cs-fixer fix --dry-run --diff
 
 ## Regenerate the golden fixture files (review the diff before committing!)
 fixtures:

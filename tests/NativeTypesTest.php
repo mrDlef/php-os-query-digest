@@ -48,7 +48,7 @@ final class NativeTypesTest extends TestCase
 
         self::assertSame(
             $this->formatter->describe($one)->hash(),
-            $this->formatter->describe($two)->hash()
+            $this->formatter->describe($two)->hash(),
         );
     }
 
@@ -121,7 +121,7 @@ final class NativeTypesTest extends TestCase
 
         self::assertSame(
             'q=(has_child(review):{ rating >= 4 } and has_parent(chain):{ active:true })',
-            $digest->text()
+            $digest->text(),
         );
     }
 
@@ -132,7 +132,7 @@ final class NativeTypesTest extends TestCase
 
         self::assertNotSame(
             $this->formatter->describe($review)->hash(),
-            $this->formatter->describe($comment)->hash()
+            $this->formatter->describe($comment)->hash(),
         );
     }
 
@@ -180,7 +180,7 @@ final class NativeTypesTest extends TestCase
         self::assertSame('q=(none)', $digest->text());
         self::assertSame(
             $this->formatter->describe(['query' => ['match_none' => []]])->hash(),
-            $digest->hash()
+            $digest->hash(),
         );
     }
 
@@ -239,13 +239,13 @@ final class NativeTypesTest extends TestCase
     public function testStructuralNormalisationErasesVectorParameters(): void
     {
         $formatter = Formatter::create(
-            Options::create()->withNormalization(Normalization::structural())
+            Options::create()->withNormalization(Normalization::structural()),
         );
 
         self::assertSame(
             $formatter->describe(['query' => ['knn' => ['v' => ['vector' => [0.1], 'k' => 10]]]])->hash(),
             $formatter->describe(['query' => ['knn' => ['v' => ['vector' => [0.2], 'k' => 50]]]])->hash(),
-            'At structural level, two knn searches on the same field are the same shape.'
+            'At structural level, two knn searches on the same field are the same shape.',
         );
     }
 
@@ -267,7 +267,7 @@ final class NativeTypesTest extends TestCase
             self::assertSame(
                 'q=(' . $type . '(?))',
                 $this->formatter->describe($request)->text(),
-                $type . ' was not signalled.'
+                $type . ' was not signalled.',
             );
         }
     }

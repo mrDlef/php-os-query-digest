@@ -50,7 +50,7 @@ final class ExplainTest extends TestCase
         self::assertSame(
             $this->formatter->describe($canonical)->hash(),
             $explanation->digest()->hash(),
-            'The two queries must converge, otherwise this test explains nothing.'
+            'The two queries must converge, otherwise this test explains nothing.',
         );
         self::assertTrue($explanation->has(Rule::UNWRAP));
         self::assertTrue($explanation->has(Rule::REORDER));
@@ -64,7 +64,7 @@ final class ExplainTest extends TestCase
         ]]]));
 
         self::assertContains(Rule::BOOST_DROPPED, $this->ruleIds(
-            ['query' => ['term' => ['a' => ['value' => 1, 'boost' => 2.0]]]]
+            ['query' => ['term' => ['a' => ['value' => 1, 'boost' => 2.0]]]],
         ));
 
         self::assertContains(Rule::SHOULD_BOOST_ONLY, $this->ruleIds(['query' => ['bool' => [
@@ -73,11 +73,11 @@ final class ExplainTest extends TestCase
         ]]]));
 
         self::assertContains(Rule::CONSTANT_SCORE_UNWRAPPED, $this->ruleIds(
-            ['query' => ['constant_score' => ['filter' => ['term' => ['a' => 1]]]]]
+            ['query' => ['constant_score' => ['filter' => ['term' => ['a' => 1]]]]],
         ));
 
         self::assertContains(Rule::FUNCTION_SCORE_UNWRAPPED, $this->ruleIds(
-            ['query' => ['function_score' => ['query' => ['term' => ['a' => 1]]]]]
+            ['query' => ['function_score' => ['query' => ['term' => ['a' => 1]]]]],
         ));
 
         self::assertContains(Rule::BOOSTING_UNWRAPPED, $this->ruleIds(['query' => ['boosting' => [
@@ -86,7 +86,7 @@ final class ExplainTest extends TestCase
         ]]]));
 
         self::assertContains(Rule::TERMS_LOOKUP, $this->ruleIds(
-            ['query' => ['terms' => ['user' => ['index' => 'users', 'id' => '1', 'path' => 'friends']]]]
+            ['query' => ['terms' => ['user' => ['index' => 'users', 'id' => '1', 'path' => 'friends']]]],
         ));
 
         self::assertContains(Rule::FLATTEN, $this->ruleIds(['query' => ['bool' => ['filter' => [
@@ -115,7 +115,7 @@ final class ExplainTest extends TestCase
     public function testTheIndexRewriteIsReportedWithBothSides(): void
     {
         $explanation = Formatter::create(
-            Options::create()->withIndexNormalizer(IndexNormalizer::datePatterns())
+            Options::create()->withIndexNormalizer(IndexNormalizer::datePatterns()),
         )->explain(['query' => ['term' => ['a' => 1]]], 'logs-2026.08.13');
 
         self::assertTrue($explanation->has(Rule::INDEX_PATTERN));
@@ -160,7 +160,7 @@ final class ExplainTest extends TestCase
 
         self::assertSame(
             json_encode($this->formatter->explain($request)),
-            json_encode($this->formatter->explain($request))
+            json_encode($this->formatter->explain($request)),
         );
     }
 
@@ -173,7 +173,7 @@ final class ExplainTest extends TestCase
 
         self::assertEquals(
             $this->formatter->describe($request, 'logs-2026.08.13')->toArray(),
-            $this->formatter->explain($request, 'logs-2026.08.13')->digest()->toArray()
+            $this->formatter->explain($request, 'logs-2026.08.13')->digest()->toArray(),
         );
     }
 
@@ -192,7 +192,7 @@ final class ExplainTest extends TestCase
         self::assertArrayHasKey('hash', $array);
         self::assertSame(
             [['rule' => Rule::DEDUPE, 'count' => 1, 'why' => (new Rule(Rule::DEDUPE, 1))->description(), 'on' => ['and']]],
-            $array['rules']
+            $array['rules'],
         );
     }
 

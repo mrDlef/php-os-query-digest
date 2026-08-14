@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Parser;
 
-use MrDlef\OsQueryDigest\Tree\AggNode;
 use MrDlef\OsQueryDigest\Support\Arr;
+use MrDlef\OsQueryDigest\Tree\AggNode;
 
 /**
  * Turns the `aggs` section into a tree of {@see AggNode}.

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Explain;
 
-use JsonSerializable;
 use MrDlef\OsQueryDigest\Digest;
 
 /**
@@ -14,7 +13,7 @@ use MrDlef\OsQueryDigest\Digest;
  * trusted: *why do these two queries share a hash?* Diff the two explanations
  * and the rule that merged them is right there.
  */
-final class Explanation implements JsonSerializable
+final class Explanation implements \JsonSerializable
 {
     /** @var Digest */
     private $digest;

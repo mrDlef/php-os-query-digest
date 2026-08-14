@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest;
 
-use JsonSerializable;
-
 /**
  * The result: a readable line, a normalised signature, and a stable hash.
  */
-final class Digest implements JsonSerializable
+final class Digest implements \JsonSerializable
 {
     /** @var string */
     private $index;

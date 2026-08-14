@@ -256,7 +256,7 @@ final class QueryParser
                 $this->note('should=' . count($should));
                 $this->trace->record(
                     Rule::SHOULD_BOOST_ONLY,
-                    count($should) . (count($should) === 1 ? ' clause' : ' clauses')
+                    count($should) . (count($should) === 1 ? ' clause' : ' clauses'),
                 );
             }
         }

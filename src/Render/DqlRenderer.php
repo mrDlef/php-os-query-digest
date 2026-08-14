@@ -41,7 +41,7 @@ final class DqlRenderer
             return $this->wrap(
                 $this->connector($node->children(), ' and ', $profile, self::PREC_AND),
                 self::PREC_AND,
-                $parentPrecedence
+                $parentPrecedence,
             );
         }
 
@@ -59,7 +59,7 @@ final class DqlRenderer
             return $this->wrap(
                 'not ' . $this->node($node->child(), $profile, self::PREC_NOT),
                 self::PREC_NOT,
-                $parentPrecedence
+                $parentPrecedence,
             );
         }
 

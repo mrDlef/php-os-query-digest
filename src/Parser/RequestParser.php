@@ -6,8 +6,8 @@ namespace MrDlef\OsQueryDigest\Parser;
 
 use MrDlef\OsQueryDigest\Explain\Rule;
 use MrDlef\OsQueryDigest\Explain\Trace;
-use MrDlef\OsQueryDigest\Tree\QueryModel;
 use MrDlef\OsQueryDigest\Support\Arr;
+use MrDlef\OsQueryDigest\Tree\QueryModel;
 
 /**
  * Reads a whole search request: index, query, aggs, and the options that carry
@@ -108,7 +108,7 @@ final class RequestParser
             $this->intOrNull(Arr::get($body, 'size')),
             $this->intOrNull(Arr::get($body, 'from')),
             $this->sort(Arr::get($body, 'sort')),
-            array_values(array_unique($notes))
+            array_values(array_unique($notes)),
         );
     }
 

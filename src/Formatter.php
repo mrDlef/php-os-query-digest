@@ -95,7 +95,7 @@ final class Formatter
             $this->options->maxValues(),
             false,
             false,
-            $this->options->includeAggNames()
+            $this->options->includeAggNames(),
         );
 
         $normalization = $this->options->normalization();
@@ -108,7 +108,7 @@ final class Formatter
             $this->options->maxValues(),
             $normalization->erasesCardinality(),
             $normalization->erasesPagination(),
-            $this->options->includeAggNames()
+            $this->options->includeAggNames(),
         );
 
         $text = $this->renderer->render($model, $textProfile);
@@ -124,7 +124,7 @@ final class Formatter
             Truncator::apply($text, $this->options->maxLength()),
             Truncator::apply($signature, $this->options->maxLength()),
             $this->hasher->hash($hashInput),
-            $model->notes()
+            $model->notes(),
         );
     }
 
@@ -152,7 +152,7 @@ final class Formatter
         $model = $model->withTree(
             $query !== null ? $this->canonicalizer->node($query, $trace) : null,
             $postFilter !== null ? $this->canonicalizer->node($postFilter, $trace) : null,
-            $this->canonicalizer->aggs($model->aggs(), $trace)
+            $this->canonicalizer->aggs($model->aggs(), $trace),
         );
 
         $pattern = $this->options->indexNormalizer()->normalize($model->index());

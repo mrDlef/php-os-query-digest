@@ -36,7 +36,7 @@ final class SpecCoverageTest extends TestCase
             $spec,
             $coverage,
             'The OpenSearch spec snapshot and resources/coverage.json disagree. '
-            . 'Add the new query types to coverage.json as "native" or "opaque".'
+            . 'Add the new query types to coverage.json as "native" or "opaque".',
         );
     }
 

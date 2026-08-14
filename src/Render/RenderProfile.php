@@ -97,7 +97,7 @@ final class RenderProfile
             null,
             $this->eraseCardinality,
             $this->erasePagination,
-            $this->includeAggNames
+            $this->includeAggNames,
         );
     }
 }

@@ -44,7 +44,7 @@ $ref = is_string($ref) && $ref !== '' ? $ref : 'main';
 $raw = [];
 foreach (FILES as $path) {
     fwrite(STDOUT, "fetching {$path} @ {$ref}\n");
-    $raw[$path] = fetch("https://raw.githubusercontent.com/" . REPO . "/{$ref}/{$path}");
+    $raw[$path] = fetch('https://raw.githubusercontent.com/' . REPO . "/{$ref}/{$path}");
 }
 
 $querySpec = Yaml::parse($raw[FILES[0]]);
@@ -84,13 +84,13 @@ $snapshot = [
 $output = __DIR__ . '/../resources/opensearch-spec.json';
 file_put_contents(
     $output,
-    json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n"
+    json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n",
 );
 
 fwrite(STDOUT, sprintf(
     "wrote %d query types and %d aggregation types\n",
     count($queryTypes),
-    count($aggTypes)
+    count($aggTypes),
 ));
 fwrite(STDOUT, "now run the tests — SpecCoverageTest will flag anything new.\n");
 

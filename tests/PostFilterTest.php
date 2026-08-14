@@ -66,7 +66,7 @@ final class PostFilterTest extends TestCase
         self::assertNotSame(
             $this->formatter->describe($filtered)->hash(),
             $this->formatter->describe($postFiltered)->hash(),
-            'The two return different buckets, so they must not share a fingerprint.'
+            'The two return different buckets, so they must not share a fingerprint.',
         );
     }
 
@@ -84,7 +84,7 @@ final class PostFilterTest extends TestCase
 
         self::assertSame(
             $this->formatter->describe($a)->hash(),
-            $this->formatter->describe($b)->hash()
+            $this->formatter->describe($b)->hash(),
         );
     }
 

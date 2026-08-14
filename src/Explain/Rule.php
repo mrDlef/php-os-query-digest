@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Explain;
 
-use JsonSerializable;
-
 /**
  * One normalisation rule that actually fired, with how many times and on what.
  *
@@ -13,7 +11,7 @@ use JsonSerializable;
  * nothing to do" is not a rule that fired — reporting it would drown the real
  * answer to "why do these two queries share a hash?".
  */
-final class Rule implements JsonSerializable
+final class Rule implements \JsonSerializable
 {
     // Parse-time rewrites: the DSL shape the library refuses to distinguish.
     public const MUST_FILTER_MERGED = 'must_filter_merged';

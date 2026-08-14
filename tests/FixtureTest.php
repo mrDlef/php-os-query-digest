@@ -37,7 +37,7 @@ final class FixtureTest extends TestCase
             $input = self::readJson($directory . '/input.json');
 
             $options = self::options(
-                isset($input['options']) && is_array($input['options']) ? $input['options'] : []
+                isset($input['options']) && is_array($input['options']) ? $input['options'] : [],
             );
             /** @var array<string,mixed> $request */
             $request = $input['request'];
@@ -51,7 +51,7 @@ final class FixtureTest extends TestCase
             if ($updating) {
                 $written = file_put_contents(
                     $file,
-                    json_encode($digest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n"
+                    json_encode($digest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n",
                 );
                 self::assertNotFalse($written, 'Could not rewrite ' . $file);
                 continue;

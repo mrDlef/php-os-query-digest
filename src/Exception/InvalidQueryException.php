@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Exception;
 
-use InvalidArgumentException;
-
-final class InvalidQueryException extends InvalidArgumentException
+final class InvalidQueryException extends \InvalidArgumentException
 {
     public static function notDecodable(string $reason): self
     {

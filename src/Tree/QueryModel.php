@@ -50,9 +50,9 @@ final class QueryModel
     private $notes;
 
     /**
-     * @param AggNode[]                          $aggs
+     * @param AggNode[]                           $aggs
      * @param array<int,array{0:string,1:string}> $sort
-     * @param array<int,string>                  $notes
+     * @param array<int,string>                   $notes
      */
     public function __construct(
         string $index,
@@ -133,7 +133,7 @@ final class QueryModel
             $this->size,
             $this->from,
             $this->sort,
-            $this->notes
+            $this->notes,
         );
     }
 
@@ -150,7 +150,7 @@ final class QueryModel
             $this->size,
             $this->from,
             $this->sort,
-            $this->notes
+            $this->notes,
         );
     }
 }
