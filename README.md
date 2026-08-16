@@ -11,7 +11,7 @@ $digest = $formatter->describe($request, 'logs-2026.08.13');
 
 $digest->text();      // logs-* | q=(@timestamp >= now-15m and service:api) | size=0
 $digest->signature(); // logs-* | q=(@timestamp >= ? and service:?) | size=0
-$digest->hash();      // q1:b7cc218cda09
+$digest->hash();      // q2:b7cc218cda09
 $digest->index();     // logs-*
 ```
 
@@ -65,7 +65,7 @@ The digest serialises to a compact object:
   "idx": "logs-*",
   "q": "logs-* | q=(@timestamp >= now-15m and service:api) | size=0",
   "sig": "logs-* | q=(@timestamp >= ? and service:?) | size=0",
-  "hash": "q1:b7cc218cda09"
+  "hash": "q2:b7cc218cda09"
 }
 ```
 
@@ -154,7 +154,7 @@ echo $explanation;
 ```
 text: logs-* | q=(env:prod and msg:timeout and service:api) | size=0 | should=1
 sig:  logs-* | q=(env:? and msg:~? and service:?) | size=0 | should=1
-hash: q1:a5d822c18ab3
+hash: q2:a5d822c18ab3
 notes: should=1
 
 rules applied:
@@ -213,7 +213,7 @@ rather than from memory. `resources/opensearch-spec.json` is a committed
 snapshot of the type names it declares; `resources/coverage.json` records our
 stance on each one, and `SpecCoverageTest` fails if the two ever disagree.
 
-**35 of the 59 query types** are rendered natively:
+**38 of the 59 query types** are rendered natively:
 
 | | |
 |---|---|
@@ -222,17 +222,21 @@ stance on each one, and `SpecCoverageTest` fails if the two ever disagree.
 | compound | `bool`, `constant_score`, `dis_max`, `function_score`, `script_score`, `boosting` (filtering part) |
 | joining | `nested`, `has_child`, `has_parent`, `parent_id` |
 | vector | `knn`, `neural` |
-| geo | `geo_distance`, `geo_bounding_box` |
+| geo | `geo_distance`, `geo_bounding_box`, `geo_polygon`, `geo_shape`, `xy_shape` |
 | other | `match_all`, `match_none`, `script` |
 
 Vector and geo clauses keep what a reader needs and drop what they cannot use: a
 `knn` renders as `image_embedding:knn(k=20)`, not as a thousand floats, so two
 searches of the same kind share a fingerprint however different their vectors.
-Same for a `geo_distance` — the radius survives, the centre does not.
+Same for a `geo_distance` — the radius survives, the centre does not. A shape
+query keeps the two parts that decide which documents match,
+`zone:geo_shape(polygon,within)`, and drops the coordinates: `within` and
+`disjoint` over the same polygon return opposite result sets, so collapsing them
+would be the geo equivalent of erasing a `not`.
 
-The other 24 — `geo_shape`, `percolate`, `intervals`, the `span_*` family,
+The other 21 — `percolate`, `intervals`, `rank_feature`, the `span_*` family,
 plugin queries — render as `type(?)`. They are signalled, never dropped, and
-still contribute to the fingerprint. The span family (9 of the 24) is
+still contribute to the fingerprint. The span family (9 of the 21) is
 deliberately left there: nobody debugs a span query from a log line.
 
 All **65 aggregation types** are rendered; 12 of them get a shape tuned for
@@ -274,8 +278,11 @@ offline, with no dependency at all.
 **The hash is a public contract.** If a normalisation rule changes, every hash
 changes — and any dashboard built on it silently breaks. So:
 
-- the hash carries its algorithm version: `q1:8f3ac1d2b901`. A rule change bumps
-  it to `q2:`, making the break visible in your data instead of invisible.
+- the hash carries its algorithm version: `q2:8f3ac1d2b901`. A rule change bumps
+  it — `q2:` → `q3:` — making the break visible in your data instead of
+  invisible. The prefix moved once already: v0.2.0 promoted three query types
+  out of `type(?)`, so everything published as `q1:` was minted by an older set
+  of rules.
 - every fixture pins its exact hash in `tests/fixtures/*/expected.json`. A rule
   change cannot land without a reviewable diff.
 - a change to the produced hashes is a **major** release.

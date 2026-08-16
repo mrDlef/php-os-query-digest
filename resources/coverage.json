@@ -15,8 +15,8 @@
         "fuzzy": "native",
         "geo_bounding_box": "native",
         "geo_distance": "native",
-        "geo_polygon": "opaque",
-        "geo_shape": "opaque",
+        "geo_polygon": "native",
+        "geo_shape": "native",
         "has_child": "native",
         "has_parent": "native",
         "hybrid": "opaque",
@@ -59,7 +59,7 @@
         "type": "opaque",
         "wildcard": "native",
         "wrapper": "opaque",
-        "xy_shape": "opaque"
+        "xy_shape": "native"
     },
     "aggregation": {
         "adjacency_matrix": "generic",

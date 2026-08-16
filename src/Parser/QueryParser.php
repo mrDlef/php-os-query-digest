@@ -35,6 +35,12 @@ final class QueryParser
         'ignore_unmapped', '_name', 'boost',
     ];
 
+    /**
+     * The same, for the shape queries. `type` is absent on purpose: it is a
+     * key *inside* the geometry, never beside the field.
+     */
+    private const SHAPE_OPTIONS = ['ignore_unmapped', '_name', 'boost'];
+
     /** @var array<int,string> */
     private array $notes = [];
 
@@ -149,7 +155,16 @@ final class QueryParser
                 return $this->geoDistance($body);
 
             case 'geo_bounding_box':
-                return $this->geoBoundingBox($body);
+                return $this->geoArea($body, LeafNode::OP_GEO_BBOX, $type);
+
+            case 'geo_polygon':
+                return $this->geoArea($body, LeafNode::OP_GEO_POLYGON, $type);
+
+            case 'geo_shape':
+                return $this->shape($body, LeafNode::OP_GEO_SHAPE);
+
+            case 'xy_shape':
+                return $this->shape($body, LeafNode::OP_XY_SHAPE);
 
             case 'script':
                 return $this->script($body);
@@ -496,9 +511,15 @@ final class QueryParser
     }
 
     /**
+     * `geo_bounding_box` and `geo_polygon`: an area given inline.
+     *
+     * Neither carries a scalar worth logging. A box comes in five encodings
+     * (object, array, string, WKT, geohash) and a polygon is a list of points —
+     * the field and the kind of area are the whole shape.
+     *
      * @param array<mixed> $body
      */
-    private function geoBoundingBox(array $body): Node
+    private function geoArea(array $body, string $op, string $type): Node
     {
         foreach (array_keys($body) as $field) {
             $field = (string) $field;
@@ -510,13 +531,61 @@ final class QueryParser
                 continue;
             }
 
-            // A box carries no scalar worth logging — and it comes in five
-            // encodings (object, array, string, WKT, geohash). The field and
-            // the fact that it is a box are the whole shape.
-            return new LeafNode($field, LeafNode::OP_GEO_BBOX);
+            return new LeafNode($field, $op);
         }
 
-        return new OpaqueNode('geo_bounding_box');
+        return new OpaqueNode($type);
+    }
+
+    /**
+     * `geo_shape` and `xy_shape`: does the document's geometry relate to this
+     * one, and how.
+     *
+     * Two parts of that survive into the signature, because both decide which
+     * documents match rather than merely which values are searched: the kind of
+     * geometry, and the relation. `within` and `disjoint` on the same polygon
+     * return opposite result sets — collapsing them would be the geo equivalent
+     * of erasing a `not`. Both are drawn from a closed vocabulary, so keeping
+     * them cannot inflate the number of distinct fingerprints. The coordinates
+     * are values and go.
+     *
+     * @param array<mixed> $body
+     */
+    private function shape(array $body, string $op): Node
+    {
+        foreach ($body as $field => $spec) {
+            $field = (string) $field;
+            if ($field === 'boost') {
+                $this->trace->record(Rule::BOOST_DROPPED);
+                continue;
+            }
+            if (in_array($field, self::SHAPE_OPTIONS, true) || !is_array($spec)) {
+                continue;
+            }
+
+            $geometry = Arr::get($spec, 'shape');
+            if (is_array($geometry)) {
+                $kind = Arr::get($geometry, 'type');
+                $kind = is_string($kind) ? strtolower($kind) : '?';
+            } elseif (is_array(Arr::get($spec, 'indexed_shape'))) {
+                // The geometry lives in another document — the same blind spot
+                // as a terms lookup, and worth the same warning.
+                $this->note('indexed_shape');
+                $this->trace->record(Rule::INDEXED_SHAPE, $field);
+                $kind = 'indexed';
+            } else {
+                continue;
+            }
+
+            // intersects is what OpenSearch assumes when the query says
+            // nothing, so an absent relation renders as the relation it is.
+            $relation = Arr::get($spec, 'relation');
+            $relation = is_string($relation) ? strtolower($relation) : 'intersects';
+
+            return new LeafNode($field, $op, [$kind, $relation]);
+        }
+
+        return new OpaqueNode($op);
     }
 
     /**

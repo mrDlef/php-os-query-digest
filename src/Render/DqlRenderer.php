@@ -183,7 +183,16 @@ final class DqlRenderer
                 return $field . ':geo_distance(' . $renderer->scalar($field, reset($values)) . ')';
 
             case LeafNode::OP_GEO_BBOX:
-                return $field . ':geo_bbox()';
+            case LeafNode::OP_GEO_POLYGON:
+                return $field . ':' . $leaf->op() . '()';
+
+            case LeafNode::OP_GEO_SHAPE:
+            case LeafNode::OP_XY_SHAPE:
+                // Rendered without the value renderer, so the geometry kind and
+                // the relation survive into the signature: they decide which
+                // documents match, and `within` versus `disjoint` is not a
+                // parameter but the opposite query.
+                return $field . ':' . $leaf->op() . '(' . implode(',', Arr::strings($values)) . ')';
 
             case LeafNode::OP_SCRIPT:
                 // The source is a value: it holds thresholds and parameters, so

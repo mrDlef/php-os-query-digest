@@ -1,0 +1,9 @@
+{
+    "idx": "deliveries",
+    "q": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
+    "sig": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
+    "hash": "q2:cb5e4609d066",
+    "notes": [
+        "indexed_shape"
+    ]
+}

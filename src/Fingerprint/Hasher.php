@@ -20,7 +20,7 @@ final class Hasher
 
     private int $length;
 
-    public function __construct(string $version = 'q1', int $length = 12)
+    public function __construct(string $version = 'q2', int $length = 12)
     {
         $this->version = $version;
         $this->length = $length;
