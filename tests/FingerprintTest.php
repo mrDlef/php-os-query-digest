@@ -39,15 +39,15 @@ final class FingerprintTest extends TestCase
         self::assertNotSame(
             $values->describe($two)->hash(),
             $values->describe($three)->hash(),
-            'At the "values" level the number of terms is part of the shape.'
+            'At the "values" level the number of terms is part of the shape.',
         );
 
         $structural = Formatter::create(
-            Options::create()->withNormalization(Normalization::structural())
+            Options::create()->withNormalization(Normalization::structural()),
         );
         self::assertSame(
             $structural->describe($two)->hash(),
-            $structural->describe($three)->hash()
+            $structural->describe($three)->hash(),
         );
     }
 
@@ -60,7 +60,7 @@ final class FingerprintTest extends TestCase
         self::assertNotSame($values->describe($first)->hash(), $values->describe($second)->hash());
 
         $structural = Formatter::create(
-            Options::create()->withNormalization(Normalization::structural())
+            Options::create()->withNormalization(Normalization::structural()),
         );
         self::assertSame($structural->describe($first)->hash(), $structural->describe($second)->hash());
     }
@@ -69,7 +69,7 @@ final class FingerprintTest extends TestCase
     {
         // "aggregations only" is a different kind of query from "give me hits".
         $structural = Formatter::create(
-            Options::create()->withNormalization(Normalization::structural())
+            Options::create()->withNormalization(Normalization::structural()),
         );
 
         $aggsOnly = $structural->describe(['query' => ['match_all' => []], 'size' => 0]);
@@ -109,9 +109,7 @@ final class FingerprintTest extends TestCase
     public function testRedactorKeepsSensitiveValuesOutOfTheReadableLine(): void
     {
         $formatter = Formatter::create(Options::create()->withRedactor(
-            static function (string $field, $value) {
-                return $field === 'email' ? '<redacted>' : $value;
-            }
+            static fn(string $field, $value) => $field === 'email' ? '<redacted>' : $value,
         ));
 
         $digest = $formatter->describe(['query' => ['bool' => ['filter' => [

@@ -7,15 +7,13 @@ namespace MrDlef\OsQueryDigest\Tree;
 final class OrNode implements Node
 {
     /** @var Node[] */
-    private $children;
+    private array $children;
 
     /**
      * minimum_should_match, when it was set explicitly and is greater than 1.
      * A plain OR (msm = 1) carries no annotation.
-     *
-     * @var int|null
      */
-    private $minimumShouldMatch;
+    private ?int $minimumShouldMatch;
 
     /**
      * @param Node[] $children

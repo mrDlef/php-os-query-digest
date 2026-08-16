@@ -1,0 +1,38 @@
+{
+    "index": "stores",
+    "request": {
+        "query": {
+            "bool": {
+                "filter": [
+                    {
+                        "geo_distance": {
+                            "distance": "25km",
+                            "location": { "lat": 48.8566, "lon": 2.3522 }
+                        }
+                    },
+                    {
+                        "geo_bounding_box": {
+                            "delivery_area": {
+                                "top_left": { "lat": 49.2, "lon": 1.9 },
+                                "bottom_right": { "lat": 48.5, "lon": 2.8 }
+                            }
+                        }
+                    },
+                    {
+                        "has_child": {
+                            "type": "review",
+                            "query": { "range": { "rating": { "gte": 4 } } }
+                        }
+                    },
+                    {
+                        "has_parent": {
+                            "parent_type": "chain",
+                            "query": { "term": { "active": true } }
+                        }
+                    }
+                ]
+            }
+        },
+        "size": 50
+    }
+}

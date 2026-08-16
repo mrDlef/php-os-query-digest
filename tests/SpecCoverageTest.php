@@ -36,7 +36,7 @@ final class SpecCoverageTest extends TestCase
             $spec,
             $coverage,
             'The OpenSearch spec snapshot and resources/coverage.json disagree. '
-            . 'Add the new query types to coverage.json as "native" or "opaque".'
+            . 'Add the new query types to coverage.json as "native" or "opaque".',
         );
     }
 
@@ -134,6 +134,25 @@ final class SpecCoverageTest extends TestCase
                 return ['positive' => ['term' => ['f' => 'x']], 'negative' => ['term' => ['g' => 'y']]];
             case 'dis_max':
                 return ['queries' => [['term' => ['f' => 'x']]]];
+            case 'knn':
+                return ['f' => ['vector' => [0.1, 0.2], 'k' => 3]];
+            case 'neural':
+                return ['f' => ['query_text' => 'x', 'model_id' => 'm', 'k' => 3]];
+            case 'geo_distance':
+                return ['distance' => '1km', 'f' => ['lat' => 0, 'lon' => 0]];
+            case 'geo_bounding_box':
+                return ['f' => [
+                    'top_left' => ['lat' => 1, 'lon' => 0],
+                    'bottom_right' => ['lat' => 0, 'lon' => 1],
+                ]];
+            case 'script':
+                return ['script' => ['source' => "doc['f'].value > 1"]];
+            case 'has_child':
+                return ['type' => 'c', 'query' => ['term' => ['f' => 'x']]];
+            case 'has_parent':
+                return ['parent_type' => 'p', 'query' => ['term' => ['f' => 'x']]];
+            case 'more_like_this':
+                return ['fields' => ['f'], 'like' => 'x'];
             case 'bool':
                 return ['filter' => [['term' => ['f' => 'x']]]];
             case 'match_all':
@@ -167,14 +186,13 @@ final class SpecCoverageTest extends TestCase
     }
 
     /**
-     * @return array<string,mixed>
+     * @return array<mixed>
      */
     private static function readJson(string $file): array
     {
         $contents = file_get_contents($file);
         self::assertIsString($contents, 'Unreadable: ' . $file);
 
-        /** @var array<string,mixed> $decoded */
         $decoded = json_decode($contents, true);
         self::assertIsArray($decoded, 'Invalid JSON: ' . $file);
 

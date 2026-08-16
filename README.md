@@ -72,12 +72,17 @@ The digest serialises to a compact object:
 ### Reading the line
 
 ```
-logs-* | q=(service:api and status:(500 or 502)) | aggs=terms(host,10)>p95(rt) | size=0 sort=@timestamp:desc | +highlight
-└ index  └ DQL query                              └ aggregation pipeline        └ options                    └ notes
+logs-* | q=(service:api and status:(500 or 502)) | post=(host:web-1) | aggs=terms(host,10)>p95(rt) | size=0 sort=@timestamp:desc | +highlight
+└ index  └ DQL query                              └ post_filter       └ aggregation pipeline        └ options                    └ notes
 ```
 
 The `q=(…)` segment is DQL: select it and paste it into OpenSearch Dashboards.
 Aggregations use `>` to read as "then, per bucket".
+
+`post=(…)` is the `post_filter`, kept apart from `q=(…)` on purpose: it runs
+*after* the aggregations, so it narrows the hits while the buckets keep counting
+the whole result set. That is the faceted-search pattern, and folding the two
+together would describe a query nobody sent.
 
 The last segment lists what was acknowledged but not rendered inline — a
 boost-only `should` group, an unsupported top-level section. Nothing is ever
@@ -127,10 +132,57 @@ differently converge. Every rule preserves the result set:
 - commutative siblings are ordered by a stable key
 - `match_all` disappears inside a multi-clause AND
 
+- `match_none` absorbs: `AND(a, none)` → `none`, `OR(a, none)` → `a`
+
 Rules that would only preserve *intent* — merging `.keyword` into its parent
 field, dropping boosts, treating `term` and `match` as one — are deliberately
 **not** applied. Over-normalising makes genuinely different queries collide,
 which destroys the diagnostic value of the hash.
+
+### Explaining a fingerprint
+
+Sooner or later two queries you thought were different share a hash, and the
+library is only worth trusting if it can say *why*. `explain()` returns the same
+digest plus every rule that fired:
+
+```php
+$explanation = $formatter->explain($request, 'logs-2026.08.13');
+
+echo $explanation;
+```
+
+```
+text: logs-* | q=(env:prod and msg:timeout and service:api) | size=0 | should=1
+sig:  logs-* | q=(env:? and msg:~? and service:?) | size=0 | should=1
+hash: q1:a5d822c18ab3
+notes: should=1
+
+rules applied:
+  boost_dropped [msg]                        A boost was ignored: it reorders results, it does not change them.
+  flatten [and]                              Nested connectors of the same kind were flattened.
+  index_pattern [logs-2026.08.13 -> logs-*]  The index was collapsed to a rolling pattern, so a daily index …
+  must_filter_merged                         bool.must and bool.filter both became AND: they differ in scoring, …
+  reorder [and]                              Commutative siblings were reordered by a stable key, so the order …
+  should_boost_only [1 clause]               A should group beside a must/filter, with no minimum_should_match, …
+```
+
+A rule is listed only when it actually changed the query, so an empty list means
+the query was already canonical. Diff two explanations and the rule that merged
+them is named.
+
+It is also queryable, which is what makes it usable in a test:
+
+```php
+use MrDlef\OsQueryDigest\Explain\Rule;
+
+$explanation->has(Rule::MUST_FILTER_MERGED);  // true
+$explanation->ruleIds();                      // ['boost_dropped', 'flatten', …]
+$explanation->digest();                       // identical to describe()
+json_encode($explanation);                    // the digest object plus a "rules" array
+```
+
+`explain()` needs no second pass: the rules are recorded during the normal
+parse, so it returns the very digest `describe()` would have produced.
 
 ### Things it gets right that are easy to get wrong
 
@@ -156,23 +208,34 @@ rather than from memory. `resources/opensearch-spec.json` is a committed
 snapshot of the type names it declares; `resources/coverage.json` records our
 stance on each one, and `SpecCoverageTest` fails if the two ever disagree.
 
-**24 of the 59 query types** are rendered natively: `bool`, `term`, `terms`,
-`terms_set`, `match`, `match_bool_prefix`, `match_phrase`,
-`match_phrase_prefix`, `multi_match`, `prefix`, `wildcard`, `regexp`, `fuzzy`,
-`exists`, `range`, `ids`, `match_all`, `nested`, `query_string`,
-`simple_query_string`, `constant_score`, `dis_max`, `function_score` and
-`boosting` (filtering part).
+**33 of the 59 query types** are rendered natively:
 
-The other 35 — `script`, `knn`, `neural`, `geo_*`, `has_child`, the `span_*`
-family, plugin queries — render as `type(?)`. They are signalled, never dropped,
-and still contribute to the fingerprint.
+| | |
+|---|---|
+| term-level | `term`, `terms`, `terms_set`, `prefix`, `wildcard`, `regexp`, `fuzzy`, `exists`, `range`, `ids` |
+| full text | `match`, `match_bool_prefix`, `match_phrase`, `match_phrase_prefix`, `multi_match`, `query_string`, `simple_query_string`, `more_like_this` |
+| compound | `bool`, `constant_score`, `dis_max`, `function_score`, `boosting` (filtering part) |
+| joining | `nested`, `has_child`, `has_parent` |
+| vector | `knn`, `neural` |
+| geo | `geo_distance`, `geo_bounding_box` |
+| other | `match_all`, `match_none`, `script` |
+
+Vector and geo clauses keep what a reader needs and drop what they cannot use: a
+`knn` renders as `image_embedding:knn(k=20)`, not as a thousand floats, so two
+searches of the same kind share a fingerprint however different their vectors.
+Same for a `geo_distance` — the radius survives, the centre does not.
+
+The other 26 — `geo_shape`, `percolate`, `intervals`, the `span_*` family,
+plugin queries — render as `type(?)`. They are signalled, never dropped, and
+still contribute to the fingerprint. The span family (9 of the 26) is
+deliberately left there: nobody debugs a span query from a log line.
 
 All **65 aggregation types** are rendered; 12 of them get a shape tuned for
 readability (`terms(host,10)`, `date_histogram(@ts,1h)`, `p95(latency)`), the
 rest render generically as `type(field)`.
 
-Top-level sections that are not modelled (`highlight`, `collapse`,
-`post_filter`, …) are listed in the notes.
+Top-level sections that are not modelled (`highlight`, `collapse`, `rescore`, …)
+are listed in the notes.
 
 ### Which OpenSearch version
 
@@ -223,9 +286,38 @@ Tests run in Docker across the whole supported matrix:
 make test                   # PHP 8.3
 make test PHP_VERSION=7.4   # one version
 make test-all               # 7.4 → 8.5
-make stan                   # PHPStan level 8
 make fixtures               # regenerate golden files — review the diff!
 ```
+
+Quality gates, on the dev PHP:
+
+```bash
+make check                  # everything below, in one go
+make stan                   # PHPStan, level max + strict rules
+make cs                     # apply the coding standard
+make rector                 # apply the Rector rules
+make hooks                  # install the pre-push hook
+```
+
+`make hooks` points `core.hooksPath` at `tools/hooks/`, so the hook is versioned
+with the code rather than living in an untracked `.git/hooks` every clone has to
+recreate. It runs the same four checks CI runs — coding standard, Rector,
+PHPStan, tests — on the dev PHP only: the Docker matrix takes minutes, and a
+pre-push hook people wait on is a pre-push hook people bypass. `git push
+--no-verify` skips it.
+
+**PHPStan runs at `level: max` with `phpstan/phpstan-strict-rules` and
+`treatPhpDocTypesAsCertain: true`** — the strictest configuration the tool
+offers. That is not free on a library whose whole job is reading untrusted
+decoded JSON: it forces every `mixed` to be narrowed before use. The parsing
+layer is typed `array<mixed>` rather than `array<string,mixed>` for exactly that
+reason — a JSON object whose key is `"0"` decodes to an *integer* key, and
+claiming otherwise would be a lie the analyser cannot catch.
+
+**Rector is pinned to `PhpVersion::PHP_74`**, the lowest supported release, so
+the type-declaration set never emits syntax the matrix cannot install. Its
+config avoids named arguments for the same reason: Rector installs happily on
+7.4, where `php74: true` would be a parse error.
 
 ## License
 

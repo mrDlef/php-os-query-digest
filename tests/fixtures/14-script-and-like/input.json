@@ -1,0 +1,29 @@
+{
+    "index": "articles",
+    "request": {
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "more_like_this": {
+                            "fields": [ "title", "body" ],
+                            "like": "distributed consensus algorithms",
+                            "min_term_freq": 1
+                        }
+                    }
+                ],
+                "filter": [
+                    {
+                        "script": {
+                            "script": {
+                                "source": "doc['word_count'].value > params.floor",
+                                "params": { "floor": 500 }
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "size": 10
+    }
+}

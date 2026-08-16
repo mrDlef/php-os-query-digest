@@ -16,11 +16,9 @@ namespace MrDlef\OsQueryDigest\Fingerprint;
  */
 final class Hasher
 {
-    /** @var string */
-    private $version;
+    private string $version;
 
-    /** @var int */
-    private $length;
+    private int $length;
 
     public function __construct(string $version = 'q1', int $length = 12)
     {

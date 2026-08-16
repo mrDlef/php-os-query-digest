@@ -16,11 +16,9 @@ use MrDlef\OsQueryDigest\Tree\QueryModel;
  */
 final class LineRenderer
 {
-    /** @var DqlRenderer */
-    private $dql;
+    private DqlRenderer $dql;
 
-    /** @var AggRenderer */
-    private $aggs;
+    private AggRenderer $aggs;
 
     public function __construct()
     {
@@ -39,6 +37,15 @@ final class LineRenderer
         $query = $model->query();
         if ($query !== null) {
             $segments[] = 'q=(' . $this->dql->render($query, $profile) . ')';
+        }
+
+        // Its own segment rather than folded into `q=(…)`: post_filter runs
+        // after the aggregations, so it narrows the hits while the buckets keep
+        // counting the whole result set. Merging the two would describe a query
+        // nobody sent.
+        $postFilter = $model->postFilter();
+        if ($postFilter !== null) {
+            $segments[] = 'post=(' . $this->dql->render($postFilter, $profile) . ')';
         }
 
         if ($model->aggs() !== []) {

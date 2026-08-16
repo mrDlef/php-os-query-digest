@@ -34,7 +34,7 @@ final class FormatterTest extends TestCase
     {
         $digest = Formatter::create()->describe(
             ['index' => 'ignored', 'body' => ['query' => ['match_all' => []]]],
-            'chosen'
+            'chosen',
         );
 
         self::assertSame('chosen', $digest->index());
@@ -61,7 +61,7 @@ final class FormatterTest extends TestCase
 
         self::assertSame(
             ['idx' => 'idx', 'q' => 'idx | q=(a:1)', 'sig' => 'idx | q=(a:?)', 'hash' => $digest->hash()],
-            $digest->toArray()
+            $digest->toArray(),
         );
         self::assertSame(json_encode($digest->toArray()), json_encode($digest));
     }
@@ -95,10 +95,8 @@ final class FormatterTest extends TestCase
     public function testHardLengthCapAppliesToTheLineButNotTheHash(): void
     {
         $request = ['query' => ['bool' => ['filter' => array_map(
-            static function (int $i): array {
-                return ['term' => ['field_' . $i => 'some-fairly-long-value-' . $i]];
-            },
-            range(1, 30)
+            static fn(int $i): array => ['term' => ['field_' . $i => 'some-fairly-long-value-' . $i]],
+            range(1, 30),
         )]]];
 
         $short = Formatter::create(Options::create()->withMaxLength(80)->withMaxClauses(null));
@@ -107,7 +105,7 @@ final class FormatterTest extends TestCase
         $shortDigest = $short->describe($request);
 
         $length = function_exists('mb_strlen')
-            ? (int) mb_strlen($shortDigest->text(), 'UTF-8')
+            ? mb_strlen($shortDigest->text(), 'UTF-8')
             : strlen($shortDigest->text());
 
         self::assertLessThanOrEqual(80, $length);

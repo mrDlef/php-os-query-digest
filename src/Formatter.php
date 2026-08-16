@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace MrDlef\OsQueryDigest;
 
 use MrDlef\OsQueryDigest\Exception\InvalidQueryException;
+use MrDlef\OsQueryDigest\Explain\Explanation;
+use MrDlef\OsQueryDigest\Explain\Rule;
+use MrDlef\OsQueryDigest\Explain\Trace;
 use MrDlef\OsQueryDigest\Fingerprint\Hasher;
 use MrDlef\OsQueryDigest\Normalizer\Canonicalizer;
 use MrDlef\OsQueryDigest\Parser\RequestParser;
@@ -23,20 +26,15 @@ use MrDlef\OsQueryDigest\Tree\QueryModel;
  */
 final class Formatter
 {
-    /** @var Options */
-    private $options;
+    private Options $options;
 
-    /** @var RequestParser */
-    private $parser;
+    private RequestParser $parser;
 
-    /** @var Canonicalizer */
-    private $canonicalizer;
+    private Canonicalizer $canonicalizer;
 
-    /** @var LineRenderer */
-    private $renderer;
+    private LineRenderer $renderer;
 
-    /** @var Hasher */
-    private $hasher;
+    private Hasher $hasher;
 
     private function __construct(Options $options)
     {
@@ -49,7 +47,7 @@ final class Formatter
 
     public static function create(?Options $options = null): self
     {
-        return new self($options !== null ? $options : Options::create());
+        return new self($options ?? Options::create());
     }
 
     public function options(): Options
@@ -58,14 +56,33 @@ final class Formatter
     }
 
     /**
-     * @param array<string,mixed>|string $request a search body, an
-     *                                            `['index' => …, 'body' => …]`
-     *                                            envelope, or the JSON of either
+     * @param array<mixed>|string $request a search body, an
+     *                                     `['index' => …, 'body' => …]`
+     *                                     envelope, or the JSON of either
      */
     public function describe($request, ?string $index = null): Digest
     {
-        $model = $this->model($this->toArray($request), $index);
+        return $this->digest($this->model($this->toArray($request), $index, new Trace()));
+    }
 
+    /**
+     * The same digest, plus the list of normalisation rules that produced it.
+     *
+     * Use it to answer "why do these two queries share a hash?" — diff the two
+     * explanations and the rule that merged them is named.
+     *
+     * @param array<mixed>|string $request
+     */
+    public function explain($request, ?string $index = null): Explanation
+    {
+        $trace = new Trace();
+        $model = $this->model($this->toArray($request), $index, $trace);
+
+        return new Explanation($this->digest($model), $trace->rules());
+    }
+
+    private function digest(QueryModel $model): Digest
+    {
         $textProfile = new RenderProfile(
             new LiteralValueRenderer($this->options->redactor()),
             false,
@@ -73,7 +90,7 @@ final class Formatter
             $this->options->maxValues(),
             false,
             false,
-            $this->options->includeAggNames()
+            $this->options->includeAggNames(),
         );
 
         $normalization = $this->options->normalization();
@@ -86,7 +103,7 @@ final class Formatter
             $this->options->maxValues(),
             $normalization->erasesCardinality(),
             $normalization->erasesPagination(),
-            $this->options->includeAggNames()
+            $this->options->includeAggNames(),
         );
 
         $text = $this->renderer->render($model, $textProfile);
@@ -102,42 +119,47 @@ final class Formatter
             Truncator::apply($text, $this->options->maxLength()),
             Truncator::apply($signature, $this->options->maxLength()),
             $this->hasher->hash($hashInput),
-            $model->notes()
+            $model->notes(),
         );
     }
 
     /**
      * Same as {@see describe()} but nothing is parsed until the value is read.
      *
-     * @param array<string,mixed>|string $request
+     * @param array<mixed>|string $request
      */
     public function lazy($request, ?string $index = null): LazyDigest
     {
-        return new LazyDigest(function () use ($request, $index): Digest {
-            return $this->describe($request, $index);
-        });
+        return new LazyDigest(fn(): Digest => $this->describe($request, $index));
     }
 
     /**
-     * @param array<string,mixed> $request
+     * @param array<mixed> $request
      */
-    private function model(array $request, ?string $index): QueryModel
+    private function model(array $request, ?string $index, Trace $trace): QueryModel
     {
-        $model = $this->parser->parse($request, $index);
+        $model = $this->parser->parse($request, $index, $trace);
 
         $query = $model->query();
+        $postFilter = $model->postFilter();
         $model = $model->withTree(
-            $query !== null ? $this->canonicalizer->node($query) : null,
-            $this->canonicalizer->aggs($model->aggs())
+            $query !== null ? $this->canonicalizer->node($query, $trace) : null,
+            $postFilter !== null ? $this->canonicalizer->node($postFilter, $trace) : null,
+            $this->canonicalizer->aggs($model->aggs(), $trace),
         );
 
-        return $model->withIndex($this->options->indexNormalizer()->normalize($model->index()));
+        $pattern = $this->options->indexNormalizer()->normalize($model->index());
+        if ($pattern !== $model->index()) {
+            $trace->record(Rule::INDEX_PATTERN, $model->index() . ' -> ' . $pattern);
+        }
+
+        return $model->withIndex($pattern);
     }
 
     /**
      * @param mixed $request
      *
-     * @return array<string,mixed>
+     * @return array<mixed>
      */
     private function toArray($request): array
     {
@@ -149,13 +171,11 @@ final class Formatter
             throw InvalidQueryException::unexpectedType(gettype($request));
         }
 
-        /** @var mixed $decoded */
         $decoded = json_decode($request, true);
         if (!is_array($decoded)) {
             throw InvalidQueryException::notDecodable(json_last_error_msg());
         }
 
-        /** @var array<string,mixed> $decoded */
         return $decoded;
     }
 }

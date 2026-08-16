@@ -44,16 +44,17 @@ $ref = is_string($ref) && $ref !== '' ? $ref : 'main';
 $raw = [];
 foreach (FILES as $path) {
     fwrite(STDOUT, "fetching {$path} @ {$ref}\n");
-    $raw[$path] = fetch("https://raw.githubusercontent.com/" . REPO . "/{$ref}/{$path}");
+    $raw[$path] = fetch('https://raw.githubusercontent.com/' . REPO . "/{$ref}/{$path}");
 }
 
-$querySpec = Yaml::parse($raw[FILES[0]]);
-$queryTypes = array_keys($querySpec['components']['schemas']['QueryContainer']['properties']);
+$queryTypes = array_map(
+    'strval',
+    array_keys(dig(Yaml::parse($raw[FILES[0]]), ['components', 'schemas', 'QueryContainer', 'properties'])),
+);
 sort($queryTypes, SORT_STRING);
 
-$aggSpec = Yaml::parse($raw[FILES[1]]);
-$schemas = $aggSpec['components']['schemas'];
-$members = $schemas['AggregationContainer']['allOf'][1]['oneOf'];
+$schemas = dig(Yaml::parse($raw[FILES[1]]), ['components', 'schemas']);
+$members = dig($schemas, ['AggregationContainer', 'allOf', 1, 'oneOf']);
 
 $aggTypes = [];
 foreach ($members as $member) {
@@ -84,40 +85,68 @@ $snapshot = [
 $output = __DIR__ . '/../resources/opensearch-spec.json';
 file_put_contents(
     $output,
-    json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n"
+    json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n",
 );
 
 fwrite(STDOUT, sprintf(
     "wrote %d query types and %d aggregation types\n",
     count($queryTypes),
-    count($aggTypes)
+    count($aggTypes),
 ));
 fwrite(STDOUT, "now run the tests — SpecCoverageTest will flag anything new.\n");
 
 /**
+ * Walk a decoded spec tree along `$path`, giving up on `[]` the moment the road
+ * ends.
+ *
+ * The specification is YAML published by someone else: every level is `mixed`
+ * until something checks it. Doing that checking once, here, is what keeps the
+ * reading code above legible.
+ *
+ * @param mixed                 $node
+ * @param array<int,string|int> $path
+ *
+ * @return array<mixed>
+ */
+function dig($node, array $path): array
+{
+    foreach ($path as $step) {
+        if (!is_array($node) || !array_key_exists($step, $node)) {
+            return [];
+        }
+        $node = $node[$step];
+    }
+
+    return is_array($node) ? $node : [];
+}
+
+/**
  * Collect the property names one oneOf member contributes, following $ref.
  *
- * @param array<string,mixed> $schemas
- * @param array<string,mixed> $node
+ * @param array<mixed> $schemas
+ * @param mixed        $node
  *
  * @return array<int,string>
  */
-function namesFrom(array $schemas, array $node, int $depth = 0): array
+function namesFrom(array $schemas, $node, int $depth = 0): array
 {
+    if (!is_array($node)) {
+        return [];
+    }
+
     $names = [];
 
-    if (isset($node['$ref']) && $depth < 3) {
-        $target = $schemas[basename((string) $node['$ref'])] ?? [];
+    $ref = $node['$ref'] ?? null;
+    if (is_string($ref) && $depth < 3) {
+        $target = dig($schemas, [basename($ref)]);
         $members = isset($target['allOf']) && is_array($target['allOf']) ? $target['allOf'] : [$target];
         foreach ($members as $member) {
-            if (is_array($member)) {
-                $names = array_merge($names, namesFrom($schemas, $member, $depth + 1));
-            }
+            $names = array_merge($names, namesFrom($schemas, $member, $depth + 1));
         }
     }
 
     if (isset($node['properties']) && is_array($node['properties'])) {
-        $names = array_merge($names, array_map('strval', array_keys($node['properties'])));
+        return array_merge($names, array_map('strval', array_keys($node['properties'])));
     }
 
     return $names;
@@ -147,11 +176,9 @@ function maxVersion(array $documents): ?string
     }
 
     $versions = array_keys($found);
-    usort($versions, static function (string $a, string $b): int {
-        return version_compare($a, $b);
-    });
+    usort($versions, static fn(string $a, string $b): int => version_compare($a, $b));
 
-    return (string) end($versions);
+    return end($versions);
 }
 
 /**
@@ -161,11 +188,14 @@ function headCommit(string $ref): array
 {
     try {
         $payload = json_decode(fetch('https://api.github.com/repos/' . REPO . '/commits/' . $ref), true);
-        if (!is_array($payload) || !isset($payload['sha'])) {
+        $sha = is_array($payload) ? $payload['sha'] ?? null : null;
+        if (!is_string($sha)) {
             throw new RuntimeException('unexpected payload');
         }
 
-        return [(string) $payload['sha'], (string) ($payload['commit']['committer']['date'] ?? '')];
+        $date = dig($payload, ['commit', 'committer'])['date'] ?? '';
+
+        return [$sha, is_string($date) ? $date : ''];
     } catch (Throwable $error) {
         // Rate limiting or offline: the snapshot is still valid, just less traceable.
         fwrite(STDERR, '  ! could not read commit metadata: ' . $error->getMessage() . "\n");
@@ -188,7 +218,7 @@ function fetch(string $url): string
         curl_setopt($handle, CURLOPT_USERAGENT, $userAgent);
         curl_setopt($handle, CURLOPT_HTTPHEADER, ['Accept: application/vnd.github+json']);
         $body = curl_exec($handle);
-        $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
+        $status = curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
         $error = curl_error($handle);
         curl_close($handle);
 

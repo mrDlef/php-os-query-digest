@@ -13,8 +13,7 @@ namespace MrDlef\OsQueryDigest\Support;
  */
 final class IndexNormalizer
 {
-    /** @var bool */
-    private $collapse;
+    private bool $collapse;
 
     private function __construct(bool $collapse)
     {

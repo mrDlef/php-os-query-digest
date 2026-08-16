@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Parser;
 
-use MrDlef\OsQueryDigest\Tree\QueryModel;
+use MrDlef\OsQueryDigest\Explain\Rule;
+use MrDlef\OsQueryDigest\Explain\Trace;
 use MrDlef\OsQueryDigest\Support\Arr;
+use MrDlef\OsQueryDigest\Tree\QueryModel;
 
 /**
  * Reads a whole search request: index, query, aggs, and the options that carry
@@ -23,13 +25,11 @@ final class RequestParser
         'explain', 'profile', 'preference', 'ext', 'stats',
     ];
 
-    private const RENDERED = ['query', 'aggs', 'aggregations', 'size', 'from', 'sort'];
+    private const RENDERED = ['query', 'post_filter', 'aggs', 'aggregations', 'size', 'from', 'sort'];
 
-    /** @var QueryParser */
-    private $queryParser;
+    private QueryParser $queryParser;
 
-    /** @var AggParser */
-    private $aggParser;
+    private AggParser $aggParser;
 
     public function __construct()
     {
@@ -38,22 +38,22 @@ final class RequestParser
     }
 
     /**
-     * @param array<string,mixed> $request a search body, or an
-     *                                     `['index' => …, 'body' => …]` envelope
-     *                                     as produced by opensearch-php
+     * @param array<mixed> $request a search body, or an
+     *                              `['index' => …, 'body' => …]` envelope
+     *                              as produced by opensearch-php
      */
-    public function parse(array $request, ?string $index = null): QueryModel
+    public function parse(array $request, ?string $index = null, ?Trace $trace = null): QueryModel
     {
+        $trace ??= new Trace();
         $body = $request;
 
         if (array_key_exists('body', $request) && is_array($request['body'])) {
             $envelopeIndex = Arr::get($request, 'index');
             if ($index === null && $envelopeIndex !== null) {
                 $index = is_array($envelopeIndex)
-                    ? implode(',', array_map('strval', $envelopeIndex))
-                    : (string) $envelopeIndex;
+                    ? implode(',', Arr::strings($envelopeIndex))
+                    : Arr::str($envelopeIndex);
             }
-            /** @var array<string,mixed> $body */
             $body = $request['body'];
         }
 
@@ -62,7 +62,16 @@ final class RequestParser
         $query = null;
         $rawQuery = Arr::get($body, 'query');
         if (is_array($rawQuery) && $rawQuery !== []) {
-            $query = $this->queryParser->parse($rawQuery);
+            $query = $this->queryParser->parse($rawQuery, $trace);
+            $notes = array_merge($notes, $this->queryParser->notes());
+        }
+
+        // Parsed second, and its notes collected right away: the parser resets
+        // them on every call.
+        $postFilter = null;
+        $rawPostFilter = Arr::get($body, 'post_filter');
+        if (is_array($rawPostFilter) && $rawPostFilter !== []) {
+            $postFilter = $this->queryParser->parse($rawPostFilter, $trace);
             $notes = array_merge($notes, $this->queryParser->notes());
         }
 
@@ -76,7 +85,11 @@ final class RequestParser
 
         foreach (array_keys($body) as $key) {
             $key = (string) $key;
-            if (in_array($key, self::RENDERED, true) || in_array($key, self::NOISE, true)) {
+            if (in_array($key, self::RENDERED, true)) {
+                continue;
+            }
+            if (in_array($key, self::NOISE, true)) {
+                $trace->record(Rule::SECTION_IGNORED, $key);
                 continue;
             }
             $notes[] = '+' . $key;
@@ -85,13 +98,14 @@ final class RequestParser
         sort($notes);
 
         return new QueryModel(
-            $index !== null ? $index : '',
+            $index ?? '',
             $query,
+            $postFilter,
             $aggs,
             $this->intOrNull(Arr::get($body, 'size')),
             $this->intOrNull(Arr::get($body, 'from')),
             $this->sort(Arr::get($body, 'sort')),
-            array_values(array_unique($notes))
+            array_values(array_unique($notes)),
         );
     }
 

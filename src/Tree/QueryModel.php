@@ -9,20 +9,23 @@ namespace MrDlef\OsQueryDigest\Tree;
  */
 final class QueryModel
 {
-    /** @var string */
-    private $index;
+    private string $index;
 
-    /** @var Node|null */
-    private $query;
+    private ?Node $query;
+
+    /**
+     * `post_filter` runs after the aggregations, so it narrows the hits without
+     * narrowing the buckets. Merging it into the query would describe a
+     * different request, hence its own slot.
+     */
+    private ?Node $postFilter;
 
     /** @var AggNode[] */
-    private $aggs;
+    private array $aggs;
 
-    /** @var int|null */
-    private $size;
+    private ?int $size;
 
-    /** @var int|null */
-    private $from;
+    private ?int $from;
 
     /**
      * Ordered list of [field, direction] pairs. Order is significant here, so
@@ -30,7 +33,7 @@ final class QueryModel
      *
      * @var array<int,array{0:string,1:string}>
      */
-    private $sort;
+    private array $sort;
 
     /**
      * Everything acknowledged but not rendered inline: non-filtering `should`
@@ -38,16 +41,17 @@ final class QueryModel
      *
      * @var array<int,string>
      */
-    private $notes;
+    private array $notes;
 
     /**
-     * @param AggNode[]                          $aggs
+     * @param AggNode[]                           $aggs
      * @param array<int,array{0:string,1:string}> $sort
-     * @param array<int,string>                  $notes
+     * @param array<int,string>                   $notes
      */
     public function __construct(
         string $index,
         ?Node $query,
+        ?Node $postFilter = null,
         array $aggs = [],
         ?int $size = null,
         ?int $from = null,
@@ -56,6 +60,7 @@ final class QueryModel
     ) {
         $this->index = $index;
         $this->query = $query;
+        $this->postFilter = $postFilter;
         $this->aggs = array_values($aggs);
         $this->size = $size;
         $this->from = $from;
@@ -71,6 +76,11 @@ final class QueryModel
     public function query(): ?Node
     {
         return $this->query;
+    }
+
+    public function postFilter(): ?Node
+    {
+        return $this->postFilter;
     }
 
     /**
@@ -109,14 +119,32 @@ final class QueryModel
 
     public function withIndex(string $index): self
     {
-        return new self($index, $this->query, $this->aggs, $this->size, $this->from, $this->sort, $this->notes);
+        return new self(
+            $index,
+            $this->query,
+            $this->postFilter,
+            $this->aggs,
+            $this->size,
+            $this->from,
+            $this->sort,
+            $this->notes,
+        );
     }
 
     /**
      * @param AggNode[] $aggs
      */
-    public function withTree(?Node $query, array $aggs): self
+    public function withTree(?Node $query, ?Node $postFilter, array $aggs): self
     {
-        return new self($this->index, $query, $aggs, $this->size, $this->from, $this->sort, $this->notes);
+        return new self(
+            $this->index,
+            $query,
+            $postFilter,
+            $aggs,
+            $this->size,
+            $this->from,
+            $this->sort,
+            $this->notes,
+        );
     }
 }

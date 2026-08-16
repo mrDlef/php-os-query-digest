@@ -7,6 +7,7 @@ namespace MrDlef\OsQueryDigest\Tests;
 use MrDlef\OsQueryDigest\Formatter;
 use MrDlef\OsQueryDigest\Normalization;
 use MrDlef\OsQueryDigest\Options;
+use MrDlef\OsQueryDigest\Support\Arr;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -36,14 +37,12 @@ final class FixtureTest extends TestCase
         foreach (self::directories() as $name => $directory) {
             $input = self::readJson($directory . '/input.json');
 
-            $options = self::options(
-                isset($input['options']) && is_array($input['options']) ? $input['options'] : []
-            );
-            /** @var array<string,mixed> $request */
-            $request = $input['request'];
+            $options = self::options(Arr::arr($input, 'options'));
+            $request = Arr::arr($input, 'request');
+            $index = Arr::get($input, 'index');
 
             $digest = Formatter::create($options)
-                ->describe($request, isset($input['index']) ? (string) $input['index'] : null)
+                ->describe($request, $index === null ? null : Arr::str($index))
                 ->toArray();
 
             $file = $directory . '/expected.json';
@@ -51,7 +50,7 @@ final class FixtureTest extends TestCase
             if ($updating) {
                 $written = file_put_contents(
                     $file,
-                    json_encode($digest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n"
+                    json_encode($digest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n",
                 );
                 self::assertNotFalse($written, 'Could not rewrite ' . $file);
                 continue;
@@ -86,45 +85,50 @@ final class FixtureTest extends TestCase
     }
 
     /**
-     * @param array<string,mixed> $spec
+     * @param array<mixed> $spec
      */
     private static function options(array $spec): Options
     {
         $options = Options::create();
 
-        if (isset($spec['normalization'])) {
-            $level = (string) $spec['normalization'];
-            if ($level === Normalization::NONE) {
-                $options = $options->withNormalization(Normalization::none());
-            } elseif ($level === Normalization::STRUCTURAL) {
-                $options = $options->withNormalization(Normalization::structural());
-            }
+        $level = Arr::str(Arr::get($spec, 'normalization'));
+        if ($level === Normalization::NONE) {
+            $options = $options->withNormalization(Normalization::none());
+        } elseif ($level === Normalization::STRUCTURAL) {
+            $options = $options->withNormalization(Normalization::structural());
         }
 
         if (array_key_exists('maxValues', $spec)) {
-            $options = $options->withMaxValues($spec['maxValues'] === null ? null : (int) $spec['maxValues']);
+            $options = $options->withMaxValues(self::intOrNull($spec['maxValues']));
         }
 
         if (array_key_exists('maxClauses', $spec)) {
-            $options = $options->withMaxClauses($spec['maxClauses'] === null ? null : (int) $spec['maxClauses']);
+            $options = $options->withMaxClauses(self::intOrNull($spec['maxClauses']));
         }
 
-        if (!empty($spec['aggNames'])) {
-            $options = $options->withAggNames(true);
+        if (Arr::get($spec, 'aggNames') === true) {
+            return $options->withAggNames(true);
         }
 
         return $options;
     }
 
     /**
-     * @return array<string,mixed>
+     * @param mixed $value
+     */
+    private static function intOrNull($value): ?int
+    {
+        return is_numeric($value) ? (int) $value : null;
+    }
+
+    /**
+     * @return array<mixed>
      */
     private static function readJson(string $file): array
     {
         $contents = file_get_contents($file);
         self::assertIsString($contents, 'Unreadable fixture: ' . $file);
 
-        /** @var array<string,mixed> $decoded */
         $decoded = json_decode($contents, true);
         self::assertIsArray($decoded, 'Invalid JSON in ' . $file);
 

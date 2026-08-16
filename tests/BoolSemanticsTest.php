@@ -14,8 +14,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class BoolSemanticsTest extends TestCase
 {
-    /** @var Formatter */
-    private $formatter;
+    private Formatter $formatter;
 
     protected function setUp(): void
     {
@@ -87,12 +86,15 @@ final class BoolSemanticsTest extends TestCase
 
     public function testUnknownClausesStaySignalledInsteadOfDropped(): void
     {
+        // A span query: deliberately left opaque — nobody debugs those from a
+        // log line — which makes it the right probe for "signalled, not
+        // dropped".
         $digest = $this->formatter->describe(['query' => ['bool' => ['filter' => [
-            ['script' => ['script' => ['source' => "doc['a'].value > 5"]]],
+            ['span_term' => ['a' => 'x']],
             ['exists' => ['field' => 'host']],
         ]]]]);
 
-        self::assertStringContainsString('script(?)', $digest->text());
+        self::assertStringContainsString('span_term(?)', $digest->text());
         self::assertStringContainsString('host:*', $digest->text());
     }
 

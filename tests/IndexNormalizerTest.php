@@ -53,13 +53,13 @@ final class IndexNormalizerTest extends TestCase
     public function testNormalizationCanBeDisabled(): void
     {
         $formatter = Formatter::create(
-            Options::create()->withIndexNormalizer(IndexNormalizer::identity())
+            Options::create()->withIndexNormalizer(IndexNormalizer::identity()),
         );
         $request = ['query' => ['term' => ['service' => 'api']]];
 
         self::assertNotSame(
             $formatter->describe($request, 'logs-2026.08.13')->hash(),
-            $formatter->describe($request, 'logs-2026.08.14')->hash()
+            $formatter->describe($request, 'logs-2026.08.14')->hash(),
         );
     }
 }

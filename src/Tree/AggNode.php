@@ -7,13 +7,13 @@ namespace MrDlef\OsQueryDigest\Tree;
 final class AggNode
 {
     /** @var string user-given name, e.g. "by_host" */
-    private $name;
+    private string $name;
 
     /** @var string agg type, e.g. "terms", "date_histogram", "avg" */
-    private $type;
+    private string $type;
 
     /** @var string|null the field it runs on, when it has one */
-    private $field;
+    private ?string $field;
 
     /**
      * Rendered-as-is extra parameters (size, interval, percents…), already
@@ -21,10 +21,10 @@ final class AggNode
      *
      * @var array<int,string>
      */
-    private $params;
+    private array $params;
 
     /** @var AggNode[] */
-    private $children;
+    private array $children;
 
     /**
      * @param array<int,string> $params
@@ -90,7 +90,7 @@ final class AggNode
             $keys[] = $child->sortKey();
         }
 
-        return $this->type . '(' . (string) $this->field . ';' . implode(',', $this->params) . ')'
+        return $this->type . '(' . $this->field . ';' . implode(',', $this->params) . ')'
             . ($keys === [] ? '' : '>[' . implode(',', $keys) . ']');
     }
 }

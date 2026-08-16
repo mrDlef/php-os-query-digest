@@ -11,37 +11,28 @@ use MrDlef\OsQueryDigest\Support\IndexNormalizer;
  */
 final class Options
 {
-    /** @var Normalization */
-    private $normalization;
+    private Normalization $normalization;
 
-    /** @var int|null */
-    private $maxClauses = 12;
+    private ?int $maxClauses = 12;
 
-    /** @var int|null */
-    private $maxValues = 5;
+    private ?int $maxValues = 5;
 
-    /** @var int|null */
-    private $maxLength = 512;
+    private ?int $maxLength = 512;
 
-    /** @var IndexNormalizer */
-    private $indexNormalizer;
+    private IndexNormalizer $indexNormalizer;
 
     /** @var callable|null */
     private $redactor;
 
-    /** @var bool */
-    private $includeAggNames = false;
+    private bool $includeAggNames = false;
 
-    /** @var int */
-    private $hashLength = 12;
+    private int $hashLength = 12;
 
     /**
      * Bumped whenever the normalisation rules change, so an algorithm change is
      * visible in the data instead of silently rewriting every dashboard.
-     *
-     * @var string
      */
-    private $hashVersion = 'q1';
+    private string $hashVersion = 'q1';
 
     private function __construct()
     {

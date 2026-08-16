@@ -17,11 +17,23 @@ final class LeafNode implements Node
     public const OP_RANGE = 'range';
     public const OP_RAW = 'raw';
 
-    /** @var string */
-    private $field;
+    /** Vector search. Values are the search parameters, keyed: k, min_score… */
+    public const OP_KNN = 'knn';
+    public const OP_NEURAL = 'neural';
 
-    /** @var string */
-    private $op;
+    /** Geo. The shape itself is a value; only the radius survives rendering. */
+    public const OP_GEO_DISTANCE = 'geo_distance';
+    public const OP_GEO_BBOX = 'geo_bbox';
+
+    /** A painless script. Fieldless: it can read anything. */
+    public const OP_SCRIPT = 'script';
+
+    /** `more_like_this`. Values are the documents or texts to look like. */
+    public const OP_LIKE = 'like';
+
+    private string $field;
+
+    private string $op;
 
     /**
      * For OP_RANGE: an ordered map of bound => value (gte/gt/lte/lt).
@@ -29,7 +41,7 @@ final class LeafNode implements Node
      *
      * @var array<string|int,mixed>
      */
-    private $values;
+    private array $values;
 
     /**
      * @param array<string|int,mixed> $values

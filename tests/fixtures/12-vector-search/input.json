@@ -1,0 +1,31 @@
+{
+    "index": "products-v3",
+    "request": {
+        "query": {
+            "bool": {
+                "should": [
+                    {
+                        "knn": {
+                            "image_embedding": {
+                                "vector": [ 0.12, -0.34, 0.98, 0.01 ],
+                                "k": 20,
+                                "filter": { "term": { "in_stock": true } }
+                            }
+                        }
+                    },
+                    {
+                        "neural": {
+                            "text_embedding": {
+                                "query_text": "waterproof hiking boots",
+                                "model_id": "aVeryLongModelId",
+                                "k": 20
+                            }
+                        }
+                    }
+                ],
+                "minimum_should_match": 1
+            }
+        },
+        "size": 20
+    }
+}

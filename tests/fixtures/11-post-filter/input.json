@@ -1,0 +1,25 @@
+{
+    "index": "shop-catalog",
+    "request": {
+        "query": {
+            "bool": {
+                "filter": [
+                    { "match": { "name": "running shoes" } },
+                    { "range": { "price": { "gte": 20, "lt": 200 } } }
+                ]
+            }
+        },
+        "aggs": {
+            "by_brand": { "terms": { "field": "brand", "size": 20 } }
+        },
+        "post_filter": {
+            "bool": {
+                "filter": [
+                    { "term": { "brand": "acme" } },
+                    { "term": { "in_stock": true } }
+                ]
+            }
+        },
+        "size": 24
+    }
+}
