@@ -35,3 +35,46 @@ services:
              status=$$?;
              rm -f composer.lock;
              exit $$status"
+
+  # Real clusters, for `make certify`. Behind a profile so they never start for
+  # the unit suite: that one is offline and must stay that way.
+  #
+  # Security is disabled on purpose. These nodes hold an empty index for a few
+  # seconds and are thrown away; a password would only buy ceremony, and 2.12+
+  # otherwise refuses to boot without OPENSEARCH_INITIAL_ADMIN_PASSWORD.
+  os2:
+    profiles: [certify]
+    image: opensearchproject/opensearch:${OS2_VERSION:-2}
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      # The default heap is a quarter of host RAM, which on a dev machine is
+      # gigabytes for an index that stays empty.
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+      # A dev machine with a full-ish disk trips the flood-stage watermark, and
+      # the node then refuses to create the index with a bare
+      # `index_create_block_exception` — nothing to do with the queries under
+      # test. The node is empty and disposable, so the watermark buys nothing.
+      cluster.routing.allocation.disk.threshold_enabled: "false"
+    ports:
+      - "9202:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  os3:
+    profiles: [certify]
+    image: opensearchproject/opensearch:${OS3_VERSION:-3}
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9203:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 40

@@ -248,16 +248,41 @@ are listed in the notes.
 
 ### Which OpenSearch version
 
-The snapshot in `resources/opensearch-spec.json` records the spec commit it came
-from, the date, and an `opensearch_version_floor` — the highest release named by
-an `x-version-added` marker in the fetched schemas.
+**Certified against OpenSearch 2.19.6 and 3.8.0.** Not inferred from the
+specification — every query type is sent to a real node of each, and
+`resources/versions.json` records what came back:
 
-That floor is a *floor*, not a certificate: the spec does not tag every type
-with the version that introduced it, so it means "this snapshot knows about
-features up to that release", not "every feature of that release is handled
-natively". The per-type truth is `resources/coverage.json`.
+| | |
+|---|---|
+| 53 types | probed against live clusters |
+| 52 | accepted by 2.19.6 |
+| 53 | accepted by 3.8.0 |
+| 6 | cannot be probed, each with a written reason |
 
-To check whether OpenSearch has moved:
+`combined_fields` is the one difference the specification could not have told
+you: it is listed as a query type, 3.x accepts it, and 2.19.6 answers `unknown
+query [combined_fields]`.
+
+The six unprobed types are not a gap left quiet — `resources/probes.json` says
+why each one cannot have a probe. `neural` needs a deployed model id, `sltr`
+needs a plugin absent from the official image, `agentic` needs a configured
+agent, `hybrid` needs a search pipeline, `template` lives behind a different
+endpoint, and `type` was removed with mapping types. Certifying those would test
+someone's cluster configuration, not this library.
+
+```bash
+make certify       # boot 2.x and 3.x, re-probe, rewrite resources/versions.json
+make integration   # replay the committed matrix against live nodes
+```
+
+`make certify` refuses to record a probe that fails for any reason other than
+"unknown query": our own malformed DSL must never be filed as a version
+difference. A scheduled workflow replays the matrix weekly, so a version that
+changes its mind about a query type surfaces on its own instead of during
+someone's release.
+
+The spec snapshot is still there and still useful for a different question —
+*has OpenSearch grown a type we have never heard of?*
 
 ```bash
 make spec                    # refresh from the spec, then run the coverage test
@@ -265,7 +290,7 @@ make spec SPEC_REF=e027edc   # or pin a commit for a reproducible snapshot
 ```
 
 If OpenSearch has added a query type, the test fails until it is classified in
-`coverage.json`.
+`coverage.json` — and `make certify` then fails until it is probed or explained.
 
 The spec is published as YAML and PHP has no core YAML parser, so
 `tools/refresh-spec.php` uses `symfony/yaml` — a **require-dev** dependency, so
