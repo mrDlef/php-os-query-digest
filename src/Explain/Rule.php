@@ -22,6 +22,7 @@ final class Rule implements \JsonSerializable
     public const SCRIPT_SCORE_UNWRAPPED = 'script_score_unwrapped';
     public const BOOSTING_UNWRAPPED = 'boosting_unwrapped';
     public const TERMS_LOOKUP = 'terms_lookup';
+    public const INDEXED_SHAPE = 'indexed_shape';
 
     // Tree rewrites applied by the canonicaliser.
     public const FLATTEN = 'flatten';
@@ -51,6 +52,7 @@ final class Rule implements \JsonSerializable
         self::SCRIPT_SCORE_UNWRAPPED => 'script_score was replaced by its inner query: the script only rescores. A min_score, which does exclude documents, is reported in the notes.',
         self::BOOSTING_UNWRAPPED => 'boosting was replaced by its positive clause: negative demotes, it does not exclude.',
         self::TERMS_LOOKUP => 'A terms lookup became a placeholder: its values live in another document.',
+        self::INDEXED_SHAPE => 'A shape query pointed at a pre-indexed geometry: what it is cannot be read from the query, only that it is indexed.',
         self::FLATTEN => 'Nested connectors of the same kind were flattened.',
         self::UNWRAP => 'A single-clause connector was replaced by that clause.',
         self::DEDUPE => 'Identical sibling clauses were de-duplicated.',

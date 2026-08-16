@@ -149,6 +149,14 @@ final class SpecCoverageTest extends TestCase
                     'top_left' => ['lat' => 1, 'lon' => 0],
                     'bottom_right' => ['lat' => 0, 'lon' => 1],
                 ]];
+            case 'geo_polygon':
+                return ['f' => ['points' => [['lat' => 0, 'lon' => 0], ['lat' => 1, 'lon' => 1]]]];
+            case 'geo_shape':
+            case 'xy_shape':
+                return ['f' => [
+                    'shape' => ['type' => 'envelope', 'coordinates' => [[0, 1], [1, 0]]],
+                    'relation' => 'within',
+                ]];
             case 'script':
                 return ['script' => ['source' => "doc['f'].value > 1"]];
             case 'has_child':

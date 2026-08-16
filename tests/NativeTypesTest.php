@@ -97,6 +97,112 @@ final class NativeTypesTest extends TestCase
         self::assertSame('q=(delivery_area:geo_bbox())', $digest->text());
     }
 
+    public function testGeoPolygonRendersAsFieldAndShape(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['geo_polygon' => [
+            'location' => ['points' => [
+                ['lat' => 48.9, 'lon' => 2.2],
+                ['lat' => 48.8, 'lon' => 2.4],
+                ['lat' => 48.9, 'lon' => 2.5],
+            ]],
+        ]]]);
+
+        self::assertSame('q=(location:geo_polygon())', $digest->text());
+    }
+
+    /**
+     * The relation is not a parameter of a shape query, it *is* the query:
+     * `within` and `disjoint` on the same polygon return opposite result sets.
+     * Erasing it would be the geo equivalent of erasing a `not`.
+     */
+    public function testAShapeRelationSurvivesIntoTheSignature(): void
+    {
+        $within = ['query' => ['geo_shape' => ['zone' => [
+            'shape' => ['type' => 'polygon', 'coordinates' => [[[0, 0], [1, 0], [1, 1], [0, 0]]]],
+            'relation' => 'within',
+        ]]]];
+        $disjoint = ['query' => ['geo_shape' => ['zone' => [
+            'shape' => ['type' => 'polygon', 'coordinates' => [[[0, 0], [1, 0], [1, 1], [0, 0]]]],
+            'relation' => 'disjoint',
+        ]]]];
+
+        self::assertSame('q=(zone:geo_shape(polygon,within))', $this->formatter->describe($within)->text());
+        self::assertSame('q=(zone:geo_shape(polygon,within))', $this->formatter->describe($within)->signature());
+        self::assertNotSame(
+            $this->formatter->describe($within)->hash(),
+            $this->formatter->describe($disjoint)->hash(),
+        );
+    }
+
+    /**
+     * The coordinates are the value: the same search over a slightly different
+     * polygon is the same kind of query.
+     */
+    public function testTwoGeometriesOfTheSameKindShareAFingerprint(): void
+    {
+        $one = ['query' => ['geo_shape' => ['zone' => [
+            'shape' => ['type' => 'envelope', 'coordinates' => [[0, 1], [1, 0]]],
+        ]]]];
+        $two = ['query' => ['geo_shape' => ['zone' => [
+            'shape' => ['type' => 'envelope', 'coordinates' => [[10, 11], [11, 10]]],
+        ]]]];
+
+        self::assertSame(
+            $this->formatter->describe($one)->hash(),
+            $this->formatter->describe($two)->hash(),
+        );
+    }
+
+    /**
+     * `intersects` is what OpenSearch assumes when the query says nothing, so
+     * writing it and omitting it must produce the same fingerprint.
+     */
+    public function testAnAbsentRelationRendersAsTheDefaultOpenSearchApplies(): void
+    {
+        $implicit = ['query' => ['geo_shape' => ['zone' => [
+            'shape' => ['type' => 'point', 'coordinates' => [0, 0]],
+        ]]]];
+        $explicit = ['query' => ['geo_shape' => ['zone' => [
+            'shape' => ['type' => 'point', 'coordinates' => [0, 0]],
+            'relation' => 'INTERSECTS',
+        ]]]];
+
+        self::assertSame('q=(zone:geo_shape(point,intersects))', $this->formatter->describe($implicit)->text());
+        self::assertSame(
+            $this->formatter->describe($implicit)->hash(),
+            $this->formatter->describe($explicit)->hash(),
+        );
+    }
+
+    public function testXyShapeReadsLikeItsGeoCounterpart(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['xy_shape' => ['geometry' => [
+            'shape' => ['type' => 'envelope', 'coordinates' => [[0, 10], [10, 0]]],
+            'relation' => 'contains',
+        ]]]]);
+
+        self::assertSame('q=(geometry:xy_shape(envelope,contains))', $digest->text());
+    }
+
+    /**
+     * A pre-indexed geometry cannot be read from the query at all — only that
+     * it is indexed. Saying so beats inventing a shape.
+     */
+    public function testAnIndexedShapeIsSignalledRatherThanGuessed(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['geo_shape' => ['zone' => [
+            'indexed_shape' => ['index' => 'shapes', 'id' => 'dept-75', 'path' => 'geometry'],
+            'relation' => 'within',
+        ]]]]);
+
+        self::assertSame('q=(zone:geo_shape(indexed,within)) | indexed_shape', $digest->text());
+
+        $explanation = $this->formatter->explain(['query' => ['geo_shape' => ['zone' => [
+            'indexed_shape' => ['index' => 'shapes', 'id' => 'dept-75'],
+        ]]]]);
+        self::assertTrue($explanation->has(Rule::INDEXED_SHAPE));
+    }
+
     public function testScriptShowsItsSourceInTheLineAndHidesItInTheSignature(): void
     {
         $digest = $this->formatter->describe(['query' => ['script' => [
@@ -363,6 +469,9 @@ final class NativeTypesTest extends TestCase
             'has_child' => ['query' => ['has_child' => ['type' => 'review']]],
             'more_like_this' => ['query' => ['more_like_this' => ['fields' => ['a']]]],
             'parent_id' => ['query' => ['parent_id' => ['type' => 'review']]],
+            'geo_polygon' => ['query' => ['geo_polygon' => ['validation_method' => 'STRICT']]],
+            'geo_shape' => ['query' => ['geo_shape' => ['zone' => ['relation' => 'within']]]],
+            'xy_shape' => ['query' => ['xy_shape' => []]],
         ];
 
         foreach ($cases as $type => $request) {

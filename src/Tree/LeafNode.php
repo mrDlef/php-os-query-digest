@@ -24,6 +24,15 @@ final class LeafNode implements Node
     /** Geo. The shape itself is a value; only the radius survives rendering. */
     public const OP_GEO_DISTANCE = 'geo_distance';
     public const OP_GEO_BBOX = 'geo_bbox';
+    public const OP_GEO_POLYGON = 'geo_polygon';
+
+    /**
+     * `geo_shape` / `xy_shape`. Values are the two structural parts, in order:
+     * the kind of geometry and the relation. Unlike every other op, they are
+     * *not* erased in the signature — see {@see \MrDlef\OsQueryDigest\Parser\QueryParser}.
+     */
+    public const OP_GEO_SHAPE = 'geo_shape';
+    public const OP_XY_SHAPE = 'xy_shape';
 
     /** A painless script. Fieldless: it can read anything. */
     public const OP_SCRIPT = 'script';

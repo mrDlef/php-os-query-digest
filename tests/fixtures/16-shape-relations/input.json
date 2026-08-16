@@ -1,0 +1,35 @@
+{
+    "index": "deliveries",
+    "request": {
+        "query": {
+            "bool": {
+                "filter": [
+                    {
+                        "geo_shape": {
+                            "drop_zone": {
+                                "shape": {
+                                    "type": "polygon",
+                                    "coordinates": [ [ [ 2.2, 48.9 ], [ 2.4, 48.8 ], [ 2.5, 48.9 ], [ 2.2, 48.9 ] ] ]
+                                },
+                                "relation": "within"
+                            }
+                        }
+                    },
+                    {
+                        "geo_shape": {
+                            "restricted_area": {
+                                "indexed_shape": {
+                                    "index": "shapes",
+                                    "id": "no-fly-75",
+                                    "path": "geometry"
+                                },
+                                "relation": "disjoint"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "size": 50
+    }
+}
