@@ -2,10 +2,18 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          bootstrap="vendor/autoload.php"
          colors="true"
-         failOnWarning="true">
+         failOnWarning="true"
+         defaultTestSuite="os-query-digest">
     <testsuites>
+        <!-- The default suite: offline, no Docker, no network. Keep it that
+             way — it is what `composer test` and every CI matrix job run. -->
         <testsuite name="os-query-digest">
             <directory>tests</directory>
+            <exclude>tests/Integration</exclude>
+        </testsuite>
+        <!-- Needs a live cluster; skips itself without OPENSEARCH_URL. -->
+        <testsuite name="integration">
+            <directory>tests/Integration</directory>
         </testsuite>
     </testsuites>
 </phpunit>

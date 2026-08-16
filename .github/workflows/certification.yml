@@ -1,0 +1,75 @@
+name: Certification
+
+# Deliberately not on every push. This job boots real OpenSearch nodes, which
+# takes minutes and would slow down the feedback loop on a library that needs
+# nothing but PHP to test. It runs on a schedule instead, so a version of
+# OpenSearch that changes its mind about a query type surfaces on its own rather
+# than during someone's release.
+on:
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      os2:
+        description: 'OpenSearch 2.x image tag'
+        default: '2'
+      os3:
+        description: 'OpenSearch 3.x image tag'
+        default: '3'
+  pull_request:
+    # Only when the certification inputs themselves move.
+    paths:
+      - 'resources/probes.json'
+      - 'resources/versions.json'
+      - 'tools/certify.php'
+      - 'tests/Integration/**'
+      - '.github/workflows/certification.yml'
+
+jobs:
+  replay:
+    name: OpenSearch ${{ matrix.major }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - major: '2.x'
+            tag: '2'
+          - major: '3.x'
+            tag: '3'
+
+    services:
+      opensearch:
+        image: opensearchproject/opensearch:${{ matrix.tag }}
+        env:
+          discovery.type: single-node
+          DISABLE_SECURITY_PLUGIN: 'true'
+          OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+          cluster.routing.allocation.disk.threshold_enabled: 'false'
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -fs http://localhost:9200/_cluster/health || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json, curl
+          coverage: none
+
+      - run: composer update --prefer-dist --no-progress
+
+      # Replays every verdict resources/versions.json records for whichever
+      # version the service container happens to run. A drift in either
+      # direction fails: a query that stopped being accepted, or one the matrix
+      # still calls unsupported after OpenSearch grew it.
+      - name: Replay the certified matrix
+        env:
+          OPENSEARCH_URL: http://localhost:9200
+        run: vendor/bin/phpunit --testsuite=integration

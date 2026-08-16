@@ -5,7 +5,8 @@ PHP_VERSION  ?= 8.3
 export DOCKER_UID := $(shell id -u)
 export DOCKER_GID := $(shell id -g)
 
-.PHONY: test test-all stan cs cs-check rector rector-check check hooks fixtures spec clean
+.PHONY: test test-all stan cs cs-check rector rector-check check hooks fixtures spec \
+        certify integration clusters clusters-down clean
 
 ## Run the test suite in Docker for one PHP version: make test PHP_VERSION=7.4
 test:
@@ -61,6 +62,29 @@ spec:
 	@vendor/bin/phpunit --filter SpecCoverageTest || \
 		echo ">> OpenSearch changed its type list. Classify the new types in resources/coverage.json."
 
+## Start throwaway OpenSearch nodes: 2.x on :9202, 3.x on :9203.
+## --wait blocks on the healthchecks, so the next target never races the boot.
+clusters:
+	docker compose --profile certify up -d --wait os2 os3
+
+clusters-down:
+	docker compose --profile certify down -v
+
+## Re-certify which OpenSearch versions accept the queries we render, and
+## rewrite resources/versions.json. Review the diff before committing.
+## Pin versions: make certify OS2_VERSION=2.11.1 OS3_VERSION=3.0.0
+certify: clusters
+	php tools/certify.php
+	@vendor/bin/phpunit --filter CertificationTest
+	@$(MAKE) clusters-down
+
+## Replay the committed matrix against live nodes. This is the regression
+## guard: it fails if a version stopped behaving the way the file says.
+integration: clusters
+	OPENSEARCH_URL=http://localhost:9202 vendor/bin/phpunit --testsuite=integration
+	OPENSEARCH_URL=http://localhost:9203 vendor/bin/phpunit --testsuite=integration
+	@$(MAKE) clusters-down
+
 clean:
-	docker compose down -v --remove-orphans
+	docker compose --profile certify down -v --remove-orphans
 	rm -rf vendor .vendor .phpunit.result.cache .phpunit.cache

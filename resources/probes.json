@@ -1,0 +1,144 @@
+{
+    "_comment": "Server-valid probe bodies, one per query type in resources/coverage.json. Used by tools/certify.php and tests/Integration — not by the offline suite, whose probes in SpecCoverageTest are deliberately minimal and only have to reach a parser branch. These have to be real DSL: the whole point is that a real cluster accepts them.",
+    "index": {
+        "settings": {
+            "index": { "number_of_shards": 1, "number_of_replicas": 0, "knn": true }
+        },
+        "mappings": {
+            "properties": {
+                "env": { "type": "keyword" },
+                "service": { "type": "keyword" },
+                "msg": { "type": "text" },
+                "title": { "type": "text" },
+                "body": { "type": "text" },
+                "created_at": { "type": "date" },
+                "rating": { "type": "integer" },
+                "votes": { "type": "integer" },
+                "word_count": { "type": "integer" },
+                "price": { "type": "float" },
+                "active": { "type": "boolean" },
+                "location": { "type": "geo_point" },
+                "zone": { "type": "geo_shape" },
+                "geometry": { "type": "xy_shape" },
+                "embedding": { "type": "knn_vector", "dimension": 3 },
+                "popularity": { "type": "rank_feature" },
+                "relation": { "type": "join", "relations": { "article": "comment" } },
+                "saved_query": { "type": "percolator" }
+            }
+        }
+    },
+    "queries": {
+        "bool": { "bool": { "filter": [ { "term": { "env": "prod" } } ] } },
+        "boosting": {
+            "boosting": {
+                "positive": { "term": { "env": "prod" } },
+                "negative": { "term": { "service": "cron" } },
+                "negative_boost": 0.5
+            }
+        },
+        "constant_score": { "constant_score": { "filter": { "term": { "env": "prod" } } } },
+        "dis_max": { "dis_max": { "queries": [ { "term": { "env": "prod" } }, { "match": { "msg": "timeout" } } ] } },
+        "exists": { "exists": { "field": "env" } },
+        "function_score": { "function_score": { "query": { "term": { "env": "prod" } }, "boost": 2 } },
+        "fuzzy": { "fuzzy": { "env": { "value": "prod", "fuzziness": 1 } } },
+        "geo_bounding_box": {
+            "geo_bounding_box": {
+                "location": { "top_left": { "lat": 49.2, "lon": 1.9 }, "bottom_right": { "lat": 48.5, "lon": 2.8 } }
+            }
+        },
+        "geo_distance": { "geo_distance": { "distance": "25km", "location": { "lat": 48.85, "lon": 2.35 } } },
+        "geo_polygon": {
+            "geo_polygon": {
+                "location": { "points": [ { "lat": 48.9, "lon": 2.2 }, { "lat": 48.8, "lon": 2.4 }, { "lat": 48.9, "lon": 2.5 } ] }
+            }
+        },
+        "geo_shape": {
+            "geo_shape": {
+                "zone": {
+                    "shape": { "type": "envelope", "coordinates": [ [ 2.2, 48.9 ], [ 2.5, 48.8 ] ] },
+                    "relation": "within"
+                }
+            }
+        },
+        "has_child": { "has_child": { "type": "comment", "query": { "range": { "rating": { "gte": 4 } } } } },
+        "has_parent": { "has_parent": { "parent_type": "article", "query": { "term": { "active": true } } } },
+        "ids": { "ids": { "values": [ "1", "2" ] } },
+        "knn": { "knn": { "embedding": { "vector": [ 0.1, 0.2, 0.3 ], "k": 3 } } },
+        "match": { "match": { "msg": "timeout" } },
+        "match_all": { "match_all": {} },
+        "match_bool_prefix": { "match_bool_prefix": { "msg": "time out" } },
+        "match_none": { "match_none": {} },
+        "match_phrase": { "match_phrase": { "msg": "connection timeout" } },
+        "match_phrase_prefix": { "match_phrase_prefix": { "msg": "connection tim" } },
+        "more_like_this": { "more_like_this": { "fields": [ "title", "body" ], "like": "distributed consensus", "min_term_freq": 1, "min_doc_freq": 1 } },
+        "multi_match": { "multi_match": { "query": "timeout", "fields": [ "title", "body" ] } },
+        "nested": { "nested": { "path": "obj", "query": { "term": { "obj.f": "x" } }, "ignore_unmapped": true } },
+        "parent_id": { "parent_id": { "type": "comment", "id": "1" } },
+        "prefix": { "prefix": { "env": "pro" } },
+        "query_string": { "query_string": { "query": "env:prod AND msg:timeout" } },
+        "range": { "range": { "created_at": { "gte": "now-15m" } } },
+        "regexp": { "regexp": { "env": "pro.*" } },
+        "script": { "script": { "script": { "source": "doc['word_count'].size() != 0" } } },
+        "script_score": {
+            "script_score": {
+                "query": { "term": { "env": "prod" } },
+                "script": { "source": "_score * 2" },
+                "min_score": 0.1
+            }
+        },
+        "simple_query_string": { "simple_query_string": { "query": "timeout + connection", "fields": [ "msg" ] } },
+        "term": { "term": { "env": "prod" } },
+        "terms": { "terms": { "env": [ "prod", "staging" ] } },
+        "terms_set": { "terms_set": { "env": { "terms": [ "prod", "staging" ], "minimum_should_match_script": { "source": "1" } } } },
+        "wildcard": { "wildcard": { "env": "pro*" } },
+        "xy_shape": {
+            "xy_shape": {
+                "geometry": {
+                    "shape": { "type": "envelope", "coordinates": [ [ 0, 10 ], [ 10, 0 ] ] },
+                    "relation": "within"
+                }
+            }
+        },
+
+        "combined_fields": { "combined_fields": { "query": "timeout", "fields": [ "title", "body" ] } },
+        "common": { "common": { "msg": { "query": "timeout" } } },
+        "distance_feature": { "distance_feature": { "field": "created_at", "pivot": "7d", "origin": "now" } },
+        "field_masking_span": {
+            "field_masking_span": { "query": { "span_term": { "msg": "timeout" } }, "field": "msg" }
+        },
+        "intervals": { "intervals": { "msg": { "match": { "query": "connection timeout", "max_gaps": 2 } } } },
+        "percolate": { "percolate": { "field": "saved_query", "document": { "msg": "timeout" } } },
+        "rank_feature": { "rank_feature": { "field": "popularity" } },
+        "span_containing": {
+            "span_containing": {
+                "little": { "span_term": { "msg": "timeout" } },
+                "big": { "span_near": { "clauses": [ { "span_term": { "msg": "connection" } }, { "span_term": { "msg": "timeout" } } ], "slop": 5, "in_order": false } }
+            }
+        },
+        "span_first": { "span_first": { "match": { "span_term": { "msg": "timeout" } }, "end": 3 } },
+        "span_multi": { "span_multi": { "match": { "prefix": { "msg": { "value": "time" } } } } },
+        "span_near": {
+            "span_near": { "clauses": [ { "span_term": { "msg": "connection" } }, { "span_term": { "msg": "timeout" } } ], "slop": 5, "in_order": false }
+        },
+        "span_not": {
+            "span_not": { "include": { "span_term": { "msg": "timeout" } }, "exclude": { "span_term": { "msg": "connection" } } }
+        },
+        "span_or": { "span_or": { "clauses": [ { "span_term": { "msg": "timeout" } }, { "span_term": { "msg": "refused" } } ] } },
+        "span_term": { "span_term": { "msg": "timeout" } },
+        "span_within": {
+            "span_within": {
+                "little": { "span_term": { "msg": "timeout" } },
+                "big": { "span_near": { "clauses": [ { "span_term": { "msg": "connection" } }, { "span_term": { "msg": "timeout" } } ], "slop": 5, "in_order": false } }
+            }
+        },
+        "wrapper": { "wrapper": { "query": "eyJ0ZXJtIjogeyJlbnYiOiAicHJvZCJ9fQ==" } }
+    },
+    "unprobed": {
+        "agentic": "Needs an agent configured in the ML Commons plugin; there is nothing to send without one.",
+        "hybrid": "Only valid under a registered hybrid search pipeline, which the plain distribution has no default for.",
+        "neural": "Needs a deployed ML model id; the model, not the query, is what a probe would be testing.",
+        "sltr": "Ships with the Learning To Rank plugin, absent from the official image.",
+        "template": "Search templates live behind /_search/template, not in a query clause.",
+        "type": "Removed with mapping types; the spec still lists it, no live cluster accepts it."
+    }
+}
