@@ -19,6 +19,7 @@ final class Rule implements \JsonSerializable
     public const SHOULD_BOOST_ONLY = 'should_boost_only';
     public const CONSTANT_SCORE_UNWRAPPED = 'constant_score_unwrapped';
     public const FUNCTION_SCORE_UNWRAPPED = 'function_score_unwrapped';
+    public const SCRIPT_SCORE_UNWRAPPED = 'script_score_unwrapped';
     public const BOOSTING_UNWRAPPED = 'boosting_unwrapped';
     public const TERMS_LOOKUP = 'terms_lookup';
 
@@ -47,6 +48,7 @@ final class Rule implements \JsonSerializable
         self::SHOULD_BOOST_ONLY => 'A should group beside a must/filter, with no minimum_should_match, only boosts — moved to the notes instead of being rendered as a filter.',
         self::CONSTANT_SCORE_UNWRAPPED => 'constant_score was replaced by its filter: it only flattens scoring.',
         self::FUNCTION_SCORE_UNWRAPPED => 'function_score was replaced by its inner query: the functions only rescore.',
+        self::SCRIPT_SCORE_UNWRAPPED => 'script_score was replaced by its inner query: the script only rescores. A min_score, which does exclude documents, is reported in the notes.',
         self::BOOSTING_UNWRAPPED => 'boosting was replaced by its positive clause: negative demotes, it does not exclude.',
         self::TERMS_LOOKUP => 'A terms lookup became a placeholder: its values live in another document.',
         self::FLATTEN => 'Nested connectors of the same kind were flattened.',

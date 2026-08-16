@@ -130,6 +130,10 @@ final class SpecCoverageTest extends TestCase
                 return ['filter' => ['term' => ['f' => 'x']]];
             case 'function_score':
                 return ['query' => ['term' => ['f' => 'x']]];
+            case 'script_score':
+                return ['query' => ['term' => ['f' => 'x']], 'script' => ['source' => '_score * 2']];
+            case 'parent_id':
+                return ['type' => 'c', 'id' => '1'];
             case 'boosting':
                 return ['positive' => ['term' => ['f' => 'x']], 'negative' => ['term' => ['g' => 'y']]];
             case 'dis_max':

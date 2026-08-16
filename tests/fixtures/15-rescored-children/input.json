@@ -1,0 +1,22 @@
+{
+    "index": "forum-2026.08.16",
+    "request": {
+        "query": {
+            "script_score": {
+                "query": {
+                    "bool": {
+                        "filter": [
+                            { "parent_id": { "type": "comment", "id": "4712" } },
+                            { "range": { "created_at": { "gte": "now-7d" } } }
+                        ]
+                    }
+                },
+                "script": {
+                    "source": "_score * Math.log(2 + doc['votes'].value)"
+                },
+                "min_score": 1.5
+            }
+        },
+        "size": 20
+    }
+}
