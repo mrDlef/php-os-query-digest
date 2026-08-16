@@ -31,6 +31,13 @@ final class LeafNode implements Node
     /** `more_like_this`. Values are the documents or texts to look like. */
     public const OP_LIKE = 'like';
 
+    /**
+     * `parent_id`. The field slot carries the joined relation, not a mapping
+     * field: the query matches children of one parent, and which relation it
+     * walks is part of the shape.
+     */
+    public const OP_PARENT_ID = 'parent_id';
+
     private string $field;
 
     private string $op;

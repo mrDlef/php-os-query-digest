@@ -199,6 +199,11 @@ parse, so it returns the very digest `describe()` would have produced.
   would collide by accident of truncation.
 - **`query_string` payloads are erased** in the signature. They are values, and
   leaving them in would mint a new fingerprint for every user search term.
+- **A rescoring wrapper is unwrapped, but its threshold is not.** `function_score`
+  and `script_score` only reorder what their inner query already matched, so the
+  wrapper goes and the query stays. A `script_score.min_score` is the exception:
+  it *excludes* documents, on a score this library never computes, so it is
+  called out as `script_score:min_score` and changes the fingerprint.
 
 ### Coverage
 
@@ -208,14 +213,14 @@ rather than from memory. `resources/opensearch-spec.json` is a committed
 snapshot of the type names it declares; `resources/coverage.json` records our
 stance on each one, and `SpecCoverageTest` fails if the two ever disagree.
 
-**33 of the 59 query types** are rendered natively:
+**35 of the 59 query types** are rendered natively:
 
 | | |
 |---|---|
 | term-level | `term`, `terms`, `terms_set`, `prefix`, `wildcard`, `regexp`, `fuzzy`, `exists`, `range`, `ids` |
 | full text | `match`, `match_bool_prefix`, `match_phrase`, `match_phrase_prefix`, `multi_match`, `query_string`, `simple_query_string`, `more_like_this` |
-| compound | `bool`, `constant_score`, `dis_max`, `function_score`, `boosting` (filtering part) |
-| joining | `nested`, `has_child`, `has_parent` |
+| compound | `bool`, `constant_score`, `dis_max`, `function_score`, `script_score`, `boosting` (filtering part) |
+| joining | `nested`, `has_child`, `has_parent`, `parent_id` |
 | vector | `knn`, `neural` |
 | geo | `geo_distance`, `geo_bounding_box` |
 | other | `match_all`, `match_none`, `script` |
@@ -225,9 +230,9 @@ Vector and geo clauses keep what a reader needs and drop what they cannot use: a
 searches of the same kind share a fingerprint however different their vectors.
 Same for a `geo_distance` — the radius survives, the centre does not.
 
-The other 26 — `geo_shape`, `percolate`, `intervals`, the `span_*` family,
+The other 24 — `geo_shape`, `percolate`, `intervals`, the `span_*` family,
 plugin queries — render as `type(?)`. They are signalled, never dropped, and
-still contribute to the fingerprint. The span family (9 of the 26) is
+still contribute to the fingerprint. The span family (9 of the 24) is
 deliberately left there: nobody debugs a span query from a log line.
 
 All **65 aggregation types** are rendered; 12 of them get a shape tuned for

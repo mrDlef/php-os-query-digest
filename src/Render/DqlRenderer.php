@@ -167,6 +167,11 @@ final class DqlRenderer
             case LeafNode::OP_LIKE:
                 return $field . ':like(' . $this->termsValues($field, $values, $profile) . ')';
 
+            case LeafNode::OP_PARENT_ID:
+                // Reads like the join clauses — `parent_id(blog):7` next to
+                // `has_child(review):{ … }` — because it walks the same relation.
+                return 'parent_id(' . $field . '):' . $renderer->scalar($field, reset($values));
+
             case LeafNode::OP_RANGE:
                 return $this->range($leaf, $profile, $parentPrecedence);
 

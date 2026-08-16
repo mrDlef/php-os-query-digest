@@ -160,6 +160,9 @@ final class QueryParser
             case 'has_parent':
                 return $this->join($body, JoinNode::HAS_PARENT, 'parent_type');
 
+            case 'parent_id':
+                return $this->parentId($body);
+
             case 'more_like_this':
                 return $this->moreLikeThis($body);
 
@@ -179,6 +182,11 @@ final class QueryParser
                 $this->trace->record(Rule::FUNCTION_SCORE_UNWRAPPED);
 
                 return is_array($inner) ? $this->clause($inner) : new MatchAllNode();
+
+            case 'script_score':
+                // Same shape as function_score: only the inner query decides
+                // which documents match, the script reorders them.
+                return $this->scriptScore($body);
 
             case 'boosting':
                 // `negative` only demotes, it does not exclude.
@@ -552,6 +560,27 @@ final class QueryParser
     }
 
     /**
+     * `parent_id`: the children of one parent document. There is no inner query
+     * to scope — the whole clause is "this relation, that parent" — so it reads
+     * as a term rather than as a {@see JoinNode}.
+     *
+     * @param array<mixed> $body
+     */
+    private function parentId(array $body): Node
+    {
+        $relation = Arr::get($body, 'type');
+        $id = Arr::get($body, 'id');
+
+        if (!is_string($relation) || !is_scalar($id)) {
+            return new OpaqueNode('parent_id');
+        }
+
+        // The relation is part of the shape, the parent id is a value: two
+        // lookups of the same relation share a fingerprint.
+        return new LeafNode($relation, LeafNode::OP_PARENT_ID, [$id]);
+    }
+
+    /**
      * @param array<mixed> $body
      */
     private function moreLikeThis(array $body): Node
@@ -579,6 +608,27 @@ final class QueryParser
         }
 
         return new LeafNode($field, LeafNode::OP_LIKE, $values);
+    }
+
+    /**
+     * `script_score`: the inner query filters, the script only rescores — so it
+     * unwraps like `function_score`.
+     *
+     * One caveat, and it is why the note is not always the same word:
+     * `min_score` *does* exclude documents, on a threshold applied to a score
+     * this library never computes. When it is set, the rendered line describes a
+     * wider result set than the query returns, and the note has to say so.
+     *
+     * @param array<mixed> $body
+     */
+    private function scriptScore(array $body): Node
+    {
+        $inner = Arr::get($body, 'query');
+
+        $this->note(array_key_exists('min_score', $body) ? 'script_score:min_score' : 'script_score');
+        $this->trace->record(Rule::SCRIPT_SCORE_UNWRAPPED);
+
+        return is_array($inner) ? $this->clause($inner) : new MatchAllNode();
     }
 
     private function note(string $note): void

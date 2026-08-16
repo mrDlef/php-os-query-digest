@@ -158,6 +158,108 @@ final class NativeTypesTest extends TestCase
         self::assertSame('q=(title:like("<doc>"))', $digest->text());
     }
 
+    public function testScriptScoreIsReplacedByTheQueryItRescores(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['script_score' => [
+            'query' => ['term' => ['env' => 'prod']],
+            'script' => ['source' => 'decay(doc[\'age\'].value)'],
+        ]]]);
+
+        self::assertSame('q=(env:prod) | script_score', $digest->text());
+    }
+
+    /**
+     * The rescoring script is where the tuning happens: it changes on every
+     * experiment while the query it wraps stays the same. Two variants of the
+     * same search must not look like two different searches.
+     */
+    public function testTwoScoringScriptsOverTheSameQueryShareAFingerprint(): void
+    {
+        $one = ['query' => ['script_score' => [
+            'query' => ['term' => ['env' => 'prod']],
+            'script' => ['source' => '_score * 2'],
+        ]]];
+        $two = ['query' => ['script_score' => [
+            'query' => ['term' => ['env' => 'prod']],
+            'script' => ['source' => 'saturation(doc[\'views\'].value, 10)'],
+        ]]];
+
+        self::assertSame(
+            $this->formatter->describe($one)->hash(),
+            $this->formatter->describe($two)->hash(),
+        );
+    }
+
+    /**
+     * `min_score` is the one part of a script_score that is not pure rescoring:
+     * it drops documents. The line would otherwise claim a wider result set than
+     * the query returns, so the note has to change — and with it the hash.
+     */
+    public function testAScriptScoreThresholdIsCalledOutInTheNotes(): void
+    {
+        $withThreshold = ['query' => ['script_score' => [
+            'query' => ['term' => ['env' => 'prod']],
+            'script' => ['source' => '_score * 2'],
+            'min_score' => 5.0,
+        ]]];
+
+        $digest = $this->formatter->describe($withThreshold);
+
+        self::assertSame('q=(env:prod) | script_score:min_score', $digest->text());
+        self::assertNotSame(
+            $this->formatter->describe(['query' => ['script_score' => [
+                'query' => ['term' => ['env' => 'prod']],
+                'script' => ['source' => '_score * 2'],
+            ]]])->hash(),
+            $digest->hash(),
+            'A threshold that excludes documents must not share a fingerprint with one that does not.',
+        );
+    }
+
+    public function testTheScriptScoreUnwrappingIsReportedByExplain(): void
+    {
+        $explanation = $this->formatter->explain(['query' => ['script_score' => [
+            'query' => ['term' => ['env' => 'prod']],
+            'script' => ['source' => '_score * 2'],
+        ]]]);
+
+        self::assertTrue($explanation->has(Rule::SCRIPT_SCORE_UNWRAPPED));
+    }
+
+    public function testParentIdKeepsTheRelationAndErasesTheParent(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['parent_id' => [
+            'type' => 'comment',
+            'id' => '4712',
+        ]]]);
+
+        self::assertSame('q=(parent_id(comment):4712)', $digest->text());
+        self::assertSame('q=(parent_id(comment):?)', $digest->signature());
+    }
+
+    /**
+     * Same reasoning as `has_child`: which relation is walked is the shape of
+     * the query, not one of its parameters.
+     */
+    public function testTheParentRelationIsPartOfTheShape(): void
+    {
+        $comment = ['query' => ['parent_id' => ['type' => 'comment', 'id' => '1']]];
+        $review = ['query' => ['parent_id' => ['type' => 'review', 'id' => '1']]];
+
+        self::assertNotSame(
+            $this->formatter->describe($comment)->hash(),
+            $this->formatter->describe($review)->hash(),
+        );
+    }
+
+    public function testTwoParentLookupsOfTheSameRelationShareAFingerprint(): void
+    {
+        self::assertSame(
+            $this->formatter->describe(['query' => ['parent_id' => ['type' => 'comment', 'id' => '1']]])->hash(),
+            $this->formatter->describe(['query' => ['parent_id' => ['type' => 'comment', 'id' => '2']]])->hash(),
+        );
+    }
+
     public function testMatchNoneRendersAsTheOppositeOfMatchAll(): void
     {
         $digest = $this->formatter->describe(['query' => ['match_none' => []]]);
@@ -260,6 +362,7 @@ final class NativeTypesTest extends TestCase
             'script' => ['query' => ['script' => []]],
             'has_child' => ['query' => ['has_child' => ['type' => 'review']]],
             'more_like_this' => ['query' => ['more_like_this' => ['fields' => ['a']]]],
+            'parent_id' => ['query' => ['parent_id' => ['type' => 'review']]],
         ];
 
         foreach ($cases as $type => $request) {
