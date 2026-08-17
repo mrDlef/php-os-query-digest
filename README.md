@@ -1,12 +1,19 @@
-# Read your OpenSearch queries. Group them. Find the slow ones.
+# os-query-digest
 
 [![CI](https://github.com/mrDlef/php-os-query-digest/actions/workflows/ci.yml/badge.svg)](https://github.com/mrDlef/php-os-query-digest/actions/workflows/ci.yml)
 ![PHP 7.4 – 8.5](https://img.shields.io/badge/PHP-7.4%20%E2%80%93%208.5-777bb3)
 ![no runtime dependencies](https://img.shields.io/badge/runtime%20dependencies-none-2e7d32)
 ![LGPL-3.0-or-later](https://img.shields.io/badge/licence-LGPL--3.0--or--later-555)
 
-**`os-query-digest`** turns a wall of DSL JSON into one line you can log, one
-shape you can read, and one hash you can `terms`-aggregate on.
+### Read your OpenSearch queries. Group them. Find the slow ones.
+
+A DSL query in a log line is a wall of nested braces: nobody greps it, nobody
+groups by it, and it costs a fortune in log volume. So the question you actually
+have during an incident — *which **kind** of query is hurting us?* — has no
+answer anywhere in your stack.
+
+This library gives that question three answers: **one line you can log**, **one
+shape you can read**, and **one hash you can `terms`-aggregate on**.
 
 ### ▶ [Try it on your own query](https://mrdlef.github.io/php-os-query-digest/) — no install, nothing leaves your browser
 
@@ -65,11 +72,11 @@ That query and that fingerprint are not illustrations: they are
 `tests/fixtures/01-error-rate-filter`, and the golden file pins the exact hash.
 Every example in this README is a test.
 
-## Why you might want it
+## What you get
 
-- **Your logs stop being unreadable.** A DSL body in a JSON log is a wall of
-  nested braces nobody greps. One line replaces it, and it is DQL you can paste
-  straight into Dashboards.
+- **Logs you can read.** One line replaces the body — and it is DQL, so you
+  select it, paste it into the Dashboards search bar, and you are looking at the
+  same query.
 - **Your log volume drops.** A 40-line body becomes one line, capped.
 - **Slow queries become countable.** `terms` on the hash and the top of the list
   is the shape to fix.

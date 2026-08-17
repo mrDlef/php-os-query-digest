@@ -45,7 +45,8 @@ h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: 
 h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 1.2rem 0 .4rem; }
 
 .masthead p { margin: .2rem 0; max-width: 64ch; color: var(--muted); }
-.masthead .lede { color: var(--fg); font-size: 1.02rem; }
+.masthead .baseline { color: var(--fg); font-size: 1.08rem; font-weight: 600; margin-top: .35rem; }
+.masthead .lede { color: var(--muted); }
 .small { font-size: .84rem; }
 .hint { margin: -.4rem 0 .9rem; font-size: .78rem; }
 .hint code { color: var(--accent); }
