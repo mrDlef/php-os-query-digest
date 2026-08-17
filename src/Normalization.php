@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest;
 
+use MrDlef\OsQueryDigest\Exception\InvalidOptionException;
+
 /**
  * How much of a query the signature erases.
  *
@@ -15,6 +17,15 @@ final class Normalization
     public const NONE = 'none';
     public const VALUES = 'values';
     public const STRUCTURAL = 'structural';
+
+    /**
+     * Every level, weakest first. Public because a configuration front — a CLI
+     * flag, a `<select>` — needs the list, and hard-coding it elsewhere is how
+     * it drifts.
+     *
+     * @var array<int,string>
+     */
+    public const LEVELS = [self::NONE, self::VALUES, self::STRUCTURAL];
 
     private string $level;
 
@@ -48,6 +59,26 @@ final class Normalization
     public static function structural(): self
     {
         return new self(self::STRUCTURAL);
+    }
+
+    /**
+     * The level named by one of the constants above, for configuration that
+     * arrives as a string rather than as a call.
+     *
+     * @throws InvalidOptionException on any other name
+     */
+    public static function fromLevel(string $level): self
+    {
+        switch ($level) {
+            case self::NONE:
+                return self::none();
+            case self::VALUES:
+                return self::values();
+            case self::STRUCTURAL:
+                return self::structural();
+        }
+
+        throw InvalidOptionException::notAllowed('normalization', $level, self::LEVELS);
     }
 
     public function level(): string

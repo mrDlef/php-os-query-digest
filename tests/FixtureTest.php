@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace MrDlef\OsQueryDigest\Tests;
 
 use MrDlef\OsQueryDigest\Formatter;
-use MrDlef\OsQueryDigest\Normalization;
 use MrDlef\OsQueryDigest\Options;
 use MrDlef\OsQueryDigest\Support\Arr;
 use PHPUnit\Framework\TestCase;
@@ -37,7 +36,7 @@ final class FixtureTest extends TestCase
         foreach (self::directories() as $name => $directory) {
             $input = self::readJson($directory . '/input.json');
 
-            $options = self::options(Arr::arr($input, 'options'));
+            $options = Options::fromArray(Arr::arr($input, 'options'));
             $request = Arr::arr($input, 'request');
             $index = Arr::get($input, 'index');
 
@@ -82,43 +81,6 @@ final class FixtureTest extends TestCase
         }
 
         return $out;
-    }
-
-    /**
-     * @param array<mixed> $spec
-     */
-    private static function options(array $spec): Options
-    {
-        $options = Options::create();
-
-        $level = Arr::str(Arr::get($spec, 'normalization'));
-        if ($level === Normalization::NONE) {
-            $options = $options->withNormalization(Normalization::none());
-        } elseif ($level === Normalization::STRUCTURAL) {
-            $options = $options->withNormalization(Normalization::structural());
-        }
-
-        if (array_key_exists('maxValues', $spec)) {
-            $options = $options->withMaxValues(self::intOrNull($spec['maxValues']));
-        }
-
-        if (array_key_exists('maxClauses', $spec)) {
-            $options = $options->withMaxClauses(self::intOrNull($spec['maxClauses']));
-        }
-
-        if (Arr::get($spec, 'aggNames') === true) {
-            return $options->withAggNames(true);
-        }
-
-        return $options;
-    }
-
-    /**
-     * @param mixed $value
-     */
-    private static function intOrNull($value): ?int
-    {
-        return is_numeric($value) ? (int) $value : null;
     }
 
     /**

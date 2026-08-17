@@ -139,6 +139,24 @@ $formatter = Formatter::create(
 );
 ```
 
+The same options as a plain array — for a YAML file, a framework config block,
+or a CLI flag:
+
+```php
+$formatter = Formatter::create(Options::fromArray([
+    'normalization' => 'structural',
+    'maxValues'     => 5,
+    'aggNames'      => true,
+]));
+```
+
+Unknown keys and wrong types throw `InvalidOptionException` instead of being
+ignored: an option that silently does nothing is the bug you find months later,
+in a dashboard that was never grouped the way the config claimed. Types are
+taken as JSON gives them — `"5"` is rejected, because a front end that guesses
+at `"5"` also accepts `"five"`. `redactor` has no array form; a callable cannot
+be expressed there.
+
 ## How the fingerprint works
 
 ### Normalisation levels
