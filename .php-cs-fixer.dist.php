@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 $finder = PhpCsFixer\Finder::create()
     ->in([__DIR__ . '/src', __DIR__ . '/tests', __DIR__ . '/tools'])
-    ->append([__DIR__ . '/rector.php', __FILE__]);
+    // Appended, not found: the composer bin has no .php extension.
+    ->append([__DIR__ . '/bin/os-query-digest', __DIR__ . '/rector.php', __FILE__]);
 
 /**
  * PER-CS is the baseline — it is what PSR-12 became — plus the rules that catch

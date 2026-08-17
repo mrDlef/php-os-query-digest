@@ -7,5 +7,7 @@ parameters:
         - src
         - tests
         - tools
+        # Listed as a file: the shim has no .php extension, being a composer bin.
+        - bin/os-query-digest
     treatPhpDocTypesAsCertain: true
     reportUnmatchedIgnoredErrors: true

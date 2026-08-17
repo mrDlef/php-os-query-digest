@@ -23,6 +23,9 @@
         "php": "^7.4 || ^8.0",
         "ext-json": "*"
     },
+    "bin": [
+        "bin/os-query-digest"
+    ],
     "suggest": {
         "monolog/monolog": "To replace raw search requests with their digest automatically, via MrDlef\\OsQueryDigest\\Monolog\\DigestProcessor (^2.0 || ^3.0)"
     },
