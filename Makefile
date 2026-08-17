@@ -6,6 +6,7 @@ export DOCKER_UID := $(shell id -u)
 export DOCKER_GID := $(shell id -g)
 
 .PHONY: test test-all stan cs cs-check rector rector-check check hooks fixtures spec \
+        playground-data \
         certify integration clusters clusters-down clean
 
 ## Run the test suite in Docker for one PHP version: make test PHP_VERSION=7.4
@@ -53,6 +54,12 @@ hooks:
 ## Regenerate the golden fixture files (review the diff before committing!)
 fixtures:
 	UPDATE_FIXTURES=1 vendor/bin/phpunit --testsuite=os-query-digest
+
+## Rebuild the two files the browser playground ships: the library as one file,
+## and every fixture already digested. Review the diff before committing —
+## PlaygroundTest fails until the committed data matches src/.
+playground-data:
+	php tools/build-playground.php
 
 ## Refresh the OpenSearch spec snapshot, then let the tests flag what changed.
 ## SPEC_REF pins a branch, tag or commit: make spec SPEC_REF=e027edc

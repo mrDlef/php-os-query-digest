@@ -1,0 +1,490 @@
+{
+    "meta": {
+        "keys": [
+            "normalization",
+            "maxClauses",
+            "maxValues",
+            "maxLength",
+            "indexNormalizer",
+            "aggNames",
+            "hashVersion",
+            "hashLength"
+        ],
+        "levels": [
+            "none",
+            "values",
+            "structural"
+        ],
+        "indexModes": [
+            "date-patterns",
+            "identity"
+        ],
+        "defaults": {
+            "normalization": "values",
+            "maxClauses": 12,
+            "maxValues": 5,
+            "maxLength": 512,
+            "indexNormalizer": "date-patterns",
+            "aggNames": false,
+            "hashVersion": "q2",
+            "hashLength": 12
+        },
+        "rules": {
+            "absorb_match_none": "match_none was absorbed: an AND that contains it matches nothing, and an OR gains nothing from it.",
+            "boost_dropped": "A boost was ignored: it reorders results, it does not change them.",
+            "boosting_unwrapped": "boosting was replaced by its positive clause: negative demotes, it does not exclude.",
+            "constant_score_unwrapped": "constant_score was replaced by its filter: it only flattens scoring.",
+            "dedupe": "Identical sibling clauses were de-duplicated.",
+            "drop_match_all": "match_all was dropped from a multi-clause AND: it constrains nothing.",
+            "empty_to_match_all": "A connector with no clause left became match_all.",
+            "flatten": "Nested connectors of the same kind were flattened.",
+            "function_score_unwrapped": "function_score was replaced by its inner query: the functions only rescore.",
+            "index_pattern": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",
+            "indexed_shape": "A shape query pointed at a pre-indexed geometry: what it is cannot be read from the query, only that it is indexed.",
+            "must_filter_merged": "bool.must and bool.filter both became AND: they differ in scoring, not in which documents match.",
+            "reorder": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
+            "script_score_unwrapped": "script_score was replaced by its inner query: the script only rescores. A min_score, which does exclude documents, is reported in the notes.",
+            "section_ignored": "Top-level sections that say nothing about what a query is for were ignored.",
+            "should_boost_only": "A should group beside a must/filter, with no minimum_should_match, only boosts — moved to the notes instead of being rendered as a filter.",
+            "terms_lookup": "A terms lookup became a placeholder: its values live in another document.",
+            "unwrap": "A single-clause connector was replaced by that clause."
+        }
+    },
+    "presets": [
+        {
+            "id": "01-error-rate-filter",
+            "label": "Error rate filter",
+            "index": "logs-2026.08.13",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"service\": \"api\"\n                    }\n                },\n                {\n                    \"range\": {\n                        \"@timestamp\": {\n                            \"gte\": \"now-15m\",\n                            \"lt\": \"now\"\n                        }\n                    }\n                }\n            ],\n            \"must_not\": [\n                {\n                    \"term\": {\n                        \"status\": 200\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 50,\n    \"sort\": [\n        {\n            \"@timestamp\": \"desc\"\n        }\n    ],\n    \"_source\": [\n        \"@timestamp\",\n        \"message\",\n        \"status\"\n    ]\n}",
+            "digest": {
+                "idx": "logs-*",
+                "q": "logs-* | q=(@timestamp >= now-15m and @timestamp < now and not status:200 and service:api) | size=50 sort=@timestamp:desc",
+                "sig": "logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc",
+                "hash": "q2:fe168406e702"
+            },
+            "rules": [
+                {
+                    "rule": "index_pattern",
+                    "count": 1,
+                    "why": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",
+                    "on": [
+                        "logs-2026.08.13 -> logs-*"
+                    ]
+                },
+                {
+                    "rule": "reorder",
+                    "count": 1,
+                    "why": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
+                    "on": [
+                        "and"
+                    ]
+                },
+                {
+                    "rule": "section_ignored",
+                    "count": 1,
+                    "why": "Top-level sections that say nothing about what a query is for were ignored.",
+                    "on": [
+                        "_source"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "02-dashboard-aggs",
+            "label": "Dashboard aggs",
+            "index": "logs-2026.08.13",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"env\": \"prod\"\n                    }\n                },\n                {\n                    \"range\": {\n                        \"@timestamp\": {\n                            \"gte\": \"now-24h\"\n                        }\n                    }\n                }\n            ]\n        }\n    },\n    \"aggs\": {\n        \"by_host\": {\n            \"terms\": {\n                \"field\": \"host\",\n                \"size\": 10\n            },\n            \"aggs\": {\n                \"p95\": {\n                    \"percentiles\": {\n                        \"field\": \"latency_ms\",\n                        \"percents\": [\n                            95\n                        ]\n                    }\n                },\n                \"errors\": {\n                    \"sum\": {\n                        \"field\": \"error_count\"\n                    }\n                }\n            }\n        }\n    },\n    \"size\": 0,\n    \"track_total_hits\": false\n}",
+            "digest": {
+                "idx": "logs-*",
+                "q": "logs-* | q=(@timestamp >= now-24h and env:prod) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0",
+                "sig": "logs-* | q=(@timestamp >= ? and env:?) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0",
+                "hash": "q2:63a1ca5c80b9"
+            },
+            "rules": [
+                {
+                    "rule": "index_pattern",
+                    "count": 1,
+                    "why": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",
+                    "on": [
+                        "logs-2026.08.13 -> logs-*"
+                    ]
+                },
+                {
+                    "rule": "reorder",
+                    "count": 1,
+                    "why": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
+                    "on": [
+                        "and"
+                    ]
+                },
+                {
+                    "rule": "section_ignored",
+                    "count": 1,
+                    "why": "Top-level sections that say nothing about what a query is for were ignored.",
+                    "on": [
+                        "track_total_hits"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "03-boosted-search",
+            "label": "Boosted search",
+            "index": "catalog-v2",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"must\": [\n                {\n                    \"match\": {\n                        \"title\": \"chaussures de running\"\n                    }\n                }\n            ],\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"in_stock\": true\n                    }\n                },\n                {\n                    \"range\": {\n                        \"price\": {\n                            \"gte\": 20,\n                            \"lte\": 150\n                        }\n                    }\n                }\n            ],\n            \"should\": [\n                {\n                    \"term\": {\n                        \"brand\": \"acme\"\n                    }\n                },\n                {\n                    \"term\": {\n                        \"promoted\": true\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 20,\n    \"from\": 40,\n    \"sort\": [\n        \"_score\",\n        {\n            \"price\": {\n                \"order\": \"asc\"\n            }\n        }\n    ]\n}",
+            "digest": {
+                "idx": "catalog-v2",
+                "q": "catalog-v2 | q=(in_stock:true and price >= 20 and price <= 150 and title:\"chaussures de running\") | size=20 from=40 sort=_score:desc,price:asc | should=2",
+                "sig": "catalog-v2 | q=(in_stock:? and price >= ? and price <= ? and title:~?) | size=20 from=40 sort=_score:desc,price:asc | should=2",
+                "hash": "q2:cde7babeb8a7",
+                "notes": [
+                    "should=2"
+                ]
+            },
+            "rules": [
+                {
+                    "rule": "must_filter_merged",
+                    "count": 1,
+                    "why": "bool.must and bool.filter both became AND: they differ in scoring, not in which documents match."
+                },
+                {
+                    "rule": "reorder",
+                    "count": 1,
+                    "why": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
+                    "on": [
+                        "and"
+                    ]
+                },
+                {
+                    "rule": "should_boost_only",
+                    "count": 1,
+                    "why": "A should group beside a must/filter, with no minimum_should_match, only boosts — moved to the notes instead of being rendered as a filter.",
+                    "on": [
+                        "2 clauses"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "04-terms-overflow",
+            "label": "Terms overflow",
+            "index": "orders",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"terms\": {\n                        \"status\": [\n                            \"new\",\n                            \"paid\",\n                            \"shipped\",\n                            \"cancelled\",\n                            \"refunded\",\n                            \"pending\",\n                            \"failed\",\n                            \"draft\"\n                        ]\n                    }\n                },\n                {\n                    \"term\": {\n                        \"country\": \"FR\"\n                    }\n                }\n            ]\n        }\n    }\n}",
+            "digest": {
+                "idx": "orders",
+                "q": "orders | q=(country:FR and status:(new or paid or shipped or cancelled or refunded or +3))",
+                "sig": "orders | q=(country:? and status:(? or ? or ? or ? or ? or +3))",
+                "hash": "q2:e9794c1be608"
+            },
+            "rules": [
+                {
+                    "rule": "reorder",
+                    "count": 1,
+                    "why": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
+                    "on": [
+                        "and"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "05-nested-variants",
+            "label": "Nested variants",
+            "index": "catalog-v2",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"nested\": {\n            \"path\": \"variants\",\n            \"query\": {\n                \"bool\": {\n                    \"filter\": [\n                        {\n                            \"term\": {\n                                \"variants.color\": \"red\"\n                            }\n                        },\n                        {\n                            \"range\": {\n                                \"variants.price\": {\n                                    \"lte\": 100\n                                }\n                            }\n                        }\n                    ]\n                }\n            }\n        }\n    }\n}",
+            "digest": {
+                "idx": "catalog-v2",
+                "q": "catalog-v2 | q=(variants:{ variants.color:red and variants.price <= 100 })",
+                "sig": "catalog-v2 | q=(variants:{ variants.color:? and variants.price <= ? })",
+                "hash": "q2:24d5e6929ac3"
+            },
+            "rules": []
+        },
+        {
+            "id": "06-envelope-multi-index",
+            "label": "Envelope multi index",
+            "index": null,
+            "options": {},
+            "body": "{\n    \"index\": [\n        \"logs-2026.08.12\",\n        \"logs-2026.08.13\"\n    ],\n    \"body\": {\n        \"query\": {\n            \"bool\": {\n                \"should\": [\n                    {\n                        \"match_phrase\": {\n                            \"message\": \"connection reset by peer\"\n                        }\n                    },\n                    {\n                        \"match\": {\n                            \"message\": \"timeout\"\n                        }\n                    }\n                ]\n            }\n        },\n        \"size\": 10\n    }\n}",
+            "digest": {
+                "idx": "logs-*",
+                "q": "logs-* | q=(message:timeout or message:\"connection reset by peer\") | size=10",
+                "sig": "logs-* | q=(message:~? or message:\"?\") | size=10",
+                "hash": "q2:4f1eaee8e165"
+            },
+            "rules": [
+                {
+                    "rule": "index_pattern",
+                    "count": 1,
+                    "why": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",
+                    "on": [
+                        "logs-2026.08.12,logs-2026.08.13 -> logs-*"
+                    ]
+                },
+                {
+                    "rule": "reorder",
+                    "count": 1,
+                    "why": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
+                    "on": [
+                        "or"
+                    ]
+                },
+                {
+                    "rule": "unwrap",
+                    "count": 1,
+                    "why": "A single-clause connector was replaced by that clause.",
+                    "on": [
+                        "bool"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "07-opaque-clause",
+            "label": "Opaque clause",
+            "index": "metrics-000042",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"span_near\": {\n                        \"clauses\": [\n                            {\n                                \"span_term\": {\n                                    \"message\": \"connection\"\n                                }\n                            },\n                            {\n                                \"span_term\": {\n                                    \"message\": \"refused\"\n                                }\n                            }\n                        ],\n                        \"slop\": 2,\n                        \"in_order\": true\n                    }\n                },\n                {\n                    \"exists\": {\n                        \"field\": \"host\"\n                    }\n                },\n                {\n                    \"prefix\": {\n                        \"host\": \"web-\"\n                    }\n                }\n            ]\n        }\n    },\n    \"highlight\": {\n        \"fields\": {\n            \"message\": []\n        }\n    },\n    \"collapse\": {\n        \"field\": \"host\"\n    }\n}",
+            "digest": {
+                "idx": "metrics-*",
+                "q": "metrics-* | q=(host:* and host:web-* and span_near(?)) | +collapse +highlight",
+                "sig": "metrics-* | q=(host:* and host:?* and span_near(?)) | +collapse +highlight",
+                "hash": "q2:a235723d04dc",
+                "notes": [
+                    "+collapse",
+                    "+highlight"
+                ]
+            },
+            "rules": [
+                {
+                    "rule": "index_pattern",
+                    "count": 1,
+                    "why": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",
+                    "on": [
+                        "metrics-000042 -> metrics-*"
+                    ]
+                },
+                {
+                    "rule": "reorder",
+                    "count": 1,
+                    "why": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
+                    "on": [
+                        "and"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "08-minimum-should-match",
+            "label": "Minimum should match",
+            "index": "docs",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"lang\": \"fr\"\n                    }\n                }\n            ],\n            \"should\": [\n                {\n                    \"match\": {\n                        \"body\": \"alpha\"\n                    }\n                },\n                {\n                    \"match\": {\n                        \"body\": \"beta\"\n                    }\n                },\n                {\n                    \"match\": {\n                        \"body\": \"gamma\"\n                    }\n                }\n            ],\n            \"minimum_should_match\": 2\n        }\n    }\n}",
+            "digest": {
+                "idx": "docs",
+                "q": "docs | q=(lang:fr and (body:alpha or body:beta or body:gamma){msm=2})",
+                "sig": "docs | q=(lang:? and (body:~? or body:~? or body:~?){msm=2})",
+                "hash": "q2:862a058a0f91"
+            },
+            "rules": []
+        },
+        {
+            "id": "09-query-string",
+            "label": "Query string",
+            "index": "logs-*",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"query_string\": {\n                        \"query\": \"status:500 AND host:web-*\"\n                    }\n                },\n                {\n                    \"wildcard\": {\n                        \"path\": \"/api/v1/*\"\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 100\n}",
+            "digest": {
+                "idx": "logs-*",
+                "q": "logs-* | q=((status:500 AND host:web-*) and path:/api/v1/*) | size=100",
+                "sig": "logs-* | q=(raw(?) and path:*?*) | size=100",
+                "hash": "q2:6fb4a2d9c302"
+            },
+            "rules": []
+        },
+        {
+            "id": "10-date-histogram-structural",
+            "label": "Date histogram structural",
+            "index": "logs-2026.08.13",
+            "options": {
+                "normalization": "structural",
+                "aggNames": true
+            },
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"terms\": {\n                        \"service\": [\n                            \"api\",\n                            \"worker\",\n                            \"cron\"\n                        ]\n                    }\n                },\n                {\n                    \"range\": {\n                        \"@timestamp\": {\n                            \"gte\": \"2026-08-13T00:00:00Z\",\n                            \"lt\": \"2026-08-14T00:00:00Z\"\n                        }\n                    }\n                }\n            ]\n        }\n    },\n    \"aggs\": {\n        \"over_time\": {\n            \"date_histogram\": {\n                \"field\": \"@timestamp\",\n                \"fixed_interval\": \"1h\"\n            },\n            \"aggs\": {\n                \"unique_users\": {\n                    \"cardinality\": {\n                        \"field\": \"user_id\"\n                    }\n                }\n            }\n        }\n    },\n    \"size\": 0\n}",
+            "digest": {
+                "idx": "logs-*",
+                "q": "logs-* | q=(@timestamp >= \"2026-08-13T00:00:00Z\" and @timestamp < \"2026-08-14T00:00:00Z\" and service:(api or worker or cron)) | aggs=over_time:date_histogram(@timestamp,1h)>unique_users:cardinality(user_id) | size=0",
+                "sig": "logs-* | q=(@timestamp >= ? and @timestamp < ? and service:(?)) | aggs=over_time:date_histogram(@timestamp,1h)>unique_users:cardinality(user_id) | size=0",
+                "hash": "q2:8b4c9e9aebc2"
+            },
+            "rules": [
+                {
+                    "rule": "index_pattern",
+                    "count": 1,
+                    "why": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",
+                    "on": [
+                        "logs-2026.08.13 -> logs-*"
+                    ]
+                },
+                {
+                    "rule": "reorder",
+                    "count": 1,
+                    "why": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
+                    "on": [
+                        "and"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "11-post-filter",
+            "label": "Post filter",
+            "index": "shop-catalog",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"match\": {\n                        \"name\": \"running shoes\"\n                    }\n                },\n                {\n                    \"range\": {\n                        \"price\": {\n                            \"gte\": 20,\n                            \"lt\": 200\n                        }\n                    }\n                }\n            ]\n        }\n    },\n    \"aggs\": {\n        \"by_brand\": {\n            \"terms\": {\n                \"field\": \"brand\",\n                \"size\": 20\n            }\n        }\n    },\n    \"post_filter\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"brand\": \"acme\"\n                    }\n                },\n                {\n                    \"term\": {\n                        \"in_stock\": true\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 24\n}",
+            "digest": {
+                "idx": "shop-catalog",
+                "q": "shop-catalog | q=(name:\"running shoes\" and price >= 20 and price < 200) | post=(brand:acme and in_stock:true) | aggs=terms(brand,20) | size=24",
+                "sig": "shop-catalog | q=(name:~? and price >= ? and price < ?) | post=(brand:? and in_stock:?) | aggs=terms(brand,20) | size=24",
+                "hash": "q2:ce0146715c07"
+            },
+            "rules": []
+        },
+        {
+            "id": "12-vector-search",
+            "label": "Vector search",
+            "index": "products-v3",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"should\": [\n                {\n                    \"knn\": {\n                        \"image_embedding\": {\n                            \"vector\": [\n                                0.12,\n                                -0.34,\n                                0.98,\n                                0.01\n                            ],\n                            \"k\": 20,\n                            \"filter\": {\n                                \"term\": {\n                                    \"in_stock\": true\n                                }\n                            }\n                        }\n                    }\n                },\n                {\n                    \"neural\": {\n                        \"text_embedding\": {\n                            \"query_text\": \"waterproof hiking boots\",\n                            \"model_id\": \"aVeryLongModelId\",\n                            \"k\": 20\n                        }\n                    }\n                }\n            ],\n            \"minimum_should_match\": 1\n        }\n    },\n    \"size\": 20\n}",
+            "digest": {
+                "idx": "products-v3",
+                "q": "products-v3 | q=(image_embedding:knn(k=20) and in_stock:true or text_embedding:neural(query=\"waterproof hiking boots\",k=20)) | size=20",
+                "sig": "products-v3 | q=(image_embedding:knn(k=?) and in_stock:? or text_embedding:neural(query=?,k=?)) | size=20",
+                "hash": "q2:4dde138a2ad7"
+            },
+            "rules": [
+                {
+                    "rule": "unwrap",
+                    "count": 1,
+                    "why": "A single-clause connector was replaced by that clause.",
+                    "on": [
+                        "bool"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "13-relations-and-geo",
+            "label": "Relations and geo",
+            "index": "stores",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"geo_distance\": {\n                        \"distance\": \"25km\",\n                        \"location\": {\n                            \"lat\": 48.8566,\n                            \"lon\": 2.3522\n                        }\n                    }\n                },\n                {\n                    \"geo_bounding_box\": {\n                        \"delivery_area\": {\n                            \"top_left\": {\n                                \"lat\": 49.2,\n                                \"lon\": 1.9\n                            },\n                            \"bottom_right\": {\n                                \"lat\": 48.5,\n                                \"lon\": 2.8\n                            }\n                        }\n                    }\n                },\n                {\n                    \"has_child\": {\n                        \"type\": \"review\",\n                        \"query\": {\n                            \"range\": {\n                                \"rating\": {\n                                    \"gte\": 4\n                                }\n                            }\n                        }\n                    }\n                },\n                {\n                    \"has_parent\": {\n                        \"parent_type\": \"chain\",\n                        \"query\": {\n                            \"term\": {\n                                \"active\": true\n                            }\n                        }\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 50\n}",
+            "digest": {
+                "idx": "stores",
+                "q": "stores | q=(delivery_area:geo_bbox() and has_child(review):{ rating >= 4 } and has_parent(chain):{ active:true } and location:geo_distance(25km)) | size=50",
+                "sig": "stores | q=(delivery_area:geo_bbox() and has_child(review):{ rating >= ? } and has_parent(chain):{ active:? } and location:geo_distance(?)) | size=50",
+                "hash": "q2:ccb4fb77328e"
+            },
+            "rules": [
+                {
+                    "rule": "reorder",
+                    "count": 1,
+                    "why": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
+                    "on": [
+                        "and"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "14-script-and-like",
+            "label": "Script and like",
+            "index": "articles",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"must\": [\n                {\n                    \"more_like_this\": {\n                        \"fields\": [\n                            \"title\",\n                            \"body\"\n                        ],\n                        \"like\": \"distributed consensus algorithms\",\n                        \"min_term_freq\": 1\n                    }\n                }\n            ],\n            \"filter\": [\n                {\n                    \"script\": {\n                        \"script\": {\n                            \"source\": \"doc['word_count'].value > params.floor\",\n                            \"params\": {\n                                \"floor\": 500\n                            }\n                        }\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 10\n}",
+            "digest": {
+                "idx": "articles",
+                "q": "articles | q=(script(doc['word_count'].value > params.floor) and title|body:like(\"distributed consensus algorithms\")) | size=10",
+                "sig": "articles | q=(script(?) and title|body:like(?)) | size=10",
+                "hash": "q2:522066bb4084"
+            },
+            "rules": [
+                {
+                    "rule": "must_filter_merged",
+                    "count": 1,
+                    "why": "bool.must and bool.filter both became AND: they differ in scoring, not in which documents match."
+                },
+                {
+                    "rule": "reorder",
+                    "count": 1,
+                    "why": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
+                    "on": [
+                        "and"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "15-rescored-children",
+            "label": "Rescored children",
+            "index": "forum-2026.08.16",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"script_score\": {\n            \"query\": {\n                \"bool\": {\n                    \"filter\": [\n                        {\n                            \"parent_id\": {\n                                \"type\": \"comment\",\n                                \"id\": \"4712\"\n                            }\n                        },\n                        {\n                            \"range\": {\n                                \"created_at\": {\n                                    \"gte\": \"now-7d\"\n                                }\n                            }\n                        }\n                    ]\n                }\n            },\n            \"script\": {\n                \"source\": \"_score * Math.log(2 + doc['votes'].value)\"\n            },\n            \"min_score\": 1.5\n        }\n    },\n    \"size\": 20\n}",
+            "digest": {
+                "idx": "forum-*",
+                "q": "forum-* | q=(parent_id(comment):4712 and created_at >= now-7d) | size=20 | script_score:min_score",
+                "sig": "forum-* | q=(parent_id(comment):? and created_at >= ?) | size=20 | script_score:min_score",
+                "hash": "q2:621e3adba249",
+                "notes": [
+                    "script_score:min_score"
+                ]
+            },
+            "rules": [
+                {
+                    "rule": "index_pattern",
+                    "count": 1,
+                    "why": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",
+                    "on": [
+                        "forum-2026.08.16 -> forum-*"
+                    ]
+                },
+                {
+                    "rule": "script_score_unwrapped",
+                    "count": 1,
+                    "why": "script_score was replaced by its inner query: the script only rescores. A min_score, which does exclude documents, is reported in the notes."
+                }
+            ]
+        },
+        {
+            "id": "16-shape-relations",
+            "label": "Shape relations",
+            "index": "deliveries",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"geo_shape\": {\n                        \"drop_zone\": {\n                            \"shape\": {\n                                \"type\": \"polygon\",\n                                \"coordinates\": [\n                                    [\n                                        [\n                                            2.2,\n                                            48.9\n                                        ],\n                                        [\n                                            2.4,\n                                            48.8\n                                        ],\n                                        [\n                                            2.5,\n                                            48.9\n                                        ],\n                                        [\n                                            2.2,\n                                            48.9\n                                        ]\n                                    ]\n                                ]\n                            },\n                            \"relation\": \"within\"\n                        }\n                    }\n                },\n                {\n                    \"geo_shape\": {\n                        \"restricted_area\": {\n                            \"indexed_shape\": {\n                                \"index\": \"shapes\",\n                                \"id\": \"no-fly-75\",\n                                \"path\": \"geometry\"\n                            },\n                            \"relation\": \"disjoint\"\n                        }\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 50\n}",
+            "digest": {
+                "idx": "deliveries",
+                "q": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
+                "sig": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
+                "hash": "q2:cb5e4609d066",
+                "notes": [
+                    "indexed_shape"
+                ]
+            },
+            "rules": [
+                {
+                    "rule": "indexed_shape",
+                    "count": 1,
+                    "why": "A shape query pointed at a pre-indexed geometry: what it is cannot be read from the query, only that it is indexed.",
+                    "on": [
+                        "restricted_area"
+                    ]
+                }
+            ]
+        }
+    ]
+}
