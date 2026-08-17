@@ -1,29 +1,53 @@
-# os-query-digest
+# Read your OpenSearch queries. Group them. Find the slow ones.
 
 [![CI](https://github.com/mrDlef/php-os-query-digest/actions/workflows/ci.yml/badge.svg)](https://github.com/mrDlef/php-os-query-digest/actions/workflows/ci.yml)
+![PHP 7.4 – 8.5](https://img.shields.io/badge/PHP-7.4%20%E2%80%93%208.5-777bb3)
+![no runtime dependencies](https://img.shields.io/badge/runtime%20dependencies-none-2e7d32)
+![LGPL-3.0-or-later](https://img.shields.io/badge/licence-LGPL--3.0--or--later-555)
+
+**`os-query-digest`** turns a wall of DSL JSON into one line you can log, one
+shape you can read, and one hash you can `terms`-aggregate on.
 
 ### ▶ [Try it on your own query](https://mrdlef.github.io/php-os-query-digest/) — no install, nothing leaves your browser
 
-Turn an OpenSearch / Elasticsearch DSL query into something you can actually put
-in a log line — and into a **stable fingerprint** you can group by.
+---
 
-```php
-$formatter = MrDlef\OsQueryDigest\Formatter::create();
-$digest = $formatter->describe($request, 'logs-2026.08.13');
+**Before.** One search request, as it lands in your logs — and there are
+thousands of these a day:
 
-$digest->text();      // logs-* | q=(@timestamp >= now-15m and service:api) | size=0
-$digest->signature(); // logs-* | q=(@timestamp >= ? and service:?) | size=0
-$digest->hash();      // q2:b7cc218cda09
-$digest->index();     // logs-*
+```json
+{
+  "query": {
+    "bool": {
+      "filter": [
+        { "term": { "service": "api" } },
+        { "range": { "@timestamp": { "gte": "now-15m", "lt": "now" } } }
+      ],
+      "must_not": [ { "term": { "status": 200 } } ]
+    }
+  },
+  "size": 50,
+  "sort": [ { "@timestamp": "desc" } ],
+  "_source": [ "@timestamp", "message", "status" ]
+}
 ```
 
-Requires PHP 7.4+, no runtime dependencies.
+**After.** The same request, three ways:
 
-## Why
+```
+text  logs-* | q=(@timestamp >= now-15m and @timestamp < now and not status:200 and service:api) | size=50 sort=@timestamp:desc
+sig   logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
+hash  q2:fe168406e702
+```
 
-A DSL query in a JSON log is a wall of nested braces: unreadable in a terminal,
-useless for grouping, and it blows up your log volume. This library gives you
-three things instead:
+```php
+$digest = MrDlef\OsQueryDigest\Formatter::create()
+    ->describe($request, 'logs-2026.08.13');
+
+$digest->text();       // the line above — select it, paste it into Dashboards
+$digest->signature();  // the same query with its literals erased: the shape
+$digest->hash();       // q2:fe168406e702 — stable, versioned, groupable
+```
 
 | | what it is | what it is for |
 |---|---|---|
@@ -31,15 +55,42 @@ three things instead:
 | `signature` | the same line with literals erased | read the *shape* at a glance |
 | `hash` | versioned fingerprint of the signature | `terms` aggregate on it |
 
-That last one is the payoff. Log `hash` alongside `took` and you can ask your own
-log index which *kinds* of query are slow, which appeared this week, and which
-one caused the incident — using OpenSearch to analyse OpenSearch.
+**The third one is the point.** Log the hash next to `took`, and your log index
+answers questions your dashboards cannot: which *kind* of query got slow this
+week, which one showed up with Friday's deploy, which one was hammering the
+cluster during the incident. Not which thousand queries were slow — which
+**shape** was. OpenSearch, analysing OpenSearch.
+
+That query and that fingerprint are not illustrations: they are
+`tests/fixtures/01-error-rate-filter`, and the golden file pins the exact hash.
+Every example in this README is a test.
+
+## Why you might want it
+
+- **Your logs stop being unreadable.** A DSL body in a JSON log is a wall of
+  nested braces nobody greps. One line replaces it, and it is DQL you can paste
+  straight into Dashboards.
+- **Your log volume drops.** A 40-line body becomes one line, capped.
+- **Slow queries become countable.** `terms` on the hash and the top of the list
+  is the shape to fix.
+- **It cannot break your logging.** Nothing is required at runtime, the digest
+  is lazy, and a request it cannot parse yields an error field rather than an
+  exception. You lose the digest, never the log line.
+- **It tells you why.** When two queries you thought were different share a
+  hash, `explain()` names the rule that merged them — see
+  [Explaining a fingerprint](#explaining-a-fingerprint).
+- **It is verified, not asserted.** Certified against real OpenSearch 2.19.6 and
+  3.8.0 nodes, checked against the official API specification, PHPStan at
+  `level: max`, tested on PHP 7.4 → 8.5.
 
 ## Install
 
 ```bash
 composer require mr-dlef/os-query-digest
 ```
+
+PHP 7.4 → 8.5. No runtime dependencies. Ships a CLI, a Monolog processor, and a
+browser playground.
 
 ## Usage
 
