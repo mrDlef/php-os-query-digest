@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest;
 
+use MrDlef\OsQueryDigest\Exception\InvalidOptionException;
 use MrDlef\OsQueryDigest\Support\IndexNormalizer;
 
 /**
@@ -11,6 +12,25 @@ use MrDlef\OsQueryDigest\Support\IndexNormalizer;
  */
 final class Options
 {
+    /**
+     * Every key {@see fromArray()} accepts, in the order the README documents
+     * the withers.
+     *
+     * `redactor` is absent on purpose: a callable has no array form.
+     *
+     * @var array<int,string>
+     */
+    public const KEYS = [
+        'normalization',
+        'maxClauses',
+        'maxValues',
+        'maxLength',
+        'indexNormalizer',
+        'aggNames',
+        'hashVersion',
+        'hashLength',
+    ];
+
     private Normalization $normalization;
 
     private ?int $maxClauses = 12;
@@ -43,6 +63,31 @@ final class Options
     public static function create(): self
     {
         return new self();
+    }
+
+    /**
+     * The same options from a plain array: a YAML file, a framework config
+     * block, a decoded request. Every key is optional and every unlisted key
+     * keeps its default.
+     *
+     * Types are taken as JSON gives them — `int|null` for the caps, `bool` for
+     * the switches, `string` for the named modes. Coercing `"12"` is the
+     * caller's job, because a front that guesses is a front that accepts
+     * `"twelve"` too.
+     *
+     * @param array<mixed> $spec
+     *
+     * @throws InvalidOptionException on an unknown key or a wrong type
+     */
+    public static function fromArray(array $spec): self
+    {
+        $options = new self();
+
+        foreach ($spec as $key => $value) {
+            $options = $options->with((string) $key, $value);
+        }
+
+        return $options;
     }
 
     public function withNormalization(Normalization $normalization): self
@@ -182,5 +227,87 @@ final class Options
     public function hashVersion(): string
     {
         return $this->hashVersion;
+    }
+
+    /**
+     * One key of {@see fromArray()}'s spec. A `switch` rather than a map of
+     * closures: the arms are the documentation of what each key accepts.
+     *
+     * @param mixed $value
+     */
+    private function with(string $key, $value): self
+    {
+        switch ($key) {
+            case 'normalization':
+                return $this->withNormalization(Normalization::fromLevel(self::asString($key, $value)));
+            case 'maxClauses':
+                return $this->withMaxClauses(self::asIntOrNull($key, $value));
+            case 'maxValues':
+                return $this->withMaxValues(self::asIntOrNull($key, $value));
+            case 'maxLength':
+                return $this->withMaxLength(self::asIntOrNull($key, $value));
+            case 'indexNormalizer':
+                return $this->withIndexNormalizer(IndexNormalizer::fromMode(self::asString($key, $value)));
+            case 'aggNames':
+                return $this->withAggNames(self::asBool($key, $value));
+            case 'hashVersion':
+                return $this->withHashVersion(self::asString($key, $value));
+            case 'hashLength':
+                return $this->withHashLength(self::asInt($key, $value));
+        }
+
+        throw InvalidOptionException::unknownOption($key, self::KEYS);
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private static function asString(string $key, $value): string
+    {
+        if (!is_string($value)) {
+            throw InvalidOptionException::wrongType($key, 'a string', $value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private static function asBool(string $key, $value): bool
+    {
+        if (!is_bool($value)) {
+            throw InvalidOptionException::wrongType($key, 'a boolean', $value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private static function asInt(string $key, $value): int
+    {
+        if (!is_int($value)) {
+            throw InvalidOptionException::wrongType($key, 'an integer', $value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private static function asIntOrNull(string $key, $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (!is_int($value)) {
+            throw InvalidOptionException::wrongType($key, 'an integer or null', $value);
+        }
+
+        return $value;
     }
 }

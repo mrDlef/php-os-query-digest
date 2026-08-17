@@ -1,0 +1,52 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use MrDlef\OsQueryDigest\Cli\Command;
+
+/**
+ * Three ways this file gets run: installed as a dependency
+ * (vendor/bin/os-query-digest), from a checkout of this repo, and from a
+ * checkout whose vendor directory was moved — the Docker matrix gives each PHP
+ * version its own, which is why COMPOSER_VENDOR_DIR is consulted first.
+ */
+$candidates = [];
+
+$fromEnv = getenv('COMPOSER_VENDOR_DIR');
+if (is_string($fromEnv) && $fromEnv !== '') {
+    $candidates[] = rtrim($fromEnv, '/') . '/autoload.php';
+}
+
+$candidates[] = __DIR__ . '/../vendor/autoload.php';
+$candidates[] = __DIR__ . '/../../../autoload.php';
+
+foreach ($candidates as $candidate) {
+    if (is_file($candidate)) {
+        require $candidate;
+        break;
+    }
+}
+
+if (!class_exists(Command::class)) {
+    fwrite(STDERR, 'os-query-digest: no autoloader found. Run `composer install`.' . PHP_EOL);
+    exit(70); // EX_SOFTWARE
+}
+
+// Read from $_SERVER rather than $argv: the CLI SAPI always populates it, but
+// nothing in the language guarantees the global exists, and a typed array is
+// what Command asks for.
+$arguments = [];
+$given = $_SERVER['argv'] ?? [];
+if (is_array($given)) {
+    foreach ($given as $argument) {
+        if (is_string($argument)) {
+            $arguments[] = $argument;
+        }
+    }
+}
+if ($arguments === []) {
+    $arguments[] = 'os-query-digest';
+}
+
+exit((new Command(STDIN, STDOUT, STDERR))->run($arguments));

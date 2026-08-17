@@ -27,6 +27,7 @@ return RectorConfig::configure()
         __DIR__ . '/src',
         __DIR__ . '/tests',
         __DIR__ . '/tools',
+        __DIR__ . '/bin/os-query-digest',
     ])
     ->withPhpVersion(PhpVersion::PHP_74)
     ->withSets([
