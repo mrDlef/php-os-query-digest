@@ -13,6 +13,7 @@
         "observability",
         "debug"
     ],
+    "homepage": "https://mrdlef.github.io/php-os-query-digest/",
     "authors": [
         {
             "name": "Denis Favreau",
