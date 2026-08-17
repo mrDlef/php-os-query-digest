@@ -6,7 +6,7 @@ export DOCKER_UID := $(shell id -u)
 export DOCKER_GID := $(shell id -g)
 
 .PHONY: test test-all stan cs cs-check rector rector-check check hooks fixtures spec \
-        playground-data \
+        playground playground-data playground-check \
         certify integration clusters clusters-down clean
 
 ## Run the test suite in Docker for one PHP version: make test PHP_VERSION=7.4
@@ -60,6 +60,20 @@ fixtures:
 ## PlaygroundTest fails until the committed data matches src/.
 playground-data:
 	php tools/build-playground.php
+
+## Serve the playground on :8080. Static files only; the PHP that runs the
+## library is the one compiled to wasm, fetched by the page.
+playground: playground-data
+	@echo "→ http://localhost:8080"
+	@php -S localhost:8080 -t playground
+
+## Drive the playground in a real browser and assert what it renders.
+##   npm install -g playwright && npx playwright install chromium
+## NODE_PATH is how node finds a globally installed playwright. CI never runs
+## this: the guard that has to be automatic is PlaygroundTest, which needs
+## neither node nor a browser.
+playground-check:
+	NODE_PATH="$${NODE_PATH:-$$(npm root -g)}" node tools/playground-browser-check.mjs
 
 ## Refresh the OpenSearch spec snapshot, then let the tests flag what changed.
 ## SPEC_REF pins a branch, tag or commit: make spec SPEC_REF=e027edc

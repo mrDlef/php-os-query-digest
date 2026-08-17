@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>os-query-digest playground</title>
+<meta name="description" content="Turn an OpenSearch / Elasticsearch DSL query into a readable log line, a signature and a stable fingerprint — in your browser.">
+<link rel="stylesheet" href="./playground.css">
+</head>
+<body>
+<header class="masthead">
+    <h1>os-query-digest</h1>
+    <p>Paste an OpenSearch / Elasticsearch DSL query. Get the line you can log,
+    the shape you can group by, and the fingerprint you can aggregate on.</p>
+    <p class="links">
+        <a href="https://github.com/mrDlef/php-os-query-digest">source</a>
+        <a href="https://packagist.org/packages/mr-dlef/os-query-digest">packagist</a>
+    </p>
+</header>
+
+<nav class="presets" aria-label="Example queries">
+    <span class="presets-label">examples</span>
+    <div id="presets" class="preset-chips"></div>
+</nav>
+
+<main>
+    <section class="pane" aria-labelledby="input-heading">
+        <h2 id="input-heading">Query</h2>
+
+        <label class="field">
+            <span>index</span>
+            <input id="index" type="text" spellcheck="false" autocomplete="off"
+                   placeholder="logs-2026.08.13">
+        </label>
+
+        <label class="field field-grow">
+            <span>search body, or an {"index": …, "body": …} envelope</span>
+            <textarea id="body" spellcheck="false" autocomplete="off" rows="18"></textarea>
+        </label>
+
+        <details id="options-box">
+            <summary>options <span id="options-summary" class="muted"></span></summary>
+            <div class="options">
+                <fieldset>
+                    <legend>normalization</legend>
+                    <div id="levels" class="radios"></div>
+                </fieldset>
+
+                <label class="option"><span>max clauses</span>
+                    <input id="maxClauses" type="text" inputmode="numeric" size="5"></label>
+                <label class="option"><span>max values</span>
+                    <input id="maxValues" type="text" inputmode="numeric" size="5"></label>
+                <label class="option"><span>max length</span>
+                    <input id="maxLength" type="text" inputmode="numeric" size="5"></label>
+
+                <label class="option checkbox"><input id="aggNames" type="checkbox">
+                    <span>keep aggregation names</span></label>
+                <label class="option checkbox"><input id="rawIndex" type="checkbox">
+                    <span>keep dated index names</span></label>
+
+                <p class="muted note">A cap accepts a number or <code>none</code>.
+                Changing anything here needs PHP, so the runtime loads.</p>
+            </div>
+        </details>
+    </section>
+
+    <section class="pane" aria-labelledby="result-heading">
+        <h2 id="result-heading">Digest</h2>
+
+        <div id="error" class="error" hidden></div>
+
+        <dl class="digest">
+            <dt>idx</dt><dd id="idx" class="mono"></dd>
+            <dt>text</dt><dd id="text" class="mono wrap"></dd>
+            <dt>sig</dt><dd id="sig" class="mono wrap"></dd>
+            <dt>hash</dt><dd id="hash" class="mono hash"></dd>
+        </dl>
+
+        <div id="notes-box" class="notes" hidden>
+            <h3>notes</h3>
+            <ul id="notes"></ul>
+        </div>
+
+        <div class="actions">
+            <button id="pin" type="button">Pin as reference</button>
+            <button id="copy-link" type="button">Copy link</button>
+        </div>
+
+        <div id="compare" class="compare" hidden>
+            <h3>against the pinned query <button id="unpin" type="button" class="link">forget</button></h3>
+            <p id="compare-verdict"></p>
+            <ul id="compare-rules"></ul>
+        </div>
+
+        <div id="rules-box" class="rules">
+            <h3>rules applied <span id="rules-count" class="muted"></span></h3>
+            <ul id="rules"></ul>
+            <p id="rules-empty" class="muted" hidden>
+                No normalisation rule fired: the query was already canonical.
+            </p>
+        </div>
+    </section>
+</main>
+
+<footer id="status" class="status">
+    <span id="engine" class="engine">precomputed</span>
+    <span id="engine-detail" class="muted"></span>
+    <button id="boot" type="button">Run it for real</button>
+</footer>
+
+<script type="module" src="./playground.js"></script>
+</body>
+</html>
