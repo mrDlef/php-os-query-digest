@@ -3,15 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>os-query-digest playground</title>
-<meta name="description" content="Turn an OpenSearch / Elasticsearch DSL query into a readable log line, a signature and a stable fingerprint — in your browser.">
+<title>Read your OpenSearch queries — os-query-digest playground</title>
+<meta name="description" content="Paste an OpenSearch / Elasticsearch DSL query and get the line you can log, the shape you can read, and the fingerprint you can group by. Runs the real PHP library in your browser.">
 <link rel="stylesheet" href="./playground.css">
 </head>
 <body>
 <header class="masthead">
-    <h1>os-query-digest</h1>
-    <p>Paste an OpenSearch / Elasticsearch DSL query. Get the line you can log,
-    the shape you can group by, and the fingerprint you can aggregate on.</p>
+    <h1>Read your OpenSearch queries</h1>
+    <p class="lede">Paste a DSL query. Get the line you can log, the shape you
+    can read, and the fingerprint you can group by.</p>
+    <p class="muted small">This page runs the real PHP library, compiled to
+    WebAssembly. Your query never leaves this browser — there is no server to
+    send it to.</p>
     <p class="links">
         <a href="https://github.com/mrDlef/php-os-query-digest">source</a>
         <a href="https://packagist.org/packages/mr-dlef/os-query-digest">packagist</a>
@@ -66,6 +69,9 @@
 
     <section class="pane" aria-labelledby="result-heading">
         <h2 id="result-heading">Digest</h2>
+        <p class="hint muted">paste <code>text</code> into Dashboards ·
+        read <code>sig</code> for the shape · <code>terms</code>-aggregate on
+        <code>hash</code></p>
 
         <div id="error" class="error" hidden></div>
 

@@ -44,8 +44,12 @@ h1 { font-size: 1.4rem; margin: 0 0 .3rem; letter-spacing: -.01em; }
 h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 .8rem; }
 h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 1.2rem 0 .4rem; }
 
-.masthead p { margin: .2rem 0; max-width: 62ch; color: var(--muted); }
-.masthead .links { margin-top: .5rem; display: flex; gap: 1rem; }
+.masthead p { margin: .2rem 0; max-width: 64ch; color: var(--muted); }
+.masthead .lede { color: var(--fg); font-size: 1.02rem; }
+.small { font-size: .84rem; }
+.hint { margin: -.4rem 0 .9rem; font-size: .78rem; }
+.hint code { color: var(--accent); }
+.masthead .links { margin-top: .6rem; display: flex; gap: 1rem; }
 a { color: var(--accent); }
 
 .presets { margin: 1.4rem 0 1rem; display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; }
@@ -111,7 +115,8 @@ legend { font-size: .74rem; color: var(--muted); padding: 0 0 .25rem; }
 .digest dd { margin: 0; min-width: 0; }
 .mono { font-family: var(--mono); font-size: 13px; }
 .wrap { overflow-wrap: anywhere; }
-.hash { color: var(--accent); font-weight: 600; }
+/* The payoff of the whole library, so it is not the smallest thing on the page. */
+.hash { color: var(--accent); font-weight: 600; font-size: 15.5px; letter-spacing: .01em; }
 
 .muted { color: var(--muted); }
 code { font-family: var(--mono); font-size: .92em; }
