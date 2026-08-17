@@ -1,6 +1,7 @@
 # Keep the distributed package to the library itself.
 /.github                 export-ignore
 /docker                  export-ignore
+/playground              export-ignore
 /tests                   export-ignore
 /tools                   export-ignore
 /.gitattributes          export-ignore
