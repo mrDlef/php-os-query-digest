@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/mrDlef/php-os-query-digest/actions/workflows/ci.yml/badge.svg)](https://github.com/mrDlef/php-os-query-digest/actions/workflows/ci.yml)
 
+### ▶ [Try it on your own query](https://mrdlef.github.io/php-os-query-digest/) — no install, nothing leaves your browser
+
 Turn an OpenSearch / Elasticsearch DSL query into something you can actually put
 in a log line — and into a **stable fingerprint** you can group by.
 
@@ -195,11 +197,13 @@ parsed, `2` a bad invocation. `--help` lists every flag.
 
 ## Playground
 
-A page that runs this library on your query, in your browser, with no server
-involved: PHP itself is compiled to WebAssembly. It is published from a release
-tag to `https://mrdlef.github.io/php-os-query-digest/` — the page prints
-fingerprints, and a fingerprint no installable version produces would be worse
-than no page at all.
+**[mrdlef.github.io/php-os-query-digest](https://mrdlef.github.io/php-os-query-digest/)**
+runs this library on your query, in your browser, with no server involved: PHP
+itself is compiled to WebAssembly. Your query is never sent anywhere.
+
+It is published from a release tag, never from `main` — the page prints
+fingerprints, and one that no installable version produces would be worse than
+no page at all.
 
 Locally:
 
