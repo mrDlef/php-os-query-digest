@@ -14,10 +14,10 @@ be.
 
 ## Supported versions
 
-| version | supported |
-|---|---|
-| latest `0.x` minor | yes |
-| everything older | no |
+| version            | supported |
+|--------------------|-----------|
+| latest `0.x` minor | yes       |
+| everything older   | no        |
 
 This library is pre-1.0 and moves quickly — six releases in the first three
 days. Backporting to an older minor would mean maintaining a branch nobody is
@@ -31,7 +31,7 @@ Most of the answer to "is this risky?" is in how little it touches.
 
 **It reads a data structure and returns strings.** At runtime it performs no
 file access, no network calls, and no process execution — there is not a single
-`file_get_contents`, `curl_*`, `exec` or `include` in the parsing, rendering or
+`file_get_contents`, `curl_*`, `exec` or `include` in the parsing, rendering, or
 hashing path. The one exception is the CLI, which reads the file you name on the
 command line, because that is what you asked it to do.
 
@@ -85,4 +85,4 @@ same care as any other handler of untrusted input.
 The maintainer tooling under `tools/` — the certification harness, the
 benchmark, the playground builder — is not shipped in the Composer package
 (`git archive` contains none of it) and is only ever run by someone with a
-checkout, Docker and a network. Findings there are bugs, not vulnerabilities.
+checkout, Docker, and a network. Findings there are bugs, not vulnerabilities.
