@@ -23,7 +23,7 @@ the same query. See [Hash stability](README.md#hash-stability).
 | `q3:` | v0.6.0 | eight more promoted |
 | `q3x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
-## v0.7.0 — unreleased
+## v0.7.0 — 2026-08-18
 
 _the pre-1.0 hardening_
 
