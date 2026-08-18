@@ -22,7 +22,12 @@ final class Hasher
 
     private int $length;
 
-    public function __construct(string $version = 'q3', int $length = 12)
+    /**
+     * No defaults: {@see \MrDlef\OsQueryDigest\Options} holds them, and a
+     * second copy here would be a value nothing constructs and nothing tests,
+     * free to drift from the one that is actually used.
+     */
+    public function __construct(string $version, int $length)
     {
         $this->version = $version;
         $this->length = $length;

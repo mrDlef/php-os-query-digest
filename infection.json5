@@ -1,0 +1,37 @@
+{
+    // Mutation testing answers the question the fixtures cannot: not "is this
+    // line executed?" but "would anything fail if it stopped doing its job?".
+    // For a library whose product is a stable hash, that is the question worth
+    // asking — a normalisation rule silently ceasing to fire is exactly the bug
+    // no coverage percentage would show.
+    "$schema": "tools/infection/vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": [
+            "src"
+        ]
+    },
+    "mutators": {
+        "@default": true
+    },
+    // One vendor directory for this job, the way every PHP version gets its
+    // own. Infection needs 8.3 while the library floor is 7.4, so it cannot
+    // share the per-version tree the unit suite uses.
+    "bootstrap": ".vendor/mutation/autoload.php",
+    "phpUnit": {
+        "configDir": ".",
+        "customPath": ".vendor/mutation/bin/phpunit"
+    },
+    "tmpDir": ".infection",
+    "timeout": 30,
+    // A ratchet, not a target. The suite sits at ~79% covered MSI with nothing
+    // uncovered at all, and most of what survives is string concatenation in
+    // CLI help and error text — reordering a message nobody asserts on. The
+    // threshold exists so that number cannot quietly fall; raise it when real
+    // escapes are killed, never lower it to make a build pass.
+    "minMsi": 78,
+    "minCoveredMsi": 78,
+    "logs": {
+        "text": ".infection/escaped.log",
+        "summary": ".infection/summary.log"
+    }
+}

@@ -9,5 +9,9 @@ parameters:
         - tools
         # Listed as a file: the shim has no .php extension, being a composer bin.
         - bin/os-query-digest
+    excludePaths:
+        # Infection's own dependencies, installed under tools/ because it needs
+        # a newer PHP than this library supports. Not our code to analyse.
+        - tools/infection/vendor
     treatPhpDocTypesAsCertain: true
     reportUnmatchedIgnoredErrors: true
