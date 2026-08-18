@@ -88,8 +88,6 @@ jobs:
 
       - name: Install dependencies
         run: composer update --prefer-dist --no-progress
-        env:
-          COMPOSER_VENDOR_DIR: .vendor/mutation
 
       # Its own manifest: Infection needs PHP 8.3+ while this library supports
       # 7.4, so it must not sit in the root require-dev and constrain what the
@@ -99,5 +97,3 @@ jobs:
 
       - name: Mutation testing
         run: tools/infection/vendor/bin/infection --threads=max --no-progress --no-interaction --logger-github
-        env:
-          COMPOSER_VENDOR_DIR: .vendor/mutation

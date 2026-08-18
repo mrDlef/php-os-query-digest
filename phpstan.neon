@@ -12,6 +12,8 @@ parameters:
     excludePaths:
         # Infection's own dependencies, installed under tools/ because it needs
         # a newer PHP than this library supports. Not our code to analyse.
-        - tools/infection/vendor
+        # A pattern, not a path: it only exists in the mutation job, and
+        # PHPStan rejects an excludePaths entry that is not there.
+        - tools/infection/vendor/*
     treatPhpDocTypesAsCertain: true
     reportUnmatchedIgnoredErrors: true

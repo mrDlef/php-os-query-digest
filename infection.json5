@@ -13,13 +13,12 @@
     "mutators": {
         "@default": true
     },
-    // One vendor directory for this job, the way every PHP version gets its
-    // own. Infection needs 8.3 while the library floor is 7.4, so it cannot
-    // share the per-version tree the unit suite uses.
-    "bootstrap": ".vendor/mutation/autoload.php",
+    // The conventional vendor/ on purpose, not one of the per-version trees the
+    // unit suite uses: phpunit.xml.dist bootstraps vendor/autoload.php, and
+    // pointing composer elsewhere leaves PHPUnit with no autoloader anywhere CI
+    // has not already installed one.
     "phpUnit": {
-        "configDir": ".",
-        "customPath": ".vendor/mutation/bin/phpunit"
+        "configDir": "."
     },
     "tmpDir": ".infection",
     "timeout": 30,

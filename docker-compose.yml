@@ -56,10 +56,12 @@ services:
       - .:/app
     environment:
       COMPOSER_HOME: /tmp/composer
-      # Its own vendor tree, like every PHP version has. Infection's manifest
-      # is separate again (tools/infection): it does not share this library's
-      # dependencies and must not constrain them.
-      COMPOSER_VENDOR_DIR: /app/.vendor/mutation
+      # No COMPOSER_VENDOR_DIR override, unlike the `php` service: PHPUnit is
+      # invoked by Infection through phpunit.xml.dist, which bootstraps
+      # vendor/autoload.php. Sending composer somewhere else leaves it with no
+      # autoloader. This job runs on one PHP version, so the per-version split
+      # buys nothing here anyway — it exists because PHPUnit differs across
+      # 7.4 to 8.5, and this is 8.5 either way.
       # So a run can be narrowed without editing this file:
       #   INFECTION_ARGS="--filter=src/Parser" make mutation
       INFECTION_ARGS: ${INFECTION_ARGS:-}
