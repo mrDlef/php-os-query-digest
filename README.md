@@ -582,8 +582,19 @@ copy of them: the notes are reviewed in the pull request that ships the change
 rather than written after the tag.
 
 ```bash
-make release-check VERSION=v0.7.0    # may this be tagged?
-make release-notes VERSION=v0.7.0    # what the release will say
+make release-check VERSION=v0.7.0             # may this be tagged?
+php tools/changelog.php section v0.7.0 > notes.md
+gh release create v0.7.0 --verify-tag --latest --notes-file notes.md
+```
+
+**Write the notes to a file and check it before publishing**, rather than
+piping. v0.7.0 shipped with every blank line stripped out — headings glued to
+paragraphs — because the extraction went through a pipeline that reflowed it,
+and nothing looked at the result until after it was public. The extraction
+itself was fine. Afterwards, compare what was published against the source:
+
+```bash
+gh release view v0.7.0 --json body --jq .body | diff - notes.md
 ```
 
 There is no generator, and there will not be one. v0.6.0's notes run to four and
