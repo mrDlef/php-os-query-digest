@@ -56,11 +56,11 @@ $digest->signature();  // the same query with its literals erased: the shape
 $digest->hash();       // q3:fe168406e702 — stable, versioned, groupable
 ```
 
-| | what it is | what it is for |
-|---|---|---|
-| `text` | the query in DQL, with real values | paste it into the Dashboards search bar |
-| `signature` | the same line with literals erased | read the *shape* at a glance |
-| `hash` | versioned fingerprint of the signature | `terms` aggregate on it |
+|             | what it is                             | what it is for                          |
+|-------------|----------------------------------------|-----------------------------------------|
+| `text`      | the query in DQL, with real values     | paste it into the Dashboards search bar |
+| `signature` | the same line with literals erased     | read the *shape* at a glance            |
+| `hash`      | versioned fingerprint of the signature | `terms` aggregate on it                 |
 
 **The third one is the point.** Log the hash next to `took`, and your log index
 answers questions your dashboards cannot: which *kind* of query got slow this
@@ -294,11 +294,11 @@ needing a browser or wasm. The page itself is checked by
 
 ### Normalisation levels
 
-| level | erases | `terms: [500, 502]` becomes |
-|---|---|---|
-| `Normalization::none()` | nothing | `status:(500 or 502)` |
-| `Normalization::values()` *(default)* | literals | `status:(? or ?)` |
-| `Normalization::structural()` | + cardinality, pagination | `status:(?)` |
+| level                                 | erases                    | `terms: [500, 502]` becomes |
+|---------------------------------------|---------------------------|-----------------------------|
+| `Normalization::none()`               | nothing                   | `status:(500 or 502)`       |
+| `Normalization::values()` *(default)* | literals                  | `status:(? or ?)`           |
+| `Normalization::structural()`         | + cardinality, pagination | `status:(?)`                |
 
 `size=0` survives every level: "aggregations only" is a different kind of query
 from "give me hits".
@@ -398,16 +398,16 @@ stance on each one, and `SpecCoverageTest` fails if the two ever disagree.
 
 **46 of the 59 query types** are rendered natively:
 
-| | |
-|---|---|
-| term-level | `term`, `terms`, `terms_set`, `prefix`, `wildcard`, `regexp`, `fuzzy`, `exists`, `range`, `ids` |
-| full text | `match`, `match_bool_prefix`, `match_phrase`, `match_phrase_prefix`, `multi_match`, `combined_fields`, `common`, `query_string`, `simple_query_string`, `more_like_this`, `intervals` |
-| compound | `bool`, `constant_score`, `dis_max`, `hybrid`, `function_score`, `script_score`, `boosting` (filtering part), `wrapper` |
-| joining | `nested`, `has_child`, `has_parent`, `parent_id` |
-| vector | `knn`, `neural` |
-| geo | `geo_distance`, `geo_bounding_box`, `geo_polygon`, `geo_shape`, `xy_shape` |
-| scoring | `rank_feature`, `distance_feature` |
-| other | `match_all`, `match_none`, `script`, `percolate` |
+|            |                                                                                                                                                                                       |
+|------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| term-level | `term`, `terms`, `terms_set`, `prefix`, `wildcard`, `regexp`, `fuzzy`, `exists`, `range`, `ids`                                                                                       |
+| full text  | `match`, `match_bool_prefix`, `match_phrase`, `match_phrase_prefix`, `multi_match`, `combined_fields`, `common`, `query_string`, `simple_query_string`, `more_like_this`, `intervals` |
+| compound   | `bool`, `constant_score`, `dis_max`, `hybrid`, `function_score`, `script_score`, `boosting` (filtering part), `wrapper`                                                               |
+| joining    | `nested`, `has_child`, `has_parent`, `parent_id`                                                                                                                                      |
+| vector     | `knn`, `neural`                                                                                                                                                                       |
+| geo        | `geo_distance`, `geo_bounding_box`, `geo_polygon`, `geo_shape`, `xy_shape`                                                                                                            |
+| scoring    | `rank_feature`, `distance_feature`                                                                                                                                                    |
+| other      | `match_all`, `match_none`, `script`, `percolate`                                                                                                                                      |
 
 Vector and geo clauses keep what a reader needs and drop what they cannot use: a
 `knn` renders as `image_embedding:knn(k=20)`, not as a thousand floats, so two
@@ -507,12 +507,12 @@ are listed in the notes.
 specification — every query type is sent to a real node of each, and
 `resources/versions.json` records what came back:
 
-| | |
-|---|---|
-| 53 types | probed against live clusters |
-| 52 | accepted by 2.19.6 |
-| 53 | accepted by 3.8.0 |
-| 6 | cannot be probed, each with a written reason |
+|          |                                              |
+|----------|----------------------------------------------|
+| 53 types | probed against live clusters                 |
+| 52       | accepted by 2.19.6                           |
+| 53       | accepted by 3.8.0                            |
+| 6        | cannot be probed, each with a written reason |
 
 `combined_fields` is the one difference the specification could not have told
 you: it is listed as a query type, 3.x accepts it, and 2.19.6 answers `unknown
@@ -616,14 +616,14 @@ whatever its annotation claims.
 
 **The public surface is fourteen classes:**
 
-| | |
-|---|---|
-| entry point | `Formatter` |
-| results | `Digest`, `LazyDigest`, `Explain\Explanation`, `Explain\Rule` |
-| configuration | `Options`, `Normalization`, `IndexNormalizer` |
-| extension | `Extension\ClauseRenderer`, `Extension\RenderedClause` |
-| failures | `Exception\InvalidQueryException`, `Exception\InvalidOptionException` |
-| Monolog | `Monolog\DigestProcessor`, `Monolog\SafeDigest` |
+|               |                                                                       |
+|---------------|-----------------------------------------------------------------------|
+| entry point   | `Formatter`                                                           |
+| results       | `Digest`, `LazyDigest`, `Explain\Explanation`, `Explain\Rule`         |
+| configuration | `Options`, `Normalization`, `IndexNormalizer`                         |
+| extension     | `Extension\ClauseRenderer`, `Extension\RenderedClause`                |
+| failures      | `Exception\InvalidQueryException`, `Exception\InvalidOptionException` |
+| Monolog       | `Monolog\DigestProcessor`, `Monolog\SafeDigest`                       |
 
 Everything else — the parser, the tree, the renderers, the canonicaliser, the
 hasher, the CLI command — is `@internal`. Not out of secrecy: those are exactly
@@ -682,11 +682,11 @@ make bench PHP_VERSION=7.4
 Measured on the committed fixtures — the same requests the suite treats as
 representative, from a single term to a 200-value `terms` clause:
 
-| | PHP 8.5 | PHP 7.4 |
-|---|---|---|
+|                                     | PHP 8.5    | PHP 7.4    |
+|-------------------------------------|------------|------------|
 | `describe()`, mean over 17 fixtures | **~30 µs** | **~37 µs** |
-| `json_encode()` of the same body | ~0.7 µs | ~1.5 µs |
-| `lazy()` | **0.2 µs** | 0.17 µs |
+| `json_encode()` of the same body    | ~0.7 µs    | ~1.5 µs    |
+| `lazy()`                            | **0.2 µs** | 0.17 µs    |
 
 **Next to the search itself, it disappears.** A query that takes 20 ms round-trip
 pays about 0.15% to be readable in your logs afterwards. Yes, it is some 40×
@@ -747,6 +747,14 @@ claiming otherwise would be a lie the analyser cannot catch.
 the type-declaration set never emits syntax the matrix cannot install. Its
 config avoids named arguments for the same reason: Rector installs happily on
 7.4, where `php74: true` would be a parse error.
+
+## Contributing and security
+
+[`CONTRIBUTING.md`](CONTRIBUTING.md) — the commands, and the rules that are not
+guessable from the code.
+
+[`SECURITY.md`](SECURITY.md) — report a vulnerability privately, not in an
+issue.
 
 ## License
 
