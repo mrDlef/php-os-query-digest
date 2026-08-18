@@ -1,8 +1,9 @@
-name: playground
+name: pages
 
-# Tags only, plus a manual button. The page prints fingerprints, and a
-# fingerprint that no installable version produces is worse than no page at all
-# — so it follows releases, not main.
+# Tags only, plus a manual button, for the documentation and the playground
+# alike. The playground prints fingerprints and the docs describe an API: a page
+# that shows either before anyone can install it is worse than a page a few days
+# out of date. The manual button is how a typo gets fixed without waiting.
 on:
   push:
     tags:
@@ -20,7 +21,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy to Pages
+    name: Deploy docs and playground
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -41,11 +42,42 @@ jobs:
       - name: The committed data must match this commit
         run: php tools/build-playground.php --check
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      # MkDocs lives here and nowhere else: not in composer.json, not in the
+      # package. The runtime dependencies of this library are php and ext-json,
+      # and documentation tooling has no business changing that.
+      - name: Install MkDocs
+        run: pip install --disable-pip-version-check mkdocs-material==9.5.49
+
+      # Copied in before the build, so MkDocs owns /playground/ and emits it
+      # verbatim. That is what lets every link to it stay relative — this site
+      # is served from a subdirectory, where a root-relative /playground/ would
+      # point off the site entirely.
+      - name: Put the playground inside the docs
+        run: cp -r playground docs/playground
+
+      # --strict fails on a broken internal link rather than publishing one.
+      - name: Build the site
+        run: mkdocs build --strict
+
+      # A docs page called playground.md would map to the same output path and
+      # silently replace the application's index.html, leaving its data files
+      # orphaned — a playground that loads nothing. MkDocs does not warn, so
+      # the built page is checked for the application's own title.
+      - name: The playground must be the playground
+        run: |
+          grep -q "os-query-digest playground" site/playground/index.html \
+            || { echo "::error::/playground/ is not the application — a docs page has taken that path."; exit 1; }
+          test -f site/playground/data/presets.json
+
       - uses: actions/configure-pages@v6
 
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: playground
+          path: site
 
       - id: deploy
         uses: actions/deploy-pages@v5

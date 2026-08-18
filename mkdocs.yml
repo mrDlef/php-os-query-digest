@@ -1,0 +1,126 @@
+# Documentation site — https://mrdlef.github.io/php-os-query-digest/
+#
+# Built and deployed by .github/workflows/pages.yml, on tags only, alongside the
+# playground it serves under /playground/. Same reason as the playground's:
+# a page describing an API nobody can install yet is worse than a page a few
+# days out of date. The workflow's manual button republishes after a typo.
+#
+# MkDocs and Material live nowhere but that workflow. They are not in
+# composer.json and never will be — the runtime dependencies of this library are
+# php and ext-json, and documentation tooling has no business changing that.
+
+site_name: os-query-digest
+site_description: Human-readable, loggable digests and stable fingerprints for OpenSearch DSL queries.
+site_url: https://mrdlef.github.io/php-os-query-digest/
+repo_url: https://github.com/mrDlef/php-os-query-digest
+repo_name: mrDlef/php-os-query-digest
+edit_uri: edit/main/docs/
+copyright: LGPL-3.0-or-later
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  custom_dir: overrides
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - toc.follow
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+  palette:
+    # The reader's system preference decides, with a switch either way.
+    # The auto entry needs the colours too: without them Material falls back to
+    # its own default here, and auto is the mode most readers arrive in.
+    - media: "(prefers-color-scheme)"
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-auto
+        name: Follow my system
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  # Both are what Material's card grids need on the home page.
+  - md_in_html
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Guides:
+      - Log your queries: guides/logging.md
+      - Options: guides/options.md
+      - Command line: guides/cli.md
+      - Teach it a query type: guides/extending.md
+  - Reference:
+      - Public API: reference/api.md
+      - Query type coverage: reference/coverage.md
+      - OpenSearch versions: reference/versions.md
+  - Explanation:
+      - How the fingerprint works: explanation/how-it-works.md
+      - Hash stability: explanation/hash-stability.md
+      - What counts as public: explanation/public-api.md
+      - What it costs: explanation/performance.md
+      - How the playground works: explanation/playground.md
+
+# The playground application is copied into docs/ before the build, so MkDocs
+# owns /playground/ and emits it verbatim. That is what keeps every link to it
+# relative: the site is served from a subdirectory on GitHub Pages, where a
+# root-relative /playground/ would resolve off the site entirely.
+#
+# It is deliberately not a nav entry — the announcement strip carries it, on
+# every page. Never add a docs page called playground.md: it maps to the same
+# output path and silently replaces the application's index.html, leaving its
+# data files orphaned. MkDocs does not warn, so the Pages workflow checks that
+# the built page is still the application.
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/mrDlef/php-os-query-digest
+    - icon: fontawesome/brands/php
+      link: https://packagist.org/packages/mr-dlef/os-query-digest
+
+# Fail the build on a broken internal link rather than shipping one. The site is
+# generated from a repository where every other artefact is checked; this one
+# should not be the exception.
+strict: true

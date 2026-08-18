@@ -7,3 +7,5 @@
 /.idea/
 /.php-cs-fixer.cache
 .infection/
+site/
+docs/playground/

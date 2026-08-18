@@ -1,5 +1,8 @@
 PHP_VERSIONS := 7.4 8.0 8.1 8.2 8.3 8.4 8.5
 PHP_VERSION  ?= 8.3
+# Pinned to what .github/workflows/pages.yml installs, so a local build and the
+# published one cannot disagree.
+MKDOCS_IMAGE := squidfunk/mkdocs-material:9.5.49
 
 # Passed to the container so files written into the bind mount stay host-owned.
 export DOCKER_UID := $(shell id -u)
@@ -7,7 +10,7 @@ export DOCKER_GID := $(shell id -g)
 
 .PHONY: test test-all stan cs cs-check rector rector-check check hooks fixtures spec \
         playground playground-data playground-check mutation \
-        release-check release-notes bench \
+        release-check release-notes bench docs docs-build docs-playground \
         certify integration clusters clusters-down clean
 
 ## Run the test suite in Docker for one PHP version: make test PHP_VERSION=7.4
@@ -111,6 +114,24 @@ integration: clusters
 	OPENSEARCH_URL=http://localhost:9202 vendor/bin/phpunit --testsuite=integration
 	OPENSEARCH_URL=http://localhost:9203 vendor/bin/phpunit --testsuite=integration
 	@$(MAKE) clusters-down
+
+## Serve the documentation site on :8000, rebuilding as you edit.
+## Through Docker so nobody needs a Python toolchain — the version is pinned to
+## the one the Pages workflow installs.
+docs: docs-playground
+	@echo "→ http://localhost:8000"
+	@docker run --rm -it -p 8000:8000 -v "$(PWD)":/docs \
+		-u "$(shell id -u):$(shell id -g)" $(MKDOCS_IMAGE)
+
+## Build it once, the way CI does: --strict fails on a broken internal link.
+docs-build: docs-playground
+	@docker run --rm -v "$(PWD)":/docs -u "$(shell id -u):$(shell id -g)" \
+		$(MKDOCS_IMAGE) build --strict
+
+## The playground is copied into docs/ so MkDocs owns /playground/ and every
+## link to it can stay relative. Gitignored: the committed copy is playground/.
+docs-playground:
+	@rm -rf docs/playground && cp -r playground docs/playground
 
 ## What a digest costs on the request path, measured on the committed fixtures.
 ## Reports; deliberately not a CI gate — wall-clock on a shared runner is noise.

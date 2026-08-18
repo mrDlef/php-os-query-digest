@@ -29,7 +29,84 @@ Other things you may need:
 make mutation               # would the tests notice? ~35s
 make bench                  # what a digest costs
 make playground             # serve the browser playground on :8080
+make docs                   # serve the documentation site on :8000
 ```
+
+### The Docker matrix
+
+Tests run in Docker across the whole supported matrix:
+
+```bash
+make test                   # PHP 8.3
+make test PHP_VERSION=7.4   # one version
+make test-all               # 7.4 → 8.5
+make fixtures               # regenerate golden files — review the diff!
+```
+
+Quality gates, on the dev PHP:
+
+```bash
+make check                  # everything below, in one go
+make stan                   # PHPStan, level max + strict rules
+make cs                     # apply the coding standard
+make rector                 # apply the Rector rules
+make hooks                  # install the pre-push hook
+```
+
+`make hooks` points `core.hooksPath` at `tools/hooks/`, so the hook is versioned
+with the code rather than living in an untracked `.git/hooks` every clone has to
+recreate. It runs the same four checks CI runs — coding standard, Rector,
+PHPStan, tests — on the dev PHP only: the Docker matrix takes minutes, and a
+pre-push hook people wait on is a pre-push hook people bypass. `git push
+--no-verify` skips it.
+
+**PHPStan runs at `level: max` with `phpstan/phpstan-strict-rules` and
+`treatPhpDocTypesAsCertain: true`** — the strictest configuration the tool
+offers. That is not free on a library whose whole job is reading untrusted
+decoded JSON: it forces every `mixed` to be narrowed before use. The parsing
+layer is typed `array<mixed>` rather than `array<string,mixed>` for exactly that
+reason — a JSON object whose key is `"0"` decodes to an *integer* key, and
+claiming otherwise would be a lie the analyser cannot catch.
+
+**Rector is pinned to `PhpVersion::PHP_74`**, the lowest supported release, so
+the type-declaration set never emits syntax the matrix cannot install. Its
+config avoids named arguments for the same reason: Rector installs happily on
+7.4, where `php74: true` would be a parse error.
+
+### Would the tests notice?
+
+Line coverage answers "was this executed?". For a library whose product is a
+stable hash, the question worth asking is "would anything fail if this stopped
+doing its job?" — a normalisation rule quietly ceasing to fire is exactly the
+bug no percentage would show.
+
+```bash
+make mutation      # ~35s, plus the image build the first time
+```
+
+Infection rewrites the source one small change at a time and re-runs the suite
+against each. **Nothing in `src/` is uncovered**, and the covered mutation score
+sits at 79%, guarded in CI so it cannot quietly fall.
+
+It has already earned its keep. Three findings on the first run:
+
+- `ABSORB_MATCH_NONE` is recorded from two branches — an AND that meets
+  `match_none` matches nothing, an OR merely drops it — and only the AND one
+  was tested. Deleting the OR branch's report left every test green.
+- `UNWRAP` is only a rewrite when the connector had something to unwrap; a bool
+  that arrives with a single clause was already reported by the parser. That
+  guard was unpinned.
+- `Hasher` carried its own default prefix and length beside the ones in
+  `Options`. Nothing constructed it that way, so the copy was free to drift
+  from the values actually used. It is gone.
+
+Most of what still survives is string concatenation in CLI help and error text
+— reordering a message nobody asserts on. The threshold is a ratchet: raise it
+when real escapes are killed, never lower it to make a build pass.
+
+Infection keeps its own manifest in `tools/infection/`. It needs PHP 8.3 while
+this library supports 7.4, so putting it in the root `require-dev` would either
+break `composer update` on 7.4 or drag in a release from 2021 that nobody runs.
 
 ## The rules that bite
 

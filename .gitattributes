@@ -4,6 +4,9 @@
 /playground              export-ignore
 /tests                   export-ignore
 /tools                   export-ignore
+/docs                    export-ignore
+/overrides               export-ignore
+/mkdocs.yml              export-ignore
 /CONTRIBUTING.md         export-ignore
 /.gitattributes          export-ignore
 /.gitignore              export-ignore
