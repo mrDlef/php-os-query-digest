@@ -35,21 +35,25 @@ theme:
     - search.highlight
   palette:
     # The reader's system preference decides, with a switch either way.
+    # The auto entry needs the colours too: without them Material falls back to
+    # its own default here, and auto is the mode most readers arrive in.
     - media: "(prefers-color-scheme)"
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-auto
         name: Follow my system
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: teal
-      accent: teal
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: teal
-      accent: teal
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light

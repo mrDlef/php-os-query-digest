@@ -135,6 +135,13 @@ root now serves the documentation, which is what people arrive looking for. The
 `composer.json` homepage is unchanged; it points at the same URL, which now
 answers with docs.
 
+The two share one identity rather than looking like a site and an app that
+happen to be neighbours: the documentation takes the playground's paper, ink and
+ochre, with the header in ink so the ochre means one thing only — this is
+something you can click. Every pairing was checked for contrast; the eleven of
+them pass AA, eight at AAA. The playground's own links to the source and to
+Packagist now carry inline marks, still fetching nothing from anywhere.
+
 MkDocs lives only in the Pages workflow — not in `composer.json`, not in the
 package. `make docs` serves the site locally through the same pinned image CI
 uses, so a local build and the published one cannot disagree.

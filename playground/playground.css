@@ -51,6 +51,14 @@ h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color:
 .hint { margin: -.4rem 0 .9rem; font-size: .78rem; }
 .hint code { color: var(--accent); }
 .masthead .links { margin-top: .6rem; display: flex; gap: 1rem; }
+.masthead .links a { display: inline-flex; align-items: center; gap: .35rem; }
+
+/* Sized in em so the marks track their label rather than a fixed pixel size,
+   and filled with currentColor so they follow the accent in either theme.
+   Inlined in the markup, like everything else here: this page fetches nothing,
+   which is the claim it makes two paragraphs above these links. */
+.icon { width: 1em; height: 1em; flex: none; }
+
 a { color: var(--accent); }
 
 .presets { margin: 1.4rem 0 1rem; display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; }
