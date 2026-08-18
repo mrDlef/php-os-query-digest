@@ -24,9 +24,6 @@ theme:
     repo: fontawesome/brands/github
   custom_dir: overrides
   features:
-    # The strip can be dismissed, and stays dismissed. A reader who has seen it
-    # should not meet it on every page for the rest of the site.
-    - announce.dismiss
     - navigation.instant
     - navigation.tracking
     - navigation.sections
