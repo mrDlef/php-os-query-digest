@@ -54,7 +54,7 @@ the incident started.
 
     From `composer require` to a readable log line, in five minutes.
 
-- :material-flask: **[Try it on your query](playground.md)**
+- :material-flask: **[Try it on your query](https://mrdlef.github.io/php-os-query-digest/playground/)**
 
     Runs in your browser. No install, nothing leaves the page.
 

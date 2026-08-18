@@ -92,7 +92,12 @@ nav:
       - Hash stability: explanation/hash-stability.md
       - What counts as public: explanation/public-api.md
       - What it costs: explanation/performance.md
-  - Playground: playground.md
+      - How the playground works: explanation/playground.md
+  # The real application, copied in beside the built site by the Pages
+  # workflow. It is not a page here, so its slug must not be one either —
+  # a docs page named playground.md would take /playground/ and push the
+  # application down to /playground/playground/.
+  - Playground ↗: https://mrdlef.github.io/php-os-query-digest/playground/
 
 extra:
   social:

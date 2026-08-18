@@ -1,4 +1,4 @@
-# Playground
+# How the playground works
 
 **[mrdlef.github.io/php-os-query-digest/playground/](https://mrdlef.github.io/php-os-query-digest/playground/)**
 runs this library on your query, in your browser, with no server involved: PHP

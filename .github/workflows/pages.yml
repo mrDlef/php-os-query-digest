@@ -59,8 +59,21 @@ jobs:
       # The docs take the root; the playground moves under /playground/. The
       # docs are what people arrive looking for, and the playground is one of
       # the things the docs point at.
+      #
+      # The guard is not decoration. A docs page named playground.md would make
+      # MkDocs claim site/playground/, and `cp -r` into an existing directory
+      # nests instead of failing — publishing a docs page where the application
+      # should be, with the application at /playground/playground/. That is a
+      # silent break, so it is checked rather than trusted.
       - name: Place the playground under the docs
-        run: cp -r playground site/playground
+        run: |
+          if [ -e site/playground ]; then
+            echo "::error::site/playground already exists — a docs page has taken that slug."
+            exit 1
+          fi
+          cp -r playground site/playground
+          test -f site/playground/index.html
+          test -f site/playground/data/presets.json
 
       - uses: actions/configure-pages@v6
 
