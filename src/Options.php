@@ -9,6 +9,8 @@ use MrDlef\OsQueryDigest\Support\IndexNormalizer;
 
 /**
  * Immutable configuration. PHP 7.4 has no named arguments, hence withers.
+ *
+ * @api
  */
 final class Options
 {

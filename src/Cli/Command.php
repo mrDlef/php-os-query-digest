@@ -21,6 +21,8 @@ use MrDlef\OsQueryDigest\Support\IndexNormalizer;
  *
  * Streams are injected rather than taken from the `STDIN` constants so the
  * whole thing is testable in-process, without spawning a shell.
+ *
+ * @internal
  */
 final class Command
 {

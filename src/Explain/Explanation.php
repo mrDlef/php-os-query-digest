@@ -12,6 +12,8 @@ use MrDlef\OsQueryDigest\Digest;
  * This is the answer to the only question that decides whether a fingerprint is
  * trusted: *why do these two queries share a hash?* Diff the two explanations
  * and the rule that merged them is right there.
+ *
+ * @api
  */
 final class Explanation implements \JsonSerializable
 {

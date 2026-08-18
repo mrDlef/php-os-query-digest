@@ -1,11 +1,10 @@
 {
     "name": "mr-dlef/os-query-digest",
-    "description": "Human-readable, loggable digests and stable fingerprints for OpenSearch / Elasticsearch DSL queries.",
+    "description": "Human-readable, loggable digests and stable fingerprints for OpenSearch DSL queries.",
     "type": "library",
     "license": "LGPL-3.0-or-later",
     "keywords": [
         "opensearch",
-        "elasticsearch",
         "dsl",
         "dql",
         "logging",

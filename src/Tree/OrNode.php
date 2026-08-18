@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Tree;
 
+/**
+ * @internal
+ */
 final class OrNode implements Node
 {
     /** @var Node[] */

@@ -11,6 +11,8 @@ namespace MrDlef\OsQueryDigest\Tree;
  * Its own node for the same reason as {@see NestedNode}: the inner query runs
  * against other documents, so hoisting its clauses up would claim the parent
  * matches them itself.
+ *
+ * @internal
  */
 final class JoinNode implements Node
 {

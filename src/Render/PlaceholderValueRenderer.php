@@ -7,6 +7,8 @@ namespace MrDlef\OsQueryDigest\Render;
 /**
  * Erases every literal. This is what makes two runs of the same query with
  * different parameters share a fingerprint.
+ *
+ * @internal
  */
 final class PlaceholderValueRenderer implements ValueRenderer
 {

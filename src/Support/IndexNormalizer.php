@@ -12,6 +12,8 @@ use MrDlef\OsQueryDigest\Exception\InvalidOptionException;
  *
  * This is on by default because the alternative silently breaks any dashboard
  * built on the hash.
+ *
+ * @api
  */
 final class IndexNormalizer
 {

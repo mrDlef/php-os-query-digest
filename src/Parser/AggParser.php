@@ -13,6 +13,8 @@ use MrDlef\OsQueryDigest\Tree\AggNode;
  * Aggregations carry a lot of intent — a query with `terms(host) > p95(latency)`
  * is recognisably a latency-per-host dashboard panel — so they are part of the
  * digest, not an afterthought.
+ *
+ * @internal
  */
 final class AggParser
 {

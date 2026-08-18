@@ -22,6 +22,8 @@ use MrDlef\OsQueryDigest\LazyDigest;
  * back into the log would restore the wall of nested braces this library exists
  * to keep out, at the size that made it unloggable in the first place. The
  * error message says what went wrong, which is the part you can act on.
+ *
+ * @api
  */
 final class SafeDigest implements \JsonSerializable
 {

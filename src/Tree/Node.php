@@ -11,6 +11,8 @@ namespace MrDlef\OsQueryDigest\Tree;
  * mirror of the DSL: `bool.must` and `bool.filter` both collapse to AND, which
  * is what makes two differently-written but equivalent queries converge on the
  * same fingerprint.
+ *
+ * @internal
  */
 interface Node
 {

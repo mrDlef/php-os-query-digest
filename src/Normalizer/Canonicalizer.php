@@ -36,6 +36,8 @@ use MrDlef\OsQueryDigest\Tree\OrNode;
  *
  * Each one reports itself into a {@see Trace} so `explain()` can say which
  * fired.
+ *
+ * @internal
  */
 final class Canonicalizer
 {

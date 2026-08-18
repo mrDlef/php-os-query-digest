@@ -10,6 +10,8 @@ namespace MrDlef\OsQueryDigest\Explain;
  * A rule is only ever reported when it changed the query. "Configured but with
  * nothing to do" is not a rule that fired — reporting it would drown the real
  * answer to "why do these two queries share a hash?".
+ *
+ * @api
  */
 final class Rule implements \JsonSerializable
 {

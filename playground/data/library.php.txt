@@ -12,6 +12,8 @@ namespace MrDlef\OsQueryDigest\Tree {
      * mirror of the DSL: `bool.must` and `bool.filter` both collapse to AND, which
      * is what makes two differently-written but equivalent queries converge on the
      * same fingerprint.
+     *
+     * @internal
      */
     interface Node
     {
@@ -26,6 +28,9 @@ namespace MrDlef\OsQueryDigest\Tree {
 
 // src/Render/ValueRenderer.php
 namespace MrDlef\OsQueryDigest\Render {
+    /**
+     * @internal
+     */
     interface ValueRenderer
     {
         /**
@@ -54,6 +59,8 @@ namespace MrDlef\OsQueryDigest\Render {
 namespace MrDlef\OsQueryDigest {
     /**
      * The result: a readable line, a normalised signature, and a stable hash.
+     *
+     * @api
      */
     final class Digest implements \JsonSerializable
     {
@@ -159,6 +166,8 @@ namespace MrDlef\OsQueryDigest\Exception {
      * silently does nothing is the worst kind of bug here: you find it months
      * later, in a dashboard built on hashes that were never grouped the way the
      * config claimed.
+     *
+     * @api
      */
     final class InvalidOptionException extends \InvalidArgumentException
     {
@@ -197,6 +206,9 @@ namespace MrDlef\OsQueryDigest\Exception {
 
 // src/Exception/InvalidQueryException.php
 namespace MrDlef\OsQueryDigest\Exception {
+    /**
+     * @api
+     */
     final class InvalidQueryException extends \InvalidArgumentException
     {
         public static function notDecodable(string $reason): self
@@ -221,6 +233,8 @@ namespace MrDlef\OsQueryDigest\Explain {
      * This is the answer to the only question that decides whether a fingerprint is
      * trusted: *why do these two queries share a hash?* Diff the two explanations
      * and the rule that merged them is right there.
+     *
+     * @api
      */
     final class Explanation implements \JsonSerializable
     {
@@ -350,6 +364,8 @@ namespace MrDlef\OsQueryDigest\Explain {
      * A rule is only ever reported when it changed the query. "Configured but with
      * nothing to do" is not a rule that fired — reporting it would drown the real
      * answer to "why do these two queries share a hash?".
+     *
+     * @api
      */
     final class Rule implements \JsonSerializable
     {
@@ -506,6 +522,8 @@ namespace MrDlef\OsQueryDigest\Explain {
      * optional would mean {@see \MrDlef\OsQueryDigest\Formatter::explain()} could
      * disagree with {@see \MrDlef\OsQueryDigest\Formatter::describe()} about what
      * happened.
+     *
+     * @internal
      */
     final class Trace
     {
@@ -564,6 +582,8 @@ namespace MrDlef\OsQueryDigest\Fingerprint {
      *
      * xxh3 would be faster but only exists from PHP 8.1, and this library targets
      * 7.4.
+     *
+     * @internal
      */
     final class Hasher
     {
@@ -608,6 +628,8 @@ namespace MrDlef\OsQueryDigest {
      *
      *   $formatter = Formatter::create();
      *   $logger->info('search', ['q' => $formatter->lazy($request, 'logs-*')]);
+     *
+     * @api
      */
     final class Formatter
     {
@@ -773,6 +795,8 @@ namespace MrDlef\OsQueryDigest {
      *
      * Pass one of these in a PSR-3 context array: if the record is filtered out by
      * level, the handler never serialises it and the query is never parsed.
+     *
+     * @api
      */
     final class LazyDigest implements \JsonSerializable
     {
@@ -824,6 +848,8 @@ namespace MrDlef\OsQueryDigest {
      *
      * PHP 7.4 has no enums, so this is a small value object with named
      * constructors.
+     *
+     * @api
      */
     final class Normalization
     {
@@ -950,6 +976,8 @@ namespace MrDlef\OsQueryDigest\Normalizer {
      *
      * Each one reports itself into a {@see Trace} so `explain()` can say which
      * fired.
+     *
+     * @internal
      */
     final class Canonicalizer
     {
@@ -1159,6 +1187,8 @@ namespace MrDlef\OsQueryDigest {
 
     /**
      * Immutable configuration. PHP 7.4 has no named arguments, hence withers.
+     *
+     * @api
      */
     final class Options
     {
@@ -1474,6 +1504,8 @@ namespace MrDlef\OsQueryDigest\Parser {
      * Aggregations carry a lot of intent — a query with `terms(host) > p95(latency)`
      * is recognisably a latency-per-host dashboard panel — so they are part of the
      * digest, not an afterthought.
+     *
+     * @internal
      */
     final class AggParser
     {
@@ -1637,6 +1669,8 @@ namespace MrDlef\OsQueryDigest\Parser {
      *
      * Anything it does not model exactly is either kept as an OpaqueNode or pushed
      * to {@see self::notes()} — nothing is dropped silently.
+     *
+     * @internal
      */
     final class QueryParser
     {
@@ -2491,6 +2525,8 @@ namespace MrDlef\OsQueryDigest\Parser {
     /**
      * Reads a whole search request: index, query, aggs, and the options that carry
      * intent (size / from / sort).
+     *
+     * @internal
      */
     final class RequestParser
     {
@@ -2663,6 +2699,8 @@ namespace MrDlef\OsQueryDigest\Render {
     /**
      * `terms(host,10)>p95(latency_ms)` — a compact pipeline notation where `>`
      * reads as "then, per bucket".
+     *
+     * @internal
      */
     final class AggRenderer
     {
@@ -2727,6 +2765,8 @@ namespace MrDlef\OsQueryDigest\Render {
      * straight into the Dashboards search bar. The signature pass turns the sigils
      * on: it can afford to be more precise than DQL because, with its values
      * erased, it was never executable in the first place.
+     *
+     * @internal
      */
     final class DqlRenderer
     {
@@ -3006,6 +3046,8 @@ namespace MrDlef\OsQueryDigest\Render {
      *
      * Segments are pipe-separated so the `q=(…)` part can be selected and pasted
      * into Dashboards on its own.
+     *
+     * @internal
      */
     final class LineRenderer
     {
@@ -3099,6 +3141,8 @@ namespace MrDlef\OsQueryDigest\Render {
     /**
      * Renders real values, quoting only when DQL requires it, and running them
      * through the optional redactor first.
+     *
+     * @internal
      */
     final class LiteralValueRenderer implements ValueRenderer
     {
@@ -3184,6 +3228,8 @@ namespace MrDlef\OsQueryDigest\Render {
     /**
      * Erases every literal. This is what makes two runs of the same query with
      * different parameters share a fingerprint.
+     *
+     * @internal
      */
     final class PlaceholderValueRenderer implements ValueRenderer
     {
@@ -3215,6 +3261,8 @@ namespace MrDlef\OsQueryDigest\Render {
     /**
      * How one particular rendering pass behaves. Three profiles are used per
      * digest: the readable line, the signature, and the (uncapped) hash input.
+     *
+     * @internal
      */
     final class RenderProfile
     {
@@ -3458,6 +3506,8 @@ namespace MrDlef\OsQueryDigest\Support {
      *
      * This is on by default because the alternative silently breaks any dashboard
      * built on the hash.
+     *
+     * @api
      */
     final class IndexNormalizer
     {
@@ -3586,6 +3636,9 @@ namespace MrDlef\OsQueryDigest\Support {
 
 // src/Tree/AggNode.php
 namespace MrDlef\OsQueryDigest\Tree {
+    /**
+     * @internal
+     */
     final class AggNode
     {
         /** @var string user-given name, e.g. "by_host" */
@@ -3680,6 +3733,9 @@ namespace MrDlef\OsQueryDigest\Tree {
 
 // src/Tree/AndNode.php
 namespace MrDlef\OsQueryDigest\Tree {
+    /**
+     * @internal
+     */
     final class AndNode implements Node
     {
         /** @var Node[] */
@@ -3730,6 +3786,8 @@ namespace MrDlef\OsQueryDigest\Tree {
      * Its own node for the same reason as {@see NestedNode}: the inner query runs
      * against other documents, so hoisting its clauses up would claim the parent
      * matches them itself.
+     *
+     * @internal
      */
     final class JoinNode implements Node
     {
@@ -3780,6 +3838,9 @@ namespace MrDlef\OsQueryDigest\Tree {
 
 // src/Tree/LeafNode.php
 namespace MrDlef\OsQueryDigest\Tree {
+    /**
+     * @internal
+     */
     final class LeafNode implements Node
     {
         public const OP_TERM = 'term';
@@ -3926,6 +3987,9 @@ namespace MrDlef\OsQueryDigest\Tree {
 
 // src/Tree/MatchAllNode.php
 namespace MrDlef\OsQueryDigest\Tree {
+    /**
+     * @internal
+     */
     final class MatchAllNode implements Node
     {
         public function sortKey(): string
@@ -3943,6 +4007,8 @@ namespace MrDlef\OsQueryDigest\Tree {
      * Its own node rather than an opaque clause because it *absorbs*: an AND that
      * contains it returns no document at all, whatever its siblings say. The
      * canonicaliser relies on that.
+     *
+     * @internal
      */
     final class MatchNoneNode implements Node
     {
@@ -3958,6 +4024,8 @@ namespace MrDlef\OsQueryDigest\Tree {
     /**
      * A `nested` query. Kept as its own node because DQL has first-class syntax for
      * it (`path:{ inner }`) and because flattening it away would change semantics.
+     *
+     * @internal
      */
     final class NestedNode implements Node
     {
@@ -3995,6 +4063,9 @@ namespace MrDlef\OsQueryDigest\Tree {
 
 // src/Tree/NotNode.php
 namespace MrDlef\OsQueryDigest\Tree {
+    /**
+     * @internal
+     */
     final class NotNode implements Node
     {
         private Node $child;
@@ -4029,6 +4100,8 @@ namespace MrDlef\OsQueryDigest\Tree {
      *
      * It is never silently dropped — it renders as `<type>(…)` so a reader can tell
      * something is there, and it still contributes to the fingerprint.
+     *
+     * @internal
      */
     final class OpaqueNode implements Node
     {
@@ -4053,6 +4126,9 @@ namespace MrDlef\OsQueryDigest\Tree {
 
 // src/Tree/OrNode.php
 namespace MrDlef\OsQueryDigest\Tree {
+    /**
+     * @internal
+     */
     final class OrNode implements Node
     {
         /** @var Node[] */
@@ -4111,6 +4187,8 @@ namespace MrDlef\OsQueryDigest\Tree {
 namespace MrDlef\OsQueryDigest\Tree {
     /**
      * The whole search request reduced to its intent-carrying parts.
+     *
+     * @internal
      */
     final class QueryModel
     {

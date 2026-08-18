@@ -9,6 +9,8 @@ use MrDlef\OsQueryDigest\Support\Arr;
 /**
  * Renders real values, quoting only when DQL requires it, and running them
  * through the optional redactor first.
+ *
+ * @internal
  */
 final class LiteralValueRenderer implements ValueRenderer
 {

@@ -6,6 +6,8 @@ namespace MrDlef\OsQueryDigest\Tree;
 
 /**
  * The whole search request reduced to its intent-carrying parts.
+ *
+ * @internal
  */
 final class QueryModel
 {

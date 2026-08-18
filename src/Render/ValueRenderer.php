@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Render;
 
+/**
+ * @internal
+ */
 interface ValueRenderer
 {
     /**

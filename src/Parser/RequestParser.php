@@ -12,6 +12,8 @@ use MrDlef\OsQueryDigest\Tree\QueryModel;
 /**
  * Reads a whole search request: index, query, aggs, and the options that carry
  * intent (size / from / sort).
+ *
+ * @internal
  */
 final class RequestParser
 {

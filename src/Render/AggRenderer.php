@@ -9,6 +9,8 @@ use MrDlef\OsQueryDigest\Tree\AggNode;
 /**
  * `terms(host,10)>p95(latency_ms)` — a compact pipeline notation where `>`
  * reads as "then, per bucket".
+ *
+ * @internal
  */
 final class AggRenderer
 {

@@ -9,6 +9,8 @@ namespace MrDlef\OsQueryDigest;
  *
  * Pass one of these in a PSR-3 context array: if the record is filtered out by
  * level, the handler never serialises it and the query is never parsed.
+ *
+ * @api
  */
 final class LazyDigest implements \JsonSerializable
 {
