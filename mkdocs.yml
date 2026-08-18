@@ -24,9 +24,6 @@ theme:
     repo: fontawesome/brands/github
   custom_dir: overrides
   features:
-    # Top-level nav becomes a tab bar in the header, which is how the
-    # playground gets a permanent seat up there without vendoring a template.
-    - navigation.tabs
     # The strip can be dismissed, and stays dismissed. A reader who has seen it
     # should not meet it on every page for the rest of the site.
     - announce.dismiss
@@ -103,16 +100,17 @@ nav:
       - What counts as public: explanation/public-api.md
       - What it costs: explanation/performance.md
       - How the playground works: explanation/playground.md
-  # The real application, copied into docs/ before the build so MkDocs owns
-  # the path and emits it verbatim. That is what keeps every link relative:
-  # the site is served from a subdirectory on GitHub Pages, where a
-  # root-relative /playground/ would resolve off the site entirely.
-  #
-  # Never add a docs page called playground.md. It maps to the same output
-  # path and silently replaces the application's index.html, leaving its data
-  # files orphaned — a playground that loads nothing. MkDocs does not warn
-  # about it, so the Pages workflow checks the built page is the application.
-  - Playground ↗: playground/index.html
+
+# The playground application is copied into docs/ before the build, so MkDocs
+# owns /playground/ and emits it verbatim. That is what keeps every link to it
+# relative: the site is served from a subdirectory on GitHub Pages, where a
+# root-relative /playground/ would resolve off the site entirely.
+#
+# It is deliberately not a nav entry — the announcement strip carries it, on
+# every page. Never add a docs page called playground.md: it maps to the same
+# output path and silently replaces the application's index.html, leaving its
+# data files orphaned. MkDocs does not warn, so the Pages workflow checks that
+# the built page is still the application.
 
 extra:
   social:

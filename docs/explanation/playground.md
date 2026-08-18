@@ -4,8 +4,6 @@ The [playground](../playground/index.html) runs this library on your query, in
 your browser, with no server involved: PHP itself is compiled to WebAssembly.
 Your query is never sent anywhere.
 
-[Open it :material-arrow-right-bold:](../playground/index.html){ .md-button .md-button--primary }
-
 It is published from a release tag, never from `main` — the page prints
 fingerprints, and one that no installable version produces would be worse than
 no page at all.
