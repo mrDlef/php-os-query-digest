@@ -6,6 +6,8 @@ namespace MrDlef\OsQueryDigest;
 
 /**
  * The result: a readable line, a normalised signature, and a stable hash.
+ *
+ * @api
  */
 final class Digest implements \JsonSerializable
 {

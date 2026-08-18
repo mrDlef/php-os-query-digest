@@ -11,6 +11,8 @@ use MrDlef\OsQueryDigest\Exception\InvalidOptionException;
  *
  * PHP 7.4 has no enums, so this is a small value object with named
  * constructors.
+ *
+ * @api
  */
 final class Normalization
 {

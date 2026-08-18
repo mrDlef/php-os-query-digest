@@ -23,6 +23,8 @@ use MrDlef\OsQueryDigest\Tree\OrNode;
  *
  * Anything it does not model exactly is either kept as an OpaqueNode or pushed
  * to {@see self::notes()} — nothing is dropped silently.
+ *
+ * @internal
  */
 final class QueryParser
 {

@@ -23,6 +23,8 @@ use MrDlef\OsQueryDigest\Tree\OrNode;
  * straight into the Dashboards search bar. The signature pass turns the sigils
  * on: it can afford to be more precise than DQL because, with its values
  * erased, it was never executable in the first place.
+ *
+ * @internal
  */
 final class DqlRenderer
 {

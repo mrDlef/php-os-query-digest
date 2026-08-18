@@ -10,6 +10,8 @@ namespace MrDlef\OsQueryDigest\Tree;
  *
  * It is never silently dropped — it renders as `<type>(…)` so a reader can tell
  * something is there, and it still contributes to the fingerprint.
+ *
+ * @internal
  */
 final class OpaqueNode implements Node
 {

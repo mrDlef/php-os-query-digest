@@ -35,9 +35,9 @@ require is_string($vendor) && $vendor !== ''
 
 use MrDlef\OsQueryDigest\Explain\Rule;
 use MrDlef\OsQueryDigest\Formatter;
+use MrDlef\OsQueryDigest\IndexNormalizer;
 use MrDlef\OsQueryDigest\Normalization;
 use MrDlef\OsQueryDigest\Options;
-use MrDlef\OsQueryDigest\Support\IndexNormalizer;
 
 const SRC = __DIR__ . '/../src';
 const FIXTURES = __DIR__ . '/../tests/fixtures';

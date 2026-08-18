@@ -7,6 +7,8 @@ namespace MrDlef\OsQueryDigest\Tree;
 /**
  * A `nested` query. Kept as its own node because DQL has first-class syntax for
  * it (`path:{ inner }`) and because flattening it away would change semantics.
+ *
+ * @internal
  */
 final class NestedNode implements Node
 {

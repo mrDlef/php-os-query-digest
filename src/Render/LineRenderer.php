@@ -13,6 +13,8 @@ use MrDlef\OsQueryDigest\Tree\QueryModel;
  *
  * Segments are pipe-separated so the `q=(…)` part can be selected and pasted
  * into Dashboards on its own.
+ *
+ * @internal
  */
 final class LineRenderer
 {

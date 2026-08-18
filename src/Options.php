@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace MrDlef\OsQueryDigest;
 
 use MrDlef\OsQueryDigest\Exception\InvalidOptionException;
-use MrDlef\OsQueryDigest\Support\IndexNormalizer;
 
 /**
  * Immutable configuration. PHP 7.4 has no named arguments, hence withers.
+ *
+ * @api
  */
 final class Options
 {

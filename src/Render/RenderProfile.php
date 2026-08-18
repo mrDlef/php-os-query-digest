@@ -7,6 +7,8 @@ namespace MrDlef\OsQueryDigest\Render;
 /**
  * How one particular rendering pass behaves. Three profiles are used per
  * digest: the readable line, the signature, and the (uncapped) hash input.
+ *
+ * @internal
  */
 final class RenderProfile
 {

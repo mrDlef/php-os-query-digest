@@ -6,10 +6,10 @@ namespace MrDlef\OsQueryDigest\Tests;
 
 use MrDlef\OsQueryDigest\Explain\Rule;
 use MrDlef\OsQueryDigest\Formatter;
+use MrDlef\OsQueryDigest\IndexNormalizer;
 use MrDlef\OsQueryDigest\Normalization;
 use MrDlef\OsQueryDigest\Options;
 use MrDlef\OsQueryDigest\Support\Arr;
-use MrDlef\OsQueryDigest\Support\IndexNormalizer;
 use PHPUnit\Framework\TestCase;
 
 /**

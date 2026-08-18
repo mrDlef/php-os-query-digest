@@ -10,6 +10,8 @@ namespace MrDlef\OsQueryDigest\Tree;
  * Its own node rather than an opaque clause because it *absorbs*: an AND that
  * contains it returns no document at all, whatever its siblings say. The
  * canonicaliser relies on that.
+ *
+ * @internal
  */
 final class MatchNoneNode implements Node
 {

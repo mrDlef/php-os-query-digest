@@ -12,6 +12,8 @@ namespace MrDlef\OsQueryDigest\Explain;
  * optional would mean {@see \MrDlef\OsQueryDigest\Formatter::explain()} could
  * disagree with {@see \MrDlef\OsQueryDigest\Formatter::describe()} about what
  * happened.
+ *
+ * @internal
  */
 final class Trace
 {

@@ -23,6 +23,8 @@ use MrDlef\OsQueryDigest\Tree\QueryModel;
  *
  *   $formatter = Formatter::create();
  *   $logger->info('search', ['q' => $formatter->lazy($request, 'logs-*')]);
+ *
+ * @api
  */
 final class Formatter
 {

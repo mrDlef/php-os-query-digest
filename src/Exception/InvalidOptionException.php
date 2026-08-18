@@ -11,6 +11,8 @@ namespace MrDlef\OsQueryDigest\Exception;
  * silently does nothing is the worst kind of bug here: you find it months
  * later, in a dashboard built on hashes that were never grouped the way the
  * config claimed.
+ *
+ * @api
  */
 final class InvalidOptionException extends \InvalidArgumentException
 {

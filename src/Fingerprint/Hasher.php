@@ -13,6 +13,8 @@ namespace MrDlef\OsQueryDigest\Fingerprint;
  *
  * xxh3 would be faster but only exists from PHP 8.1, and this library targets
  * 7.4.
+ *
+ * @internal
  */
 final class Hasher
 {

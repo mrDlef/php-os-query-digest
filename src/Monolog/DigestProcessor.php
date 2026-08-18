@@ -28,6 +28,8 @@ use MrDlef\OsQueryDigest\Formatter;
  * the only part of the library that knows Monolog exists, and it is written to
  * work with both major versions — see {@see __invoke()} for how, and why it
  * does not implement `ProcessorInterface`.
+ *
+ * @api
  */
 final class DigestProcessor
 {
