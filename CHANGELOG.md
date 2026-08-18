@@ -23,6 +23,27 @@ the same query. See [Hash stability](README.md#hash-stability).
 | `q3:` | v0.6.0 | eight more promoted |
 | `q3x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
+## v0.8.0 — unreleased
+
+_contributing and security_
+
+**Fingerprints:** `q3:` unchanged.
+
+[`SECURITY.md`](SECURITY.md) — how to report a vulnerability (privately, through
+GitHub), which versions are supported, and a threat model grounded in what the
+library actually does rather than in boilerplate: no file access, no network, no
+process execution at runtime, and `php` plus `ext-json` for dependencies. It is
+blunt about the one real risk, which is that at the default normalisation the
+rendered *line* keeps literal values — so a `term` on an email puts that email
+wherever the line goes. The signature and the hash never do.
+
+[`CONTRIBUTING.md`](CONTRIBUTING.md) — the commands, and then the half that
+matters: the seven rules that are not guessable from the code. Never regenerate
+fixtures without reading the diff, promotions are batched because the prefix is
+global, a new class is `@internal` until someone decides otherwise, PHP 7.4 is
+the floor and it constrains the tooling, the mutation score is a ratchet, the
+changelog is the source, and new query types must be classified.
+
 ## v0.7.0 — 2026-08-18
 
 _the pre-1.0 hardening_

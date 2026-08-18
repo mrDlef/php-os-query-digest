@@ -748,6 +748,17 @@ the type-declaration set never emits syntax the matrix cannot install. Its
 config avoids named arguments for the same reason: Rector installs happily on
 7.4, where `php74: true` would be a parse error.
 
+## Contributing and security
+
+[`CONTRIBUTING.md`](CONTRIBUTING.md) has the commands, and the seven rules that
+are not guessable from the code — the hash contract, why promotions are batched,
+why a new class is `@internal` until someone decides otherwise.
+
+Found a vulnerability? [`SECURITY.md`](SECURITY.md) — report it privately, not
+in an issue. It also sets out what the library does and does not touch, which is
+most of the answer: no file access, no network, no process execution, and two
+runtime dependencies.
+
 ## License
 
 LGPL-3.0-or-later — see [LICENSE](LICENSE).
