@@ -84,6 +84,17 @@ two branches and tested on one, `UNWRAP`'s guard was unpinned, and `Hasher`
 carried a second copy of the defaults that live in `Options` — unreachable, and
 free to drift from the values actually used.
 
+### What it costs
+
+`make bench` measures the request path against the committed fixtures. The
+pitch — that you can afford a digest on every search — was an argument until
+now: **~30 µs per request on PHP 8.5, ~37 µs on 7.4**, against a search that
+takes milliseconds. `lazy()` costs 0.2 µs, some hundred times less, so a debug
+record your handler drops really does parse nothing.
+
+No timing gate in CI: wall-clock on a shared runner is noise, and a threshold
+tight enough to catch a regression would fail on a busy afternoon.
+
 ### This file
 
 `CHANGELOG.md` is new, and it is the source: release notes are extracted from
