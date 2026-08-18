@@ -8,9 +8,9 @@ use MrDlef\OsQueryDigest\Exception\InvalidOptionException;
 use MrDlef\OsQueryDigest\Exception\InvalidQueryException;
 use MrDlef\OsQueryDigest\Explain\Explanation;
 use MrDlef\OsQueryDigest\Formatter;
+use MrDlef\OsQueryDigest\IndexNormalizer;
 use MrDlef\OsQueryDigest\Normalization;
 use MrDlef\OsQueryDigest\Options;
-use MrDlef\OsQueryDigest\Support\IndexNormalizer;
 
 /**
  * The library on a pipe.

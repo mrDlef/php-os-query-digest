@@ -184,7 +184,7 @@ dropped silently.
 
 ```php
 use MrDlef\OsQueryDigest\{Formatter, Normalization, Options};
-use MrDlef\OsQueryDigest\Support\IndexNormalizer;
+use MrDlef\OsQueryDigest\IndexNormalizer;
 
 $formatter = Formatter::create(
     Options::create()
@@ -530,7 +530,7 @@ whatever its annotation claims.
 |---|---|
 | entry point | `Formatter` |
 | results | `Digest`, `LazyDigest`, `Explain\Explanation`, `Explain\Rule` |
-| configuration | `Options`, `Normalization`, `Support\IndexNormalizer` |
+| configuration | `Options`, `Normalization`, `IndexNormalizer` |
 | failures | `Exception\InvalidQueryException`, `Exception\InvalidOptionException` |
 | Monolog | `Monolog\DigestProcessor`, `Monolog\SafeDigest` |
 

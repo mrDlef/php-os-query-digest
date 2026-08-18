@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace MrDlef\OsQueryDigest\Tests;
 
 use MrDlef\OsQueryDigest\Formatter;
+use MrDlef\OsQueryDigest\IndexNormalizer;
 use MrDlef\OsQueryDigest\Options;
-use MrDlef\OsQueryDigest\Support\IndexNormalizer;
 use PHPUnit\Framework\TestCase;
 
 final class IndexNormalizerTest extends TestCase

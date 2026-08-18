@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace MrDlef\OsQueryDigest\Tests;
 
 use MrDlef\OsQueryDigest\Exception\InvalidOptionException;
+use MrDlef\OsQueryDigest\IndexNormalizer;
 use MrDlef\OsQueryDigest\Normalization;
 use MrDlef\OsQueryDigest\Options;
-use MrDlef\OsQueryDigest\Support\IndexNormalizer;
 use PHPUnit\Framework\TestCase;
 
 /**

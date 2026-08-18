@@ -41,7 +41,7 @@ final class ApiBoundaryTest extends TestCase
         'MrDlef\OsQueryDigest\Monolog\SafeDigest',
         'MrDlef\OsQueryDigest\Normalization',
         'MrDlef\OsQueryDigest\Options',
-        'MrDlef\OsQueryDigest\Support\IndexNormalizer',
+        'MrDlef\OsQueryDigest\IndexNormalizer',
     ];
 
     public function testEveryClassDeclaresWhetherItIsPublicOrInternal(): void

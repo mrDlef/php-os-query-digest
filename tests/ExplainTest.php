@@ -6,8 +6,8 @@ namespace MrDlef\OsQueryDigest\Tests;
 
 use MrDlef\OsQueryDigest\Explain\Rule;
 use MrDlef\OsQueryDigest\Formatter;
+use MrDlef\OsQueryDigest\IndexNormalizer;
 use MrDlef\OsQueryDigest\Options;
-use MrDlef\OsQueryDigest\Support\IndexNormalizer;
 use PHPUnit\Framework\TestCase;
 
 /**

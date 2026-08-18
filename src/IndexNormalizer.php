@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MrDlef\OsQueryDigest\Support;
+namespace MrDlef\OsQueryDigest;
 
 use MrDlef\OsQueryDigest\Exception\InvalidOptionException;
 
