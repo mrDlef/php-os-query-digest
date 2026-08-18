@@ -50,7 +50,7 @@ final class Digest implements \JsonSerializable
         return $this->signature;
     }
 
-    /** Versioned fingerprint of the signature, e.g. `q2:8f3ac1d2b901`. */
+    /** Versioned fingerprint of the signature, e.g. `q3:8f3ac1d2b901`. */
     public function hash(): string
     {
         return $this->hash;

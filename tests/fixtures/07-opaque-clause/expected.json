@@ -2,7 +2,7 @@
     "idx": "metrics-*",
     "q": "metrics-* | q=(host:* and host:web-* and span_near(?)) | +collapse +highlight",
     "sig": "metrics-* | q=(host:* and host:?* and span_near(?)) | +collapse +highlight",
-    "hash": "q2:a235723d04dc",
+    "hash": "q3:a235723d04dc",
     "notes": [
         "+collapse",
         "+highlight"

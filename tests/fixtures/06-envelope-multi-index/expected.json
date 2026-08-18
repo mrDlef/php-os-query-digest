@@ -2,5 +2,5 @@
     "idx": "logs-*",
     "q": "logs-* | q=(message:timeout or message:\"connection reset by peer\") | size=10",
     "sig": "logs-* | q=(message:~? or message:\"?\") | size=10",
-    "hash": "q2:4f1eaee8e165"
+    "hash": "q3:4f1eaee8e165"
 }

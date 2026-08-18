@@ -177,6 +177,8 @@ final class DqlRenderer
 
             case LeafNode::OP_KNN:
             case LeafNode::OP_NEURAL:
+            case LeafNode::OP_RANK_FEATURE:
+            case LeafNode::OP_DISTANCE_FEATURE:
                 return $field . ':' . $leaf->op() . '(' . $this->params($field, $values, $profile) . ')';
 
             case LeafNode::OP_GEO_DISTANCE:
@@ -184,7 +186,16 @@ final class DqlRenderer
 
             case LeafNode::OP_GEO_BBOX:
             case LeafNode::OP_GEO_POLYGON:
+            case LeafNode::OP_INTERVALS:
+                // Nothing inside is worth a log line: the field and the kind of
+                // clause are the whole shape.
                 return $field . ':' . $leaf->op() . '()';
+
+            case LeafNode::OP_PERCOLATE:
+                // Rendered without the value renderer, like the shape queries:
+                // the only value it can hold is the closed marker `indexed`,
+                // which says where the document came from, not what it was.
+                return $field . ':percolate(' . implode(',', Arr::strings($values)) . ')';
 
             case LeafNode::OP_GEO_SHAPE:
             case LeafNode::OP_XY_SHAPE:

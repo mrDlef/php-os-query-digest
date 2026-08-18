@@ -26,7 +26,7 @@
             "maxLength": 512,
             "indexNormalizer": "date-patterns",
             "aggNames": false,
-            "hashVersion": "q2",
+            "hashVersion": "q3",
             "hashLength": 12
         },
         "rules": {
@@ -42,12 +42,14 @@
             "index_pattern": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",
             "indexed_shape": "A shape query pointed at a pre-indexed geometry: what it is cannot be read from the query, only that it is indexed.",
             "must_filter_merged": "bool.must and bool.filter both became AND: they differ in scoring, not in which documents match.",
+            "percolate_lookup": "A percolate query tested a document fetched from another index: what was percolated cannot be read from the query, only that it was.",
             "reorder": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
             "script_score_unwrapped": "script_score was replaced by its inner query: the script only rescores. A min_score, which does exclude documents, is reported in the notes.",
             "section_ignored": "Top-level sections that say nothing about what a query is for were ignored.",
             "should_boost_only": "A should group beside a must/filter, with no minimum_should_match, only boosts — moved to the notes instead of being rendered as a filter.",
             "terms_lookup": "A terms lookup became a placeholder: its values live in another document.",
-            "unwrap": "A single-clause connector was replaced by that clause."
+            "unwrap": "A single-clause connector was replaced by that clause.",
+            "wrapper_decoded": "A wrapper was base64-decoded and parsed: the query it carried is rendered in full, so nothing about it is hidden."
         }
     },
     "presets": [
@@ -61,7 +63,7 @@
                 "idx": "logs-*",
                 "q": "logs-* | q=(@timestamp >= now-15m and @timestamp < now and not status:200 and service:api) | size=50 sort=@timestamp:desc",
                 "sig": "logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc",
-                "hash": "q2:fe168406e702"
+                "hash": "q3:fe168406e702"
             },
             "rules": [
                 {
@@ -100,7 +102,7 @@
                 "idx": "logs-*",
                 "q": "logs-* | q=(@timestamp >= now-24h and env:prod) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0",
                 "sig": "logs-* | q=(@timestamp >= ? and env:?) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0",
-                "hash": "q2:63a1ca5c80b9"
+                "hash": "q3:63a1ca5c80b9"
             },
             "rules": [
                 {
@@ -139,7 +141,7 @@
                 "idx": "catalog-v2",
                 "q": "catalog-v2 | q=(in_stock:true and price >= 20 and price <= 150 and title:\"chaussures de running\") | size=20 from=40 sort=_score:desc,price:asc | should=2",
                 "sig": "catalog-v2 | q=(in_stock:? and price >= ? and price <= ? and title:~?) | size=20 from=40 sort=_score:desc,price:asc | should=2",
-                "hash": "q2:cde7babeb8a7",
+                "hash": "q3:cde7babeb8a7",
                 "notes": [
                     "should=2"
                 ]
@@ -178,7 +180,7 @@
                 "idx": "orders",
                 "q": "orders | q=(country:FR and status:(new or paid or shipped or cancelled or refunded or +3))",
                 "sig": "orders | q=(country:? and status:(? or ? or ? or ? or ? or +3))",
-                "hash": "q2:e9794c1be608"
+                "hash": "q3:e9794c1be608"
             },
             "rules": [
                 {
@@ -201,7 +203,7 @@
                 "idx": "catalog-v2",
                 "q": "catalog-v2 | q=(variants:{ variants.color:red and variants.price <= 100 })",
                 "sig": "catalog-v2 | q=(variants:{ variants.color:? and variants.price <= ? })",
-                "hash": "q2:24d5e6929ac3"
+                "hash": "q3:24d5e6929ac3"
             },
             "rules": []
         },
@@ -215,7 +217,7 @@
                 "idx": "logs-*",
                 "q": "logs-* | q=(message:timeout or message:\"connection reset by peer\") | size=10",
                 "sig": "logs-* | q=(message:~? or message:\"?\") | size=10",
-                "hash": "q2:4f1eaee8e165"
+                "hash": "q3:4f1eaee8e165"
             },
             "rules": [
                 {
@@ -254,7 +256,7 @@
                 "idx": "metrics-*",
                 "q": "metrics-* | q=(host:* and host:web-* and span_near(?)) | +collapse +highlight",
                 "sig": "metrics-* | q=(host:* and host:?* and span_near(?)) | +collapse +highlight",
-                "hash": "q2:a235723d04dc",
+                "hash": "q3:a235723d04dc",
                 "notes": [
                     "+collapse",
                     "+highlight"
@@ -289,7 +291,7 @@
                 "idx": "docs",
                 "q": "docs | q=(lang:fr and (body:alpha or body:beta or body:gamma){msm=2})",
                 "sig": "docs | q=(lang:? and (body:~? or body:~? or body:~?){msm=2})",
-                "hash": "q2:862a058a0f91"
+                "hash": "q3:862a058a0f91"
             },
             "rules": []
         },
@@ -303,7 +305,7 @@
                 "idx": "logs-*",
                 "q": "logs-* | q=((status:500 AND host:web-*) and path:/api/v1/*) | size=100",
                 "sig": "logs-* | q=(raw(?) and path:*?*) | size=100",
-                "hash": "q2:6fb4a2d9c302"
+                "hash": "q3:6fb4a2d9c302"
             },
             "rules": []
         },
@@ -320,7 +322,7 @@
                 "idx": "logs-*",
                 "q": "logs-* | q=(@timestamp >= \"2026-08-13T00:00:00Z\" and @timestamp < \"2026-08-14T00:00:00Z\" and service:(api or worker or cron)) | aggs=over_time:date_histogram(@timestamp,1h)>unique_users:cardinality(user_id) | size=0",
                 "sig": "logs-* | q=(@timestamp >= ? and @timestamp < ? and service:(?)) | aggs=over_time:date_histogram(@timestamp,1h)>unique_users:cardinality(user_id) | size=0",
-                "hash": "q2:8b4c9e9aebc2"
+                "hash": "q3:8b4c9e9aebc2"
             },
             "rules": [
                 {
@@ -351,7 +353,7 @@
                 "idx": "shop-catalog",
                 "q": "shop-catalog | q=(name:\"running shoes\" and price >= 20 and price < 200) | post=(brand:acme and in_stock:true) | aggs=terms(brand,20) | size=24",
                 "sig": "shop-catalog | q=(name:~? and price >= ? and price < ?) | post=(brand:? and in_stock:?) | aggs=terms(brand,20) | size=24",
-                "hash": "q2:ce0146715c07"
+                "hash": "q3:ce0146715c07"
             },
             "rules": []
         },
@@ -365,7 +367,7 @@
                 "idx": "products-v3",
                 "q": "products-v3 | q=(image_embedding:knn(k=20) and in_stock:true or text_embedding:neural(query=\"waterproof hiking boots\",k=20)) | size=20",
                 "sig": "products-v3 | q=(image_embedding:knn(k=?) and in_stock:? or text_embedding:neural(query=?,k=?)) | size=20",
-                "hash": "q2:4dde138a2ad7"
+                "hash": "q3:4dde138a2ad7"
             },
             "rules": [
                 {
@@ -388,7 +390,7 @@
                 "idx": "stores",
                 "q": "stores | q=(delivery_area:geo_bbox() and has_child(review):{ rating >= 4 } and has_parent(chain):{ active:true } and location:geo_distance(25km)) | size=50",
                 "sig": "stores | q=(delivery_area:geo_bbox() and has_child(review):{ rating >= ? } and has_parent(chain):{ active:? } and location:geo_distance(?)) | size=50",
-                "hash": "q2:ccb4fb77328e"
+                "hash": "q3:ccb4fb77328e"
             },
             "rules": [
                 {
@@ -411,7 +413,7 @@
                 "idx": "articles",
                 "q": "articles | q=(script(doc['word_count'].value > params.floor) and title|body:like(\"distributed consensus algorithms\")) | size=10",
                 "sig": "articles | q=(script(?) and title|body:like(?)) | size=10",
-                "hash": "q2:522066bb4084"
+                "hash": "q3:522066bb4084"
             },
             "rules": [
                 {
@@ -439,7 +441,7 @@
                 "idx": "forum-*",
                 "q": "forum-* | q=(parent_id(comment):4712 and created_at >= now-7d) | size=20 | script_score:min_score",
                 "sig": "forum-* | q=(parent_id(comment):? and created_at >= ?) | size=20 | script_score:min_score",
-                "hash": "q2:621e3adba249",
+                "hash": "q3:621e3adba249",
                 "notes": [
                     "script_score:min_score"
                 ]
@@ -470,7 +472,7 @@
                 "idx": "deliveries",
                 "q": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
                 "sig": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
-                "hash": "q2:cb5e4609d066",
+                "hash": "q3:cb5e4609d066",
                 "notes": [
                     "indexed_shape"
                 ]
@@ -483,6 +485,48 @@
                     "on": [
                         "restricted_area"
                     ]
+                }
+            ]
+        },
+        {
+            "id": "17-hybrid-and-wrapper",
+            "label": "Hybrid and wrapper",
+            "index": "catalog-2026.08.18",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"must\": [\n                {\n                    \"hybrid\": {\n                        \"queries\": [\n                            {\n                                \"combined_fields\": {\n                                    \"query\": \"waterproof hiking boots\",\n                                    \"fields\": [\n                                        \"title\",\n                                        \"description\"\n                                    ]\n                                }\n                            },\n                            {\n                                \"knn\": {\n                                    \"embedding\": {\n                                        \"vector\": [\n                                            0.12,\n                                            0.98,\n                                            0.31\n                                        ],\n                                        \"k\": 20\n                                    }\n                                }\n                            }\n                        ]\n                    }\n                },\n                {\n                    \"rank_feature\": {\n                        \"field\": \"popularity\",\n                        \"saturation\": {\n                            \"pivot\": 8\n                        }\n                    }\n                }\n            ],\n            \"filter\": [\n                {\n                    \"wrapper\": {\n                        \"query\": \"eyJ0ZXJtIjp7ImluX3N0b2NrIjp0cnVlfX0=\"\n                    }\n                },\n                {\n                    \"distance_feature\": {\n                        \"field\": \"released_at\",\n                        \"pivot\": \"30d\",\n                        \"origin\": \"now\"\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 24\n}",
+            "digest": {
+                "idx": "catalog-*",
+                "q": "catalog-* | q=(in_stock:true and (embedding:knn(k=20) or title|description:\"waterproof hiking boots\") and popularity:rank_feature() and released_at:distance_feature(pivot=30d)) | size=24",
+                "sig": "catalog-* | q=(in_stock:? and (embedding:knn(k=?) or title|description:~?) and popularity:rank_feature() and released_at:distance_feature(pivot=?)) | size=24",
+                "hash": "q3:b1d9d5875df4"
+            },
+            "rules": [
+                {
+                    "rule": "index_pattern",
+                    "count": 1,
+                    "why": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",
+                    "on": [
+                        "catalog-2026.08.18 -> catalog-*"
+                    ]
+                },
+                {
+                    "rule": "must_filter_merged",
+                    "count": 1,
+                    "why": "bool.must and bool.filter both became AND: they differ in scoring, not in which documents match."
+                },
+                {
+                    "rule": "reorder",
+                    "count": 2,
+                    "why": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
+                    "on": [
+                        "and",
+                        "or"
+                    ]
+                },
+                {
+                    "rule": "wrapper_decoded",
+                    "count": 1,
+                    "why": "A wrapper was base64-decoded and parsed: the query it carried is rendered in full, so nothing about it is hidden."
                 }
             ]
         }

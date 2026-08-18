@@ -47,6 +47,24 @@ final class LeafNode implements Node
      */
     public const OP_PARENT_ID = 'parent_id';
 
+    /**
+     * `percolate`. The field is the one holding the stored queries; the
+     * document being tested against them is a value. A single value may be
+     * present — `indexed` — when the document is fetched rather than inlined.
+     */
+    public const OP_PERCOLATE = 'percolate';
+
+    /**
+     * `rank_feature` and `distance_feature`. Scoring queries, but not pure
+     * rescoring: a document without the field does not match, so they cannot be
+     * unwrapped the way `function_score` is. Values are the keyed knobs.
+     */
+    public const OP_RANK_FEATURE = 'rank_feature';
+    public const OP_DISTANCE_FEATURE = 'distance_feature';
+
+    /** `intervals`. The field only — see the parser for why the rules go. */
+    public const OP_INTERVALS = 'intervals';
+
     private string $field;
 
     private string $op;

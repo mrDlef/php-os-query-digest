@@ -457,6 +457,175 @@ final class NativeTypesTest extends TestCase
     }
 
     /**
+     * The flagship OpenSearch pattern — a lexical clause and a vector clause
+     * combined by a search pipeline — used to collapse to `hybrid(?)`, which
+     * said nothing at all about a query whose whole point is what it combines.
+     */
+    public function testHybridRendersItsBranchesInsteadOfHidingThem(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['hybrid' => ['queries' => [
+            ['match' => ['title' => 'waterproof boots']],
+            ['knn' => ['embedding' => ['vector' => [0.1, 0.2], 'k' => 10]]],
+        ]]]]);
+
+        self::assertSame('q=(embedding:knn(k=10) or title:"waterproof boots")', $digest->text());
+        self::assertSame('q=(embedding:knn(k=?) or title:~?)', $digest->signature());
+    }
+
+    /**
+     * The pipeline decides how the two scores are blended, never which
+     * documents come back — so hybrid restricts exactly the way dis_max does.
+     */
+    public function testHybridAndDisMaxOverTheSameBranchesShareAFingerprint(): void
+    {
+        $branches = [['term' => ['env' => 'prod']], ['term' => ['env' => 'staging']]];
+
+        self::assertSame(
+            $this->formatter->describe(['query' => ['dis_max' => ['queries' => $branches]]])->hash(),
+            $this->formatter->describe(['query' => ['hybrid' => ['queries' => $branches]]])->hash(),
+        );
+    }
+
+    public function testCombinedFieldsReadsLikeTheMultiMatchItMatches(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['combined_fields' => [
+            'query' => 'connection timeout',
+            'fields' => ['title', 'body'],
+            'operator' => 'and',
+        ]]]);
+
+        self::assertSame('q=(title|body:"connection timeout")', $digest->text());
+        self::assertSame('q=(title|body:~?)', $digest->signature());
+    }
+
+    public function testTheDeprecatedCommonQueryReadsAsAMatch(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['common' => [
+            'msg' => ['query' => 'timeout', 'cutoff_frequency' => 0.001],
+        ]]]);
+
+        self::assertSame('q=(msg:timeout)', $digest->text());
+        self::assertSame('q=(msg:~?)', $digest->signature());
+    }
+
+    /**
+     * The field says which set of saved queries is being replayed, which is the
+     * whole diagnostic content. The document is a value.
+     */
+    public function testPercolateKeepsTheFieldAndDropsTheDocument(): void
+    {
+        $one = ['query' => ['percolate' => ['field' => 'alerts', 'document' => ['msg' => 'timeout']]]];
+        $two = ['query' => ['percolate' => ['field' => 'alerts', 'document' => ['msg' => 'refused']]]];
+
+        self::assertSame('q=(alerts:percolate())', $this->formatter->describe($one)->text());
+        self::assertSame(
+            $this->formatter->describe($one)->hash(),
+            $this->formatter->describe($two)->hash(),
+        );
+    }
+
+    /**
+     * A percolated document fetched from another index is the same blind spot
+     * as a terms lookup, and gets the same warning rather than silence.
+     */
+    public function testAPercolateLookupIsCalledOut(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['percolate' => [
+            'field' => 'alerts', 'index' => 'docs', 'id' => '7',
+        ]]]);
+
+        self::assertSame('q=(alerts:percolate(indexed)) | percolate_lookup', $digest->text());
+        self::assertContains('percolate_lookup', $digest->notes());
+        self::assertTrue(
+            $this->formatter->explain(['query' => ['percolate' => [
+                'field' => 'alerts', 'index' => 'docs', 'id' => '7',
+            ]]])->has(Rule::PERCOLATE_LOOKUP),
+        );
+    }
+
+    public function testRankFeatureKeepsTheFieldAndDropsTheScoringFunction(): void
+    {
+        $saturation = ['query' => ['rank_feature' => [
+            'field' => 'popularity', 'saturation' => ['pivot' => 8],
+        ]]];
+        $log = ['query' => ['rank_feature' => [
+            'field' => 'popularity', 'log' => ['scaling_factor' => 4],
+        ]]];
+
+        self::assertSame('q=(popularity:rank_feature())', $this->formatter->describe($saturation)->text());
+        self::assertSame(
+            $this->formatter->describe($saturation)->hash(),
+            $this->formatter->describe($log)->hash(),
+            'The curve reorders results, it does not change which ones come back.',
+        );
+    }
+
+    public function testDistanceFeatureKeepsWhichKnobWasTurned(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['distance_feature' => [
+            'field' => 'created_at', 'pivot' => '7d', 'origin' => 'now',
+        ]]]);
+
+        self::assertSame('q=(created_at:distance_feature(pivot=7d))', $digest->text());
+        self::assertSame('q=(created_at:distance_feature(pivot=?))', $digest->signature());
+    }
+
+    /**
+     * They read as boosting, but a document without the field does not match —
+     * so unlike function_score they cannot be unwrapped away.
+     */
+    public function testAFeatureQueryStillNarrowsTheConjunction(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['bool' => ['must' => [
+            ['term' => ['env' => 'prod']],
+            ['rank_feature' => ['field' => 'popularity']],
+        ]]]]);
+
+        self::assertSame('q=(env:prod and popularity:rank_feature())', $digest->text());
+    }
+
+    public function testIntervalsKeepsTheFieldItRunsOn(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['intervals' => ['msg' => [
+            'match' => ['query' => 'connection timeout', 'max_gaps' => 2, 'ordered' => true],
+        ]]]]);
+
+        self::assertSame('q=(msg:intervals())', $digest->text());
+        self::assertSame('q=(msg:intervals())', $digest->signature());
+    }
+
+    /**
+     * The one promotion that recovers a whole query rather than summarising
+     * one: base64 in, real tree out.
+     */
+    public function testAWrapperIsDecodedIntoTheQueryItCarries(): void
+    {
+        $inner = '{"bool":{"filter":[{"term":{"env":"prod"}},{"range":{"took":{"gte":500}}}]}}';
+
+        $digest = $this->formatter->describe(['query' => [
+            'wrapper' => ['query' => base64_encode($inner)],
+        ]]);
+
+        self::assertSame('q=(env:prod and took >= 500)', $digest->text());
+    }
+
+    /**
+     * Wrapping a query changes nothing about what it matches, so it must not
+     * change its fingerprint either.
+     */
+    public function testAWrappedQueryHashesLikeTheSameQueryUnwrapped(): void
+    {
+        $plain = ['query' => ['term' => ['env' => 'prod']]];
+        $wrapped = ['query' => ['wrapper' => ['query' => base64_encode('{"term":{"env":"prod"}}')]]];
+
+        self::assertSame(
+            $this->formatter->describe($plain)->hash(),
+            $this->formatter->describe($wrapped)->hash(),
+        );
+        self::assertTrue($this->formatter->explain($wrapped)->has(Rule::WRAPPER_DECODED));
+    }
+
+    /**
      * A body the parser cannot make sense of must still be signalled rather
      * than swallowed — the promotion must not open a hole.
      */
@@ -472,6 +641,11 @@ final class NativeTypesTest extends TestCase
             'geo_polygon' => ['query' => ['geo_polygon' => ['validation_method' => 'STRICT']]],
             'geo_shape' => ['query' => ['geo_shape' => ['zone' => ['relation' => 'within']]]],
             'xy_shape' => ['query' => ['xy_shape' => []]],
+            'percolate' => ['query' => ['percolate' => ['document' => ['a' => 1]]]],
+            'rank_feature' => ['query' => ['rank_feature' => ['saturation' => ['pivot' => 8]]]],
+            'distance_feature' => ['query' => ['distance_feature' => ['pivot' => '7d']]],
+            'intervals' => ['query' => ['intervals' => ['boost' => 2]]],
+            'wrapper' => ['query' => ['wrapper' => ['query' => 'not base64 %%%']]],
         ];
 
         foreach ($cases as $type => $request) {

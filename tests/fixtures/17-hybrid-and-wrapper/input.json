@@ -1,0 +1,25 @@
+{
+    "index": "catalog-2026.08.18",
+    "request": {
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "hybrid": {
+                            "queries": [
+                                { "combined_fields": { "query": "waterproof hiking boots", "fields": [ "title", "description" ] } },
+                                { "knn": { "embedding": { "vector": [ 0.12, 0.98, 0.31 ], "k": 20 } } }
+                            ]
+                        }
+                    },
+                    { "rank_feature": { "field": "popularity", "saturation": { "pivot": 8 } } }
+                ],
+                "filter": [
+                    { "wrapper": { "query": "eyJ0ZXJtIjp7ImluX3N0b2NrIjp0cnVlfX0=" } },
+                    { "distance_feature": { "field": "released_at", "pivot": "30d", "origin": "now" } }
+                ]
+            }
+        },
+        "size": 24
+    }
+}
