@@ -39,6 +39,12 @@ hash  q3:fe168406e702
 | `signature` | the same line with literals erased     | read the *shape* at a glance            |
 | `hash`      | versioned fingerprint of the signature | `terms` aggregate on it                 |
 
+[Try it on your own query :material-arrow-right-bold:](playground/index.html){ .md-button .md-button--primary }
+[Getting started](getting-started.md){ .md-button }
+
+The playground runs this library in your browser — PHP compiled to WebAssembly,
+no server, nothing leaves the page.
+
 **The third one is the point.** Log the hash next to `took`, and your log index
 answers questions your dashboards cannot: which *kind* of query got slow this
 afternoon, which shape runs a thousand times an hour, which one appeared the day
@@ -54,7 +60,7 @@ the incident started.
 
     From `composer require` to a readable log line, in five minutes.
 
-- :material-flask: **[Try it on your query](https://mrdlef.github.io/php-os-query-digest/playground/)**
+- :material-flask: **[Try it on your query](playground/index.html)**
 
     Runs in your browser. No install, nothing leaves the page.
 

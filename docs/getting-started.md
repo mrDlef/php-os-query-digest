@@ -91,10 +91,12 @@ you can paste straight into Dashboards.
 
 ## Try it without installing anything
 
-The [playground](https://mrdlef.github.io/php-os-query-digest/playground/) runs this same library, compiled to WebAssembly,
-in your browser. Paste a real request from your slow log: nothing leaves the
-page. [How it manages that](explanation/playground.md) is worth a read on
-its own.
+It runs this same library, compiled to WebAssembly, in your browser. Paste a
+real request from your slow log: nothing leaves the page.
+
+[Open the playground :material-arrow-right-bold:](playground/index.html){ .md-button .md-button--primary }
+
+[How it manages that](explanation/playground.md) is worth a read on its own.
 
 ## Where to go next
 

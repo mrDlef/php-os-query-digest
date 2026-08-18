@@ -52,27 +52,25 @@ jobs:
       - name: Install MkDocs
         run: pip install --disable-pip-version-check mkdocs-material==9.5.49
 
+      # Copied in before the build, so MkDocs owns /playground/ and emits it
+      # verbatim. That is what lets every link to it stay relative — this site
+      # is served from a subdirectory, where a root-relative /playground/ would
+      # point off the site entirely.
+      - name: Put the playground inside the docs
+        run: cp -r playground docs/playground
+
       # --strict fails on a broken internal link rather than publishing one.
       - name: Build the site
         run: mkdocs build --strict
 
-      # The docs take the root; the playground moves under /playground/. The
-      # docs are what people arrive looking for, and the playground is one of
-      # the things the docs point at.
-      #
-      # The guard is not decoration. A docs page named playground.md would make
-      # MkDocs claim site/playground/, and `cp -r` into an existing directory
-      # nests instead of failing — publishing a docs page where the application
-      # should be, with the application at /playground/playground/. That is a
-      # silent break, so it is checked rather than trusted.
-      - name: Place the playground under the docs
+      # A docs page called playground.md would map to the same output path and
+      # silently replace the application's index.html, leaving its data files
+      # orphaned — a playground that loads nothing. MkDocs does not warn, so
+      # the built page is checked for the application's own title.
+      - name: The playground must be the playground
         run: |
-          if [ -e site/playground ]; then
-            echo "::error::site/playground already exists — a docs page has taken that slug."
-            exit 1
-          fi
-          cp -r playground site/playground
-          test -f site/playground/index.html
+          grep -q "os-query-digest playground" site/playground/index.html \
+            || { echo "::error::/playground/ is not the application — a docs page has taken that path."; exit 1; }
           test -f site/playground/data/presets.json
 
       - uses: actions/configure-pages@v6

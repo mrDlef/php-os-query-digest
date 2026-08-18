@@ -93,11 +93,16 @@ nav:
       - What counts as public: explanation/public-api.md
       - What it costs: explanation/performance.md
       - How the playground works: explanation/playground.md
-  # The real application, copied in beside the built site by the Pages
-  # workflow. It is not a page here, so its slug must not be one either —
-  # a docs page named playground.md would take /playground/ and push the
-  # application down to /playground/playground/.
-  - Playground ↗: https://mrdlef.github.io/php-os-query-digest/playground/
+  # The real application, copied into docs/ before the build so MkDocs owns
+  # the path and emits it verbatim. That is what keeps every link relative:
+  # the site is served from a subdirectory on GitHub Pages, where a
+  # root-relative /playground/ would resolve off the site entirely.
+  #
+  # Never add a docs page called playground.md. It maps to the same output
+  # path and silently replaces the application's index.html, leaving its data
+  # files orphaned — a playground that loads nothing. MkDocs does not warn
+  # about it, so the Pages workflow checks the built page is the application.
+  - Playground ↗: playground/index.html
 
 extra:
   social:
