@@ -14,7 +14,7 @@ survived when they did not, or forget to mention that they did not.
 
 The prefix has moved twice, and both times only the prefix: a signature that did
 not change kept its twelve hex characters, so `q2:abc…` and `q3:abc…` describe
-the same query. See [Hash stability](README.md#hash-stability).
+the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-digest/explanation/hash-stability/).
 
 | prefix | from | why |
 |---|---|---|
@@ -115,6 +115,29 @@ record your handler drops really does parse nothing.
 
 No timing gate in CI: wall-clock on a shared runner is noise, and a threshold
 tight enough to catch a regression would fail on a busy afternoon.
+
+### A documentation site
+
+**<https://mrdlef.github.io/php-os-query-digest/>** — built with MkDocs
+Material, published from a release tag like the playground and for the same
+reason: a page describing an API nobody can install yet is worse than a page a
+few days out of date.
+
+The README had grown to 36 KB across 23 sections, one of which was 39% of the
+file on its own. It is now 6 KB: what the library does, the before-and-after,
+how to install it, and where to read more. Everything else moved to pages, plus
+new material that was missing — a five-minute getting started, and a reference
+for the fourteen public classes written from reflection rather than from memory.
+
+**The playground moves to
+[/playground/](https://mrdlef.github.io/php-os-query-digest/playground/).** The
+root now serves the documentation, which is what people arrive looking for. The
+`composer.json` homepage is unchanged; it points at the same URL, which now
+answers with docs.
+
+MkDocs lives only in the Pages workflow — not in `composer.json`, not in the
+package. `make docs` serves the site locally through the same pinned image CI
+uses, so a local build and the published one cannot disagree.
 
 ### This file
 
