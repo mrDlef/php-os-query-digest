@@ -22,7 +22,14 @@ theme:
   language: en
   icon:
     repo: fontawesome/brands/github
+  custom_dir: overrides
   features:
+    # Top-level nav becomes a tab bar in the header, which is how the
+    # playground gets a permanent seat up there without vendoring a template.
+    - navigation.tabs
+    # The strip can be dismissed, and stays dismissed. A reader who has seen it
+    # should not meet it on every page for the rest of the site.
+    - announce.dismiss
     - navigation.instant
     - navigation.tracking
     - navigation.sections
@@ -71,6 +78,9 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra_css:
+  - stylesheets/extra.css
 
 plugins:
   - search
