@@ -68,6 +68,13 @@ final class LeafNode implements Node
     /** `intervals`. The field only — see the parser for why the rules go. */
     public const OP_INTERVALS = 'intervals';
 
+    /**
+     * A clause described by a user-registered
+     * {@see \MrDlef\OsQueryDigest\Extension\ClauseRenderer}. The label it
+     * chose is the first value; the rest are its keyed parameters.
+     */
+    public const OP_EXTENSION = 'extension';
+
     private string $field;
 
     private string $op;

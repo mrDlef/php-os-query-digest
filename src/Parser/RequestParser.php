@@ -6,6 +6,7 @@ namespace MrDlef\OsQueryDigest\Parser;
 
 use MrDlef\OsQueryDigest\Explain\Rule;
 use MrDlef\OsQueryDigest\Explain\Trace;
+use MrDlef\OsQueryDigest\Extension\ClauseRenderer;
 use MrDlef\OsQueryDigest\Support\Arr;
 use MrDlef\OsQueryDigest\Tree\QueryModel;
 
@@ -33,9 +34,13 @@ final class RequestParser
 
     private AggParser $aggParser;
 
-    public function __construct()
+    /**
+     * @param array<string,ClauseRenderer> $renderers for query types this
+     *                                                library does not model
+     */
+    public function __construct(array $renderers = [])
     {
-        $this->queryParser = new QueryParser();
+        $this->queryParser = new QueryParser($renderers);
         $this->aggParser = new AggParser();
     }
 

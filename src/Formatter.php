@@ -8,6 +8,7 @@ use MrDlef\OsQueryDigest\Exception\InvalidQueryException;
 use MrDlef\OsQueryDigest\Explain\Explanation;
 use MrDlef\OsQueryDigest\Explain\Rule;
 use MrDlef\OsQueryDigest\Explain\Trace;
+use MrDlef\OsQueryDigest\Extension\ClauseRenderer;
 use MrDlef\OsQueryDigest\Fingerprint\Hasher;
 use MrDlef\OsQueryDigest\Normalizer\Canonicalizer;
 use MrDlef\OsQueryDigest\Parser\RequestParser;
@@ -41,10 +42,34 @@ final class Formatter
     private function __construct(Options $options)
     {
         $this->options = $options;
-        $this->parser = new RequestParser();
+        $this->parser = new RequestParser($options->clauseRenderers());
         $this->canonicalizer = new Canonicalizer();
         $this->renderer = new LineRenderer();
-        $this->hasher = new Hasher($options->hashVersion(), $options->hashLength());
+        $this->hasher = new Hasher(self::hashVersion($options), $options->hashLength());
+    }
+
+    /**
+     * The algorithm version, marked when the rules are no longer this library's
+     * alone.
+     *
+     * A registered {@see ClauseRenderer} is a local normalisation rule: it
+     * changes the fingerprint of every query using its type. That is exactly
+     * what a prefix bump exists to make visible — `q1:` → `q2:` → `q3:` says
+     * "an older set of rules minted this", and `q3x:` says "someone's plugin
+     * code took part in minting this, so do not expect it to match a stock
+     * digest of the same query".
+     *
+     * A plain marker rather than a digest of the registered types: a renderer's
+     * *behaviour* can change without its type name changing, so anything more
+     * precise would promise a completeness it cannot deliver. Bumping
+     * `withHashVersion()` when your own renderer changes is yours to do, the
+     * same way it is ours.
+     */
+    private static function hashVersion(Options $options): string
+    {
+        return $options->clauseRenderers() === []
+            ? $options->hashVersion()
+            : $options->hashVersion() . 'x';
     }
 
     public static function create(?Options $options = null): self

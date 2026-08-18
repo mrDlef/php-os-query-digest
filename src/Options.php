@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MrDlef\OsQueryDigest;
 
 use MrDlef\OsQueryDigest\Exception\InvalidOptionException;
+use MrDlef\OsQueryDigest\Extension\ClauseRenderer;
 
 /**
  * Immutable configuration. PHP 7.4 has no named arguments, hence withers.
@@ -33,6 +34,9 @@ final class Options
     ];
 
     private Normalization $normalization;
+
+    /** @var array<string,ClauseRenderer> */
+    private array $clauseRenderers = [];
 
     private ?int $maxClauses = 12;
 
@@ -208,6 +212,32 @@ final class Options
     public function indexNormalizer(): IndexNormalizer
     {
         return $this->indexNormalizer;
+    }
+
+    /**
+     * Teach the library a query type it does not model, keyed by type name.
+     *
+     * Like the redactor, this has no array form and no {@see self::KEYS} entry:
+     * an object cannot come out of a configuration array.
+     *
+     * Registering one changes the fingerprints of queries using that type —
+     * that is the point — so {@see \MrDlef\OsQueryDigest\Formatter} marks the
+     * hash version to say the rules are no longer this library's alone.
+     */
+    public function withClauseRenderer(string $type, ClauseRenderer $renderer): self
+    {
+        $clone = clone $this;
+        $clone->clauseRenderers[$type] = $renderer;
+
+        return $clone;
+    }
+
+    /**
+     * @return array<string,ClauseRenderer>
+     */
+    public function clauseRenderers(): array
+    {
+        return $this->clauseRenderers;
     }
 
     public function redactor(): ?callable
