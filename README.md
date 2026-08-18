@@ -571,6 +571,26 @@ changes — and any dashboard built on it silently breaks. So:
 - every fixture pins its exact hash in `tests/fixtures/*/expected.json`. A rule
   change cannot land without a reviewable diff.
 - a change to the produced hashes is a **major** release.
+- [`CHANGELOG.md`](CHANGELOG.md) says, for every released version, whether your
+  fingerprints moved — and that claim is checked, not trusted. `make
+  release-check VERSION=v0.7.0` compares the entry against the hashes pinned in
+  `tests/fixtures`, so a release cannot promise your dashboards survived when
+  they did not, or move every hash without saying so.
+
+`CHANGELOG.md` is the source the GitHub release notes are extracted from, not a
+copy of them: the notes are reviewed in the pull request that ships the change
+rather than written after the tag.
+
+```bash
+make release-check VERSION=v0.7.0    # may this be tagged?
+make release-notes VERSION=v0.7.0    # what the release will say
+```
+
+There is no generator, and there will not be one. v0.6.0's notes run to four and
+a half thousand characters over a single commit — which types were promoted, why
+the thirteen left are a settled position, that both prefix bumps kept every hex
+character. None of that is in anybody's `git log`. What a tool can check is
+whether the entry is *true*, and that is what the tool checks.
 
 Twelve hex characters (48 bits) keep collisions negligible at any realistic
 number of distinct query shapes; `withHashLength()` adjusts it.
