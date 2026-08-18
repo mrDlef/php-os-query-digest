@@ -37,6 +37,7 @@
             "dedupe": "Identical sibling clauses were de-duplicated.",
             "drop_match_all": "match_all was dropped from a multi-clause AND: it constrains nothing.",
             "empty_to_match_all": "A connector with no clause left became match_all.",
+            "extension_rendered": "A registered ClauseRenderer read a query type this library does not model. The fingerprint depends on that renderer, not on this library alone.",
             "flatten": "Nested connectors of the same kind were flattened.",
             "function_score_unwrapped": "function_score was replaced by its inner query: the functions only rescore.",
             "index_pattern": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",

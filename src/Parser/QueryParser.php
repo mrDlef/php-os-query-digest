@@ -6,6 +6,7 @@ namespace MrDlef\OsQueryDigest\Parser;
 
 use MrDlef\OsQueryDigest\Explain\Rule;
 use MrDlef\OsQueryDigest\Explain\Trace;
+use MrDlef\OsQueryDigest\Extension\ClauseRenderer;
 use MrDlef\OsQueryDigest\Support\Arr;
 use MrDlef\OsQueryDigest\Tree\AndNode;
 use MrDlef\OsQueryDigest\Tree\JoinNode;
@@ -48,9 +49,18 @@ final class QueryParser
 
     private Trace $trace;
 
-    public function __construct()
+    /** @var array<string,ClauseRenderer> */
+    private array $renderers;
+
+    /**
+     * @param array<string,ClauseRenderer> $renderers keyed by query type, for
+     *                                                types this parser does not
+     *                                                model
+     */
+    public function __construct(array $renderers = [])
     {
         $this->trace = new Trace();
+        $this->renderers = $renderers;
     }
 
     /**
@@ -246,7 +256,12 @@ final class QueryParser
                 return $this->wrapper($body);
 
             default:
-                return new OpaqueNode($type);
+                // The only place an extension is consulted. Every type above
+                // has already returned, so a registered renderer physically
+                // cannot reach a natively modelled clause and move fingerprints
+                // that are not its business — the guarantee is structural, not
+                // a list that could drift out of date.
+                return $this->extension($type, $body);
         }
     }
 
@@ -858,6 +873,39 @@ final class QueryParser
         $this->trace->record(Rule::WRAPPER_DECODED);
 
         return $this->clause($inner);
+    }
+
+    /**
+     * A query type the library does not model. If someone has registered a
+     * renderer for it, it stops being a blank; otherwise it stays one.
+     *
+     * @param array<mixed> $body
+     */
+    private function extension(string $type, array $body): Node
+    {
+        $renderer = $this->renderers[$type] ?? null;
+        if ($renderer === null) {
+            return new OpaqueNode($type);
+        }
+
+        $clause = $renderer->render($body);
+        if ($clause === null) {
+            // The renderer did not recognise this body. `type(?)` is then the
+            // true answer, and a guess would be a fingerprint built on a
+            // misreading.
+            return new OpaqueNode($type);
+        }
+
+        // Reported by explain(), because a fingerprint that depended on
+        // someone's plugin code must not look like one this library produced
+        // on its own.
+        $this->trace->record(Rule::EXTENSION_RENDERED, $type);
+
+        // The label first, then the knobs — see RenderedClause on why a
+        // parameter cannot take the label's place.
+        $values = array_merge([$clause->label()], $clause->params());
+
+        return new LeafNode($clause->field(), LeafNode::OP_EXTENSION, $values);
     }
 
     private function note(string $note): void

@@ -207,6 +207,15 @@ final class DqlRenderer
                 // parameter but the opposite query.
                 return $field . ':' . $leaf->op() . '(' . implode(',', Arr::strings($values)) . ')';
 
+            case LeafNode::OP_EXTENSION:
+                // The label leads the values, so it survives the signature the
+                // way an op name would; the parameters after it are erased like
+                // every other clause's.
+                $label = Arr::str(reset($values));
+                $rendered = $label . '(' . $this->params($field, array_slice($values, 1, null, true), $profile) . ')';
+
+                return $field === '' ? $rendered : $field . ':' . $rendered;
+
             case LeafNode::OP_SCRIPT:
                 // The source is a value: it holds thresholds and parameters, so
                 // leaving it in would mint a fingerprint per threshold.

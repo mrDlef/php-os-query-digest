@@ -35,6 +35,8 @@ final class ApiBoundaryTest extends TestCase
         'MrDlef\OsQueryDigest\Exception\InvalidQueryException',
         'MrDlef\OsQueryDigest\Explain\Explanation',
         'MrDlef\OsQueryDigest\Explain\Rule',
+        'MrDlef\OsQueryDigest\Extension\ClauseRenderer',
+        'MrDlef\OsQueryDigest\Extension\RenderedClause',
         'MrDlef\OsQueryDigest\Formatter',
         'MrDlef\OsQueryDigest\LazyDigest',
         'MrDlef\OsQueryDigest\Monolog\DigestProcessor',
@@ -50,8 +52,8 @@ final class ApiBoundaryTest extends TestCase
 
         foreach (self::classes() as $class) {
             $doc = self::docComment($class);
-            $api = strpos($doc, '@api') !== false;
-            $internal = strpos($doc, '@internal') !== false;
+            $api = self::hasTag($doc, 'api');
+            $internal = self::hasTag($doc, 'internal');
 
             if ($api === $internal) {
                 $undeclared[] = $class . ($api ? ' (both)' : ' (neither)');
@@ -71,7 +73,7 @@ final class ApiBoundaryTest extends TestCase
     {
         $marked = [];
         foreach (self::classes() as $class) {
-            if (strpos(self::docComment($class), '@api') !== false) {
+            if (self::hasTag(self::docComment($class), 'api')) {
                 $marked[] = $class;
             }
         }
@@ -162,6 +164,17 @@ final class ApiBoundaryTest extends TestCase
     private static function isOurs(string $class): bool
     {
         return strpos($class, 'MrDlef\OsQueryDigest\\') === 0;
+    }
+
+    /**
+     * An annotation is a tag opening a line, not any occurrence of the word.
+     * A docblock is allowed to *discuss* `@internal` — the extension point's
+     * does, explaining why the tree it deliberately avoids is marked that way —
+     * without thereby claiming to be internal.
+     */
+    private static function hasTag(string $doc, string $tag): bool
+    {
+        return preg_match('/^\s*\*\s*@' . $tag . '\b/m', $doc) === 1;
     }
 
     /**
