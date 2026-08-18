@@ -120,6 +120,7 @@ final class SpecCoverageTest extends TestCase
             case 'terms_set':
                 return ['f' => ['a', 'b']];
             case 'multi_match':
+            case 'combined_fields':
                 return ['query' => 'x', 'fields' => ['f']];
             case 'query_string':
             case 'simple_query_string':
@@ -137,7 +138,18 @@ final class SpecCoverageTest extends TestCase
             case 'boosting':
                 return ['positive' => ['term' => ['f' => 'x']], 'negative' => ['term' => ['g' => 'y']]];
             case 'dis_max':
+            case 'hybrid':
                 return ['queries' => [['term' => ['f' => 'x']]]];
+            case 'percolate':
+                return ['field' => 'f', 'document' => ['g' => 'x']];
+            case 'rank_feature':
+                return ['field' => 'f'];
+            case 'distance_feature':
+                return ['field' => 'f', 'pivot' => '7d', 'origin' => 'now'];
+            case 'intervals':
+                return ['f' => ['match' => ['query' => 'x']]];
+            case 'wrapper':
+                return ['query' => base64_encode('{"term":{"f":"x"}}')];
             case 'knn':
                 return ['f' => ['vector' => [0.1, 0.2], 'k' => 3]];
             case 'neural':

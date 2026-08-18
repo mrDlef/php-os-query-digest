@@ -118,6 +118,10 @@ final class QueryParser
                 return $this->single($body, LeafNode::OP_REGEXP);
 
             case 'fuzzy':
+            case 'common':
+                // The deprecated cutoff_frequency query. Same body as a match,
+                // and legacy applications are exactly the ones whose logs get
+                // read back.
                 return $this->single($body, LeafNode::OP_MATCH);
 
             case 'exists':
@@ -136,6 +140,11 @@ final class QueryParser
                 return new LeafNode('_id', LeafNode::OP_TERMS, is_array($values) ? array_values($values) : []);
 
             case 'multi_match':
+            case 'combined_fields':
+                // combined_fields scores as though the fields were one field.
+                // That is a scoring difference, and this library already
+                // refuses to distinguish those: the set of documents a text
+                // query over a field list can match is the same shape.
                 return $this->multiMatch($body);
 
             case 'query_string':
@@ -212,13 +221,27 @@ final class QueryParser
                 return is_array($positive) ? $this->clause($positive) : new MatchAllNode();
 
             case 'dis_max':
-                $queries = Arr::get($body, 'queries', []);
-                $children = [];
-                foreach (Arr::clauses($queries) as $sub) {
-                    $children[] = $this->clause($sub);
-                }
+            case 'hybrid':
+                // Both take a list of queries and return the union of what they
+                // match; they differ only in how the scores are combined —
+                // hybrid needs a search pipeline to normalise them. Which is a
+                // scoring concern, so the two read the same here.
+                return $this->union($body);
 
-                return $children === [] ? new MatchAllNode() : new OrNode($children);
+            case 'percolate':
+                return $this->percolate($body);
+
+            case 'rank_feature':
+                return $this->feature($body, LeafNode::OP_RANK_FEATURE, []);
+
+            case 'distance_feature':
+                return $this->feature($body, LeafNode::OP_DISTANCE_FEATURE, ['pivot']);
+
+            case 'intervals':
+                return $this->intervals($body);
+
+            case 'wrapper':
+                return $this->wrapper($body);
 
             default:
                 return new OpaqueNode($type);
@@ -698,6 +721,141 @@ final class QueryParser
         $this->trace->record(Rule::SCRIPT_SCORE_UNWRAPPED);
 
         return is_array($inner) ? $this->clause($inner) : new MatchAllNode();
+    }
+
+    /**
+     * `dis_max` and `hybrid`: a list of alternatives, any of which is enough.
+     *
+     * @param array<mixed> $body
+     */
+    private function union(array $body): Node
+    {
+        $children = [];
+        foreach (Arr::clauses(Arr::get($body, 'queries', [])) as $sub) {
+            $children[] = $this->clause($sub);
+        }
+
+        return $children === [] ? new MatchAllNode() : new OrNode($children);
+    }
+
+    /**
+     * `percolate`: run the *stored* queries of a field against a document.
+     *
+     * The field is the whole diagnostic content — it says which set of saved
+     * queries is being replayed. The document is a value: percolating two
+     * different documents through the same field is the same query twice.
+     *
+     * @param array<mixed> $body
+     */
+    private function percolate(array $body): Node
+    {
+        $field = Arr::get($body, 'field');
+        if (!is_string($field)) {
+            return new OpaqueNode('percolate');
+        }
+
+        // The document can live in another index instead of being inlined —
+        // the same blind spot as a terms lookup, and worth the same warning.
+        if (array_key_exists('id', $body)) {
+            $this->note('percolate_lookup');
+            $this->trace->record(Rule::PERCOLATE_LOOKUP, $field);
+
+            return new LeafNode($field, LeafNode::OP_PERCOLATE, ['indexed']);
+        }
+
+        return new LeafNode($field, LeafNode::OP_PERCOLATE);
+    }
+
+    /**
+     * `rank_feature` and `distance_feature`.
+     *
+     * They read as boosting and are written where a boost would go, but they
+     * are not pure rescoring: a document that has no value for the field does
+     * not match at all. So they stay in the tree rather than unwrapping like
+     * `function_score`. The scoring function — saturation, log, sigmoid, and
+     * `origin` for a distance — is dropped: it reorders, it does not exclude.
+     *
+     * @param array<mixed>      $body
+     * @param array<int,string> $params
+     */
+    private function feature(array $body, string $op, array $params): Node
+    {
+        $field = Arr::get($body, 'field');
+        if (!is_string($field)) {
+            return new OpaqueNode($op);
+        }
+
+        $values = [];
+        foreach ($params as $key) {
+            if (array_key_exists($key, $body)) {
+                $values[$key] = $body[$key];
+            }
+        }
+
+        return new LeafNode($field, $op, $values);
+    }
+
+    /**
+     * `intervals`: ordered, gap-constrained matching over one field.
+     *
+     * Only the field is kept. The rule tree underneath — `all_of`, `any_of`,
+     * `max_gaps`, `ordered` — is a small language of its own, and modelling it
+     * would be a parser inside the parser for the rarest query type that has a
+     * field at all. The same call the geo queries make: the field and the kind
+     * of clause are what a log line needs, the rest is the payload.
+     *
+     * @param array<mixed> $body
+     */
+    private function intervals(array $body): Node
+    {
+        foreach (array_keys($body) as $field) {
+            $field = (string) $field;
+            if ($field === 'boost') {
+                $this->trace->record(Rule::BOOST_DROPPED);
+                continue;
+            }
+            if ($field === '_name') {
+                continue;
+            }
+
+            return new LeafNode($field, LeafNode::OP_INTERVALS);
+        }
+
+        return new OpaqueNode('intervals');
+    }
+
+    /**
+     * `wrapper`: a whole query, base64-encoded, so a client can pass one
+     * through without the surrounding builder parsing it.
+     *
+     * Decoding it is two calls and turns the one clause the library was
+     * completely blind to into the real tree. Nothing is lost, so this is an
+     * unwrapping rather than a note. A wrapper inside a wrapper recurses, and
+     * cannot run away: each level base64-encodes the one below it, so depth
+     * costs 4/3 the bytes in the request that carried it.
+     *
+     * @param array<mixed> $body
+     */
+    private function wrapper(array $body): Node
+    {
+        $encoded = Arr::get($body, 'query');
+        if (!is_string($encoded)) {
+            return new OpaqueNode('wrapper');
+        }
+
+        $decoded = base64_decode($encoded, true);
+        if ($decoded === false) {
+            return new OpaqueNode('wrapper');
+        }
+
+        $inner = json_decode($decoded, true);
+        if (!is_array($inner)) {
+            return new OpaqueNode('wrapper');
+        }
+
+        $this->trace->record(Rule::WRAPPER_DECODED);
+
+        return $this->clause($inner);
     }
 
     private function note(string $note): void

@@ -44,7 +44,7 @@ thousands of these a day:
 ```
 text  logs-* | q=(@timestamp >= now-15m and @timestamp < now and not status:200 and service:api) | size=50 sort=@timestamp:desc
 sig   logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
-hash  q2:fe168406e702
+hash  q3:fe168406e702
 ```
 
 ```php
@@ -53,7 +53,7 @@ $digest = MrDlef\OsQueryDigest\Formatter::create()
 
 $digest->text();       // the line above — select it, paste it into Dashboards
 $digest->signature();  // the same query with its literals erased: the shape
-$digest->hash();       // q2:fe168406e702 — stable, versioned, groupable
+$digest->hash();       // q3:fe168406e702 — stable, versioned, groupable
 ```
 
 | | what it is | what it is for |
@@ -125,7 +125,7 @@ The digest serialises to a compact object:
   "idx": "logs-*",
   "q": "logs-* | q=(@timestamp >= now-15m and service:api) | size=0",
   "sig": "logs-* | q=(@timestamp >= ? and service:?) | size=0",
-  "hash": "q2:b7cc218cda09"
+  "hash": "q3:b7cc218cda09"
 }
 ```
 
@@ -228,7 +228,7 @@ $ echo '{"query":{"term":{"service":"api"}},"size":50}' \
 idx:  logs-*
 text: logs-* | q=(service:api) | size=50
 sig:  logs-* | q=(service:?) | size=50
-hash: q2:5b2210eb5318
+hash: q3:5b2210eb5318
 ```
 
 `--explain` appends the rules table, `--json` emits the digest object, `--hash`
@@ -242,8 +242,8 @@ a `uniq -c` away:
 
 ```bash
 $ os-query-digest --ndjson --hash < slow.ndjson | sort | uniq -c | sort -rn
-      3 q2:3109618415cb
-      1 q2:a3e42b3a6c70
+      3 q3:2e2169e22798
+      1 q3:33a434d95576
 ```
 
 Those three are not three slow queries to read: they are one shape, hit on two
@@ -337,7 +337,7 @@ echo $explanation;
 ```
 text: logs-* | q=(env:prod and msg:timeout and service:api) | size=0 | should=1
 sig:  logs-* | q=(env:? and msg:~? and service:?) | size=0 | should=1
-hash: q2:a5d822c18ab3
+hash: q3:a5d822c18ab3
 notes: should=1
 
 rules applied:
@@ -396,17 +396,18 @@ rather than from memory. `resources/opensearch-spec.json` is a committed
 snapshot of the type names it declares; `resources/coverage.json` records our
 stance on each one, and `SpecCoverageTest` fails if the two ever disagree.
 
-**38 of the 59 query types** are rendered natively:
+**46 of the 59 query types** are rendered natively:
 
 | | |
 |---|---|
 | term-level | `term`, `terms`, `terms_set`, `prefix`, `wildcard`, `regexp`, `fuzzy`, `exists`, `range`, `ids` |
-| full text | `match`, `match_bool_prefix`, `match_phrase`, `match_phrase_prefix`, `multi_match`, `query_string`, `simple_query_string`, `more_like_this` |
-| compound | `bool`, `constant_score`, `dis_max`, `function_score`, `script_score`, `boosting` (filtering part) |
+| full text | `match`, `match_bool_prefix`, `match_phrase`, `match_phrase_prefix`, `multi_match`, `combined_fields`, `common`, `query_string`, `simple_query_string`, `more_like_this`, `intervals` |
+| compound | `bool`, `constant_score`, `dis_max`, `hybrid`, `function_score`, `script_score`, `boosting` (filtering part), `wrapper` |
 | joining | `nested`, `has_child`, `has_parent`, `parent_id` |
 | vector | `knn`, `neural` |
 | geo | `geo_distance`, `geo_bounding_box`, `geo_polygon`, `geo_shape`, `xy_shape` |
-| other | `match_all`, `match_none`, `script` |
+| scoring | `rank_feature`, `distance_feature` |
+| other | `match_all`, `match_none`, `script`, `percolate` |
 
 Vector and geo clauses keep what a reader needs and drop what they cannot use: a
 `knn` renders as `image_embedding:knn(k=20)`, not as a thousand floats, so two
@@ -417,10 +418,22 @@ query keeps the two parts that decide which documents match,
 `disjoint` over the same polygon return opposite result sets, so collapsing them
 would be the geo equivalent of erasing a `not`.
 
-The other 21 — `percolate`, `intervals`, `rank_feature`, the `span_*` family,
-plugin queries — render as `type(?)`. They are signalled, never dropped, and
-still contribute to the fingerprint. The span family (9 of the 21) is
-deliberately left there: nobody debugs a span query from a log line.
+Two of them recover more than they summarise. A `hybrid` — the OpenSearch
+pattern of running a lexical and a vector clause together under a normalisation
+pipeline — renders as the union it matches, so
+`q=(embedding:knn(k=20) or title|description:"hiking boots")` says what the
+search actually combined instead of hiding it behind one word. And a `wrapper`
+is base64-decoded and parsed, so a query passed through as an opaque blob comes
+back as the query it always was, hashing exactly like the same query sent
+unwrapped.
+
+The other 13 render as `type(?)`. They are signalled, never dropped, and still
+contribute to the fingerprint — and none of them is a gap waiting to be filled.
+The `span_*` family is 9 of the 13 and stays there on purpose: nobody debugs a
+span query from a log line. The remaining four cannot be read even in principle
+— `type` was removed with mapping types, `sltr` and `template` only rescore or
+live behind another endpoint, and an `agentic` query hands the whole result set
+to a model that decides outside the DSL.
 
 All **65 aggregation types** are rendered; 12 of them get a shape tuned for
 readability (`terms(host,10)`, `date_histogram(@ts,1h)`, `p95(latency)`), the
@@ -486,11 +499,16 @@ offline, with no dependency at all.
 **The hash is a public contract.** If a normalisation rule changes, every hash
 changes — and any dashboard built on it silently breaks. So:
 
-- the hash carries its algorithm version: `q2:8f3ac1d2b901`. A rule change bumps
-  it — `q2:` → `q3:` — making the break visible in your data instead of
-  invisible. The prefix moved once already: v0.2.0 promoted three query types
-  out of `type(?)`, so everything published as `q1:` was minted by an older set
-  of rules.
+- the hash carries its algorithm version: `q3:8f3ac1d2b901`. A rule change bumps
+  it — `q3:` → `q4:` — making the break visible in your data instead of
+  invisible. The prefix has moved twice: v0.2.0 promoted three query types out
+  of `type(?)`, and v0.6.0 promoted eight more, so anything published as `q1:`
+  or `q2:` was minted by an older set of rules. Promotions are deliberately
+  batched into one release for that reason — the prefix is global, so promoting
+  a single rare type would invalidate every dashboard on its own.
+- a signature that did not change keeps its twelve hex characters. `q2:abc…`
+  and `q3:abc…` describe the same shape, which makes a prefix bump readable
+  rather than a wall of new values.
 - every fixture pins its exact hash in `tests/fixtures/*/expected.json`. A rule
   change cannot land without a reviewable diff.
 - a change to the produced hashes is a **major** release.
