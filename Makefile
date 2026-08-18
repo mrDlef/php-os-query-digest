@@ -7,7 +7,7 @@ export DOCKER_GID := $(shell id -g)
 
 .PHONY: test test-all stan cs cs-check rector rector-check check hooks fixtures spec \
         playground playground-data playground-check mutation \
-        release-check release-notes \
+        release-check release-notes bench \
         certify integration clusters clusters-down clean
 
 ## Run the test suite in Docker for one PHP version: make test PHP_VERSION=7.4
@@ -111,6 +111,16 @@ integration: clusters
 	OPENSEARCH_URL=http://localhost:9202 vendor/bin/phpunit --testsuite=integration
 	OPENSEARCH_URL=http://localhost:9203 vendor/bin/phpunit --testsuite=integration
 	@$(MAKE) clusters-down
+
+## What a digest costs on the request path, measured on the committed fixtures.
+## Reports; deliberately not a CI gate — wall-clock on a shared runner is noise.
+##   make bench
+##   make bench PHP_VERSION=7.4
+##   make bench ITERATIONS=20000
+bench:
+	@docker compose run --rm --build -T -e ITERATIONS=$(ITERATIONS) php \
+		sh -c "rm -f composer.lock && composer update --no-progress -q && php tools/benchmark.php; \
+		       status=\$$?; rm -f composer.lock; exit \$$status"
 
 ## May this version be tagged? Checks that CHANGELOG.md has an entry for it and
 ## that the entry's Fingerprints: line agrees with the hashes pinned in
