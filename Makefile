@@ -6,7 +6,7 @@ export DOCKER_UID := $(shell id -u)
 export DOCKER_GID := $(shell id -g)
 
 .PHONY: test test-all stan cs cs-check rector rector-check check hooks fixtures spec \
-        playground playground-data playground-check \
+        playground playground-data playground-check mutation \
         certify integration clusters clusters-down clean
 
 ## Run the test suite in Docker for one PHP version: make test PHP_VERSION=7.4
@@ -21,6 +21,11 @@ test-all:
 		echo "=====  PHP $$v  ====="; \
 		PHP_VERSION=$$v docker compose run --rm -T --build php </dev/null || exit 1; \
 	done
+
+## Mutation testing: does the suite actually notice when a rule stops firing?
+## Slow on purpose — it runs the suite once per surviving mutant.
+mutation:
+	docker compose run --rm --build mutation
 
 stan:
 	PHP_VERSION=8.3 docker compose run --rm -T php sh -c "composer update --no-progress && vendor/bin/phpstan analyse"

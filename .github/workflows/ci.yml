@@ -67,3 +67,33 @@ jobs:
           coverage: none
       - run: composer update --prefer-dist --no-progress
       - run: vendor/bin/rector process --dry-run
+
+  mutation-testing:
+    name: Mutation testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # 8.5 rather than Infection's own 8.3 floor: tools/infection/composer.lock
+      # is committed so the mutation score is reproducible, and its dependencies
+      # have moved past 8.3. A lock is only reproducible on a PHP that satisfies
+      # it.
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: json
+          # The one job that needs a coverage driver — mutation testing cannot
+          # tell a killed mutant from an unreached one without it.
+          coverage: pcov
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-progress
+
+      # Its own manifest: Infection needs PHP 8.3+ while this library supports
+      # 7.4, so it must not sit in the root require-dev and constrain what the
+      # other jobs can resolve.
+      - name: Install Infection
+        run: composer --working-dir=tools/infection install --no-progress
+
+      - name: Mutation testing
+        run: tools/infection/vendor/bin/infection --threads=max --no-progress --no-interaction --logger-github

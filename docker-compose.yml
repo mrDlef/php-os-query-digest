@@ -36,6 +36,45 @@ services:
              rm -f composer.lock;
              exit $$status"
 
+  # Mutation testing. Its own service rather than a flag on `php`, because it
+  # needs two things the unit suite deliberately does not have: a coverage
+  # driver, and PHP 8.3 — Infection's floor, while this library's is 7.4.
+  mutation:
+    image: os-query-digest:mutation
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        # Pinned to the version tools/infection/composer.lock was resolved for.
+        # Infection's own floor is 8.3, but its dependencies have since moved
+        # past it, and a lock is only reproducible on a PHP that satisfies it.
+        PHP_VERSION: "8.5"
+        WITH_PCOV: "1"
+    working_dir: /app
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    volumes:
+      - .:/app
+    environment:
+      COMPOSER_HOME: /tmp/composer
+      # No COMPOSER_VENDOR_DIR override, unlike the `php` service: PHPUnit is
+      # invoked by Infection through phpunit.xml.dist, which bootstraps
+      # vendor/autoload.php. Sending composer somewhere else leaves it with no
+      # autoloader. This job runs on one PHP version, so the per-version split
+      # buys nothing here anyway — it exists because PHPUnit differs across
+      # 7.4 to 8.5, and this is 8.5 either way.
+      # So a run can be narrowed without editing this file:
+      #   INFECTION_ARGS="--filter=src/Parser" make mutation
+      INFECTION_ARGS: ${INFECTION_ARGS:-}
+    command: >
+      sh -c "rm -f composer.lock &&
+             composer update --no-progress &&
+             COMPOSER_VENDOR_DIR=/app/tools/infection/vendor composer --working-dir=tools/infection install --no-progress &&
+             tools/infection/vendor/bin/infection --threads=max --show-mutations --no-progress --no-interaction $$INFECTION_ARGS;
+             status=$$?;
+             rm -f composer.lock;
+             exit $$status"
+
+
   # Real clusters, for `make certify`. Behind a profile so they never start for
   # the unit suite: that one is offline and must stay that way.
   #

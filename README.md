@@ -543,6 +543,41 @@ would stop improving. Depend on them and an ordinary patch may move under you.
 This matters because it is the half of a `1.0.0` that cannot be walked back:
 widening a public surface later is free, narrowing one is not.
 
+## Would the tests notice?
+
+Line coverage answers "was this executed?". For a library whose product is a
+stable hash, the question worth asking is "would anything fail if this stopped
+doing its job?" — a normalisation rule quietly ceasing to fire is exactly the
+bug no percentage would show.
+
+```bash
+make mutation      # ~35s, plus the image build the first time
+```
+
+Infection rewrites the source one small change at a time and re-runs the suite
+against each. **Nothing in `src/` is uncovered**, and the covered mutation score
+sits at 79%, guarded in CI so it cannot quietly fall.
+
+It has already earned its keep. Three findings on the first run:
+
+- `ABSORB_MATCH_NONE` is recorded from two branches — an AND that meets
+  `match_none` matches nothing, an OR merely drops it — and only the AND one
+  was tested. Deleting the OR branch's report left every test green.
+- `UNWRAP` is only a rewrite when the connector had something to unwrap; a bool
+  that arrives with a single clause was already reported by the parser. That
+  guard was unpinned.
+- `Hasher` carried its own default prefix and length beside the ones in
+  `Options`. Nothing constructed it that way, so the copy was free to drift
+  from the values actually used. It is gone.
+
+Most of what still survives is string concatenation in CLI help and error text
+— reordering a message nobody asserts on. The threshold is a ratchet: raise it
+when real escapes are killed, never lower it to make a build pass.
+
+Infection keeps its own manifest in `tools/infection/`. It needs PHP 8.3 while
+this library supports 7.4, so putting it in the root `require-dev` would either
+break `composer update` on 7.4 or drag in a release from 2021 that nobody runs.
+
 ## Development
 
 Tests run in Docker across the whole supported matrix:

@@ -44,6 +44,11 @@ return RectorConfig::configure()
     // noise.
     ->withImportNames(true, true, false, true)
     ->withSkip([
+        // Infection's own dependencies, installed under tools/ because it
+        // needs a newer PHP than this library supports. Not our code to
+        // rewrite — and it is written for 8.3, not 7.4.
+        __DIR__ . '/tools/infection/vendor',
+
         // `if ($query !== null)` says what it means when the property is
         // `?Node`. Rewriting it to `instanceof Node` asks the reader to know
         // the type before they can read the condition.

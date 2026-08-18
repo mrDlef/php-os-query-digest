@@ -24,6 +24,69 @@ final class ExplainTest extends TestCase
         $this->formatter = Formatter::create();
     }
 
+    /**
+     * Found by mutation testing: `ABSORB_MATCH_NONE` is recorded from two
+     * separate branches — an AND that hits `match_none` matches nothing, an OR
+     * merely drops it — and only the AND one was covered. Deleting the OR
+     * branch's record left every test green.
+     */
+    public function testAnOrDroppingMatchNoneReportsTheAbsorption(): void
+    {
+        $explanation = $this->formatter->explain(['query' => ['bool' => ['should' => [
+            ['term' => ['env' => 'prod']],
+            ['match_none' => []],
+        ]]]]);
+
+        self::assertTrue($explanation->has(Rule::ABSORB_MATCH_NONE));
+        self::assertStringContainsString('env:prod', $explanation->digest()->text());
+    }
+
+    /**
+     * An OR of nothing but match_none matches nothing. It must not fall
+     * through to the empty-connector rule, which would turn it into match_all
+     * — the exact opposite result set.
+     */
+    public function testAnOrOfOnlyMatchNoneStaysMatchNone(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['bool' => ['should' => [
+            ['match_none' => []],
+            ['match_none' => []],
+        ]]]]);
+
+        self::assertSame('q=(none)', $digest->text());
+    }
+
+    /**
+     * Also from mutation testing: `UNWRAP` is only a rewrite when the
+     * connector had something to unwrap. A bool that arrives with one clause
+     * was already reported by the parser, so the canonicaliser reporting it
+     * again would double-count. The guard is `count($original) > 1`, and
+     * nothing pinned it.
+     */
+    public function testUnwrappingIsReportedWhenAConnectorLosesItsOtherClause(): void
+    {
+        // Two clauses in, one out: match_all is dropped, and what is left is
+        // no longer a connector at all.
+        $explanation = $this->formatter->explain(['query' => ['bool' => ['filter' => [
+            ['term' => ['env' => 'prod']],
+            ['match_all' => []],
+        ]]]]);
+
+        self::assertTrue($explanation->has(Rule::DROP_MATCH_ALL));
+        self::assertTrue($explanation->has(Rule::UNWRAP));
+        self::assertSame('q=(env:prod)', $explanation->digest()->text());
+    }
+
+    /**
+     * The empty-connector rule, which the two above must not be confused with.
+     */
+    public function testAConnectorLeftWithNothingBecomesMatchAll(): void
+    {
+        $explanation = $this->formatter->explain(['query' => ['bool' => ['filter' => []]]]);
+
+        self::assertSame('q=(*)', $explanation->digest()->text());
+    }
+
     public function testACanonicalQueryReportsNoRule(): void
     {
         $explanation = $this->formatter->explain(['query' => ['term' => ['env' => 'prod']]]);
