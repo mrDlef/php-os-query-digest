@@ -110,6 +110,14 @@ services:
       discovery.type: single-node
       DISABLE_SECURITY_PLUGIN: "true"
       OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+      # Same as os2, and it bites harder here. 3.x adds a *headroom* to the
+      # flood-stage watermark, so the block trips when free space falls under
+      # ~100 GB regardless of the percentage — a 455 GB disk at 92% has 36 GB
+      # free, well inside the 95% threshold and well inside the headroom. The
+      # node then answers index creation with a bare 403
+      # `index_create_block_exception` that says nothing about disks, and every
+      # integration test fails in setUp. The node is empty and disposable.
+      cluster.routing.allocation.disk.threshold_enabled: "false"
     ports:
       - "9203:9200"
     healthcheck:

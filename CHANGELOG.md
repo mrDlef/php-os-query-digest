@@ -116,6 +116,46 @@ record your handler drops really does parse nothing.
 No timing gate in CI: wall-clock on a shared runner is noise, and a threshold
 tight enough to catch a regression would fail on a busy afternoon.
 
+### Use cases, with every query executed
+
+Four [Use cases](https://mrdlef.github.io/php-os-query-digest/use-cases/) pages,
+placed before the guides because a reader who has just installed this wants to
+know what it answers, not what its options are.
+
+The home page already claimed the log index could tell you "which kind of query
+got slow this afternoon, which shape runs a thousand times an hour, which one
+appeared the day the incident started". Nothing behind it showed how. These pages
+do, and the answers are less obvious than the claim:
+
+- **Ranking by p95 finds the wrong query.** It surfaces the report that takes a
+  second and a half and took a second and a half yesterday. Ranking each shape
+  against *its own history* finds the one that went from 50 ms to 1074 ms.
+- **The query you run most is not the query that costs you most.** The workhorse
+  ran 7200 times for 57.6 s; a dashboard aggregation ran 360 times for 118.6 s.
+- **A deploy marker and a latency bump are not the same event.** In the scenario
+  the slowdown lands at 14:00 and the release at 15:00, so the obvious story —
+  the release broke search — is wrong and hard to disprove without the hash.
+- **The hash is not a cache key.** Three tenants share one fingerprint, because
+  erasing literals is the whole point. Cache on it and tenant 42 is served
+  tenant 41's invoices.
+
+**Every aggregation on those pages is executed by `UseCaseTest` against
+OpenSearch 2.19.6 and 3.8.0**, including the one shown as a counter-example,
+which has to keep being wrong. The queries are *extracted from the markdown* by a
+`<!-- verified: -->` marker rather than copied into the test, so there is one copy
+and it is the one a reader sees. The test also fails if a page prints a hash this
+library no longer produces, and if a marked block has no test behind it.
+
+That caught two things worth admitting: a page that quoted an invented hash, and
+a page that showed `status:?` inside the `q` field while explaining that `q` keeps
+its values.
+
+`make integration` was broken against the 3.x node on any machine with less than
+about 100 GB free, and had been. 3.x adds a headroom to the flood-stage watermark,
+so the block trips under ~100 GB regardless of the percentage, and the node
+answers index creation with a bare 403 `index_create_block_exception` that
+mentions no disk. `os2` already disabled the threshold; `os3` now does too.
+
 ### A documentation site
 
 **<https://mrdlef.github.io/php-os-query-digest/>** — built with MkDocs
