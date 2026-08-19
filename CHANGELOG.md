@@ -136,11 +136,31 @@ root now serves the documentation, which is what people arrive looking for. The
 answers with docs.
 
 The two share one identity rather than looking like a site and an app that
-happen to be neighbours: the documentation takes the playground's paper, ink and
-ochre, with the header in ink so the ochre means one thing only — this is
-something you can click. Every pairing was checked for contrast; the eleven of
-them pass AA, eight at AAA. The playground's own links to the source and to
-Packagist now carry inline marks, still fetching nothing from anywhere.
+happen to be neighbours — and that identity is now generated rather than written
+twice. Bone is the field, pitch black is the ink, and a lobster marks anything
+you can act on: six values, emitted into both stylesheets from
+`tools/build-palette.php`, because they were written twice and the second copy
+drifted inside a day.
+
+The lobster needed two of those six. It reads 2.87:1 on bone and 3.88:1 on the
+playground's raised pane, so it carries no text itself — light mode takes a
+deeper one, dark mode a lifted one, and the hue they are drawn from stays in the
+palette as the thing they agree on. Nothing is `#fff`: Material defaults three
+variables to white or an alpha of it, and all three name bone.
+
+Every pairing is measured, not checked once. `PaletteTest` parses the shipped
+stylesheets rather than the tool's own values — which would prove only that the
+tool agrees with itself — resolves each `var()` chain, and reports all 34
+documented pairs. The 30 text pairs clear AA with the tightest at 4.73:1 and
+fourteen of them at AAA; the four form borders clear the 3:1 that identifies a
+control. A colour nudged to taste turns CI red instead of shipping 3.9:1.
+
+**The site fetches no fonts.** It linked a stylesheet on `fonts.googleapis.com`
+and preconnected to `fonts.gstatic.com`; it now references neither, naming the
+system stacks the playground already used. The playground's corners follow
+Material's three radii — 2px for controls, 4px for panes, a pill for the chips
+that were already one. Its links to the source and to Packagist carry inline
+marks, still fetching nothing from anywhere.
 
 MkDocs lives only in the Pages workflow — not in `composer.json`, not in the
 package. `make docs` serves the site locally through the same pinned image CI
