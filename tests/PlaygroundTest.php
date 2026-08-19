@@ -26,6 +26,67 @@ final class PlaygroundTest extends TestCase
 {
     private const DATA = __DIR__ . '/../playground/data';
 
+    private const PAGE = __DIR__ . '/../playground';
+
+    /**
+     * The page's own claim is that nothing it loads comes from anywhere but the
+     * site serving it — which is why the wasm runtime is fetched at build time
+     * rather than imported from a CDN.
+     *
+     * Matched on hosts rather than on the shape of a loader call: the URL that
+     * used to be here reached `import()` through a constant, so a pattern
+     * looking for `import('https://…')` would have passed the very code this
+     * exists to forbid. Two hosts are allowed and both are anchors — a link the
+     * reader may click is not a request the page makes.
+     */
+    public function testThePageReferencesNoHostButTheTwoItLinksTo(): void
+    {
+        $allowed = ['github.com', 'packagist.org'];
+
+        foreach (['index.html', 'playground.js', 'playground.css'] as $file) {
+            $source = (string) file_get_contents(self::PAGE . '/' . $file);
+
+            preg_match_all('#\bhttps?://([a-z0-9.-]+)#i', $source, $found);
+
+            foreach (array_unique($found[1]) as $host) {
+                self::assertContains(
+                    strtolower($host),
+                    $allowed,
+                    $file . ' names ' . $host . '. The runtime is fetched by '
+                    . 'tools/fetch-runtime.php and served from this site; nothing here '
+                    . 'may load from another origin.',
+                );
+            }
+        }
+    }
+
+    /**
+     * The runtime is gitignored, so this manifest is the only committed record of
+     * what the page will execute. A hash that is not a hash would make
+     * fetch-runtime.php's check pass on anything.
+     */
+    public function testTheRuntimeManifestPinsEveryFileToASha256(): void
+    {
+        $manifest = json_decode((string) file_get_contents(self::PAGE . '/runtime.lock.json'), true);
+        self::assertIsArray($manifest);
+
+        $version = $manifest['version'] ?? null;
+        $files = $manifest['files'] ?? null;
+
+        self::assertIsString($version, 'The manifest pins no version.');
+        self::assertMatchesRegularExpression('/^\d+\.\d+\.\d+$/', $version, 'The version is not exact.');
+        self::assertIsArray($files);
+        self::assertNotSame([], $files, 'The manifest lists no files.');
+
+        foreach ($files as $name => $hash) {
+            self::assertIsString($name);
+            self::assertIsString($hash, $name . ' has no hash.');
+            self::assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $hash, $name . ' is not a SHA-256.');
+        }
+
+        self::assertArrayHasKey('PhpWeb.mjs', $files, 'The entry point is not pinned.');
+    }
+
     public function testTheGeneratedFilesAreWhatTheToolWouldWriteNow(): void
     {
         [$status, $out, $err] = self::php([dirname(__DIR__) . '/tools/build-playground.php', '--check']);

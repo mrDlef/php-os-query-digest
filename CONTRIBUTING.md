@@ -31,7 +31,13 @@ make bench                  # what a digest costs
 make playground             # serve the browser playground on :8080
 make docs                   # serve the documentation site on :8000
 make palette                # write the palette into both stylesheets
+make playground-runtime     # fetch the wasm PHP the playground runs
 ```
+
+The playground serves its own PHP-in-WebAssembly runtime rather than importing
+one from a CDN. It is gitignored — 12.5 MB does not belong in this history — so
+`tools/fetch-runtime.php` downloads it and verifies every file against
+`playground/runtime.lock.json`. `make playground` does that for you.
 
 The colours of the documentation and the playground come from
 `tools/build-palette.php` and are generated into both stylesheets. Edit the tool,

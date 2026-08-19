@@ -75,9 +75,15 @@ playground-data:
 palette:
 	php tools/build-palette.php
 
-## Serve the playground on :8080. Static files only; the PHP that runs the
-## library is the one compiled to wasm, fetched by the page.
-playground: playground-data
+## Fetch the PHP-in-wasm runtime into playground/runtime and check it against
+## playground/runtime.lock.json. Gitignored: 12.5 MB does not belong in the
+## history of a library whose package is measured in kilobytes.
+playground-runtime:
+	@php tools/fetch-runtime.php
+
+## Serve the playground on :8080. Static files only, and nothing leaves the
+## origin: the wasm is served from playground/runtime, not a CDN.
+playground: playground-data playground-runtime
 	@echo "→ http://localhost:8080"
 	@php -S localhost:8080 -t playground
 
@@ -86,7 +92,7 @@ playground: playground-data
 ## NODE_PATH is how node finds a globally installed playwright. CI never runs
 ## this: the guard that has to be automatic is PlaygroundTest, which needs
 ## neither node nor a browser.
-playground-check:
+playground-check: playground-runtime
 	NODE_PATH="$${NODE_PATH:-$$(npm root -g)}" node tools/playground-browser-check.mjs
 
 ## Refresh the OpenSearch spec snapshot, then let the tests flag what changed.
