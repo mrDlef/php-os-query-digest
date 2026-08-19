@@ -2,18 +2,31 @@
   --pitch-black: #231c07;
   --bone: #ece2d0;
   --lobster-pink: #c46d5e;
+
+  /* Two deeper lobsters, and the reason is contrast rather than taste. White on
+     #c46d5e is 3.69:1 and the lobster reads 2.87:1 on bone — both under the
+     4.5:1 normal text needs. #b35a4b carries white at 4.69:1; #9c4536 clears
+     4.93:1 on bone, which is what body links sit on. */
+  --lobster-header: #b35a4b;
+  --lobster-link: #9c4536;
 }
 
 :root  > * {
   --md-default-bg-color: var(--bone);
-  --md-primary-fg-color: var(--lobster-pink);
+  --md-primary-fg-color: var(--lobster-header);
   --md-primary-fg-color--light: var(--bone);
   --md-primary-fg-color--dark: var(--pitch-black);
   --md-footer-bg-color: var(--pitch-black);
-  --md-accent-fg-color: var(--lobster-pink);
+  --md-accent-fg-color: var(--lobster-link);
   --md-footer-bg-color--dark: var(--pitch-black);
   --md-footer-fg-color--light: var(--bone);
   --md-footer-fg-color--lighter: var(--bone);
+
+  /* Material derives this from --md-primary-fg-color, so the header colour
+     would otherwise repaint every link in the page. Pinned, because a header
+     is chrome behind white text and a link is text on bone: the two cannot be
+     the same value and both clear AA. */
+  --md-typeset-a-color: var(--lobster-link);
 }
 
 [data-md-color-scheme="slate"] {
@@ -23,6 +36,11 @@
   --md-footer-bg-color--dark: var(--bone);
   --md-footer-fg-color--light: var(--pitch-black);
   --md-footer-fg-color--lighter: var(--pitch-black);
+
+  /* The deep lobster inverts: 3.61:1 on pitch black. The original is 4.59:1
+     there, so dark mode keeps the colour the palette is named for. */
+  --md-typeset-a-color: var(--lobster-pink);
+  --md-accent-fg-color: var(--lobster-pink);
 }
 
 

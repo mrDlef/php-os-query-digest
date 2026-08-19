@@ -3,33 +3,33 @@
  * PHP has finished downloading, so nothing here waits on anything.
  */
 :root {
-    --pitch-black: #231c07;
     --bone: #ece2d0;
-    --lobster-pink: #c46d5e;
     --dark-blue: #272a35;
+    --lobster-pink: #c46d5e;
+    --pitch-black: #231c07;
 
-    --bg: var(--bone);
-    --fg: var(--pitch-black);
-    --muted: #6b6b66;
-    --line: #dcdcd6;
-    --pane: #ffffff;
-    --accent: var(--lobster-pink);
     --accent-bg: #fdf4e3;
-    --error: #8a1c1c;
+    --accent: var(--lobster-pink);
+    --bg: var(--bone);
     --error-bg: #fdf0f0;
+    --error: #8a1c1c;
+    --fg: var(--pitch-black);
+    --line: #dcdcd6;
     --mono: SFMono-Regular, Consolas, Menlo, monospace;
+    --muted: #6b6b66;
+    --pane: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg: var(--pitch-black);
-        --fg: var(--bone);
-        --muted: #98988f;
-        --line: #33333a;
-        --pane: var(--dark-blue);
         --accent-bg: #2a2116;
-        --error: #f08f8f;
+        --bg: var(--pitch-black);
         --error-bg: #2c1a1a;
+        --error: #f08f8f;
+        --fg: var(--bone);
+        --line: #33333a;
+        --muted: #98988f;
+        --pane: var(--dark-blue);
     }
 }
 
