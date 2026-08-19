@@ -116,6 +116,45 @@ record your handler drops really does parse nothing.
 No timing gate in CI: wall-clock on a shared runner is noise, and a threshold
 tight enough to catch a regression would fail on a busy afternoon.
 
+### The playground answers to nobody
+
+It used to `import()` its PHP-in-WebAssembly runtime from a public CDN, which
+cost two things. Every visitor was disclosed to a third party the page never
+named, and a dynamic `import()` takes no `integrity` attribute — so nothing
+checked that what arrived was what had been published.
+
+**The runtime is now served from this site.** `tools/fetch-runtime.php` downloads
+it at build time and verifies all nine files against the SHA-256 hashes in
+`playground/runtime.lock.json`; a substituted artefact fails the deploy rather
+than reaching a browser. That verification is the point of the arrangement, and
+it was not available before: the usual workaround for an unverifiable dynamic
+import — fetching the module and importing a hash-checked blob URL — cannot work
+here, because this runtime resolves its wasm with `new URL(…, import.meta.url)`
+and a blob URL breaks that.
+
+The runtime is **not committed**. 12.5 MB does not belong in the history of a
+library whose own package is measured in kilobytes, and the repository's largest
+file is 146 KB. It is fetched by `make playground-runtime`, gitignored, and
+downloaded in the Pages workflow beside MkDocs, for the same reason MkDocs lives
+only there.
+
+What it costs a visitor: **about 3.1 MB instead of 2.8 MB**, once — GitHub Pages
+gzips wasm where the CDN served brotli. What it buys: the page's claim is now
+literally true. Nothing it loads comes from anywhere but the site serving it, and
+`PlaygroundTest` fails if that stops being so.
+
+That guard is worth a note. The first version matched the *shape* of a loader
+call, looking for `import('https://…')` — and passed the very line it existed to
+forbid, because the URL reached `import()` through a constant. It matches on
+hosts now: two are allowed, both anchors, and a link the reader may click is not
+a request the page makes.
+
+Also fixed while verifying this in a real browser:
+`tools/playground-browser-check.mjs` had pinned `q2:5b2210eb5318` as the hash the
+CLI produces. The prefix moved to `q3:` in v0.6.0 and nothing noticed, because
+that script is deliberately not in CI. It asks the CLI now, which is what its
+comment always claimed it did.
+
 ### Use cases, with every query executed
 
 Four [Use cases](https://mrdlef.github.io/php-os-query-digest/use-cases/) pages,

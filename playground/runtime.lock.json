@@ -1,0 +1,14 @@
+{
+    "version": "0.1.0",
+    "files": {
+        "PhpWeb.mjs": "b981eb4bf99fbd0d5842cc0834f1a505033e9d0a7f9e7e099ae110e18e5943c7",
+        "PhpBase.mjs": "d748ee69b4828dc16dc9562b104a44b0eb0136c794c0f641d43bdc9d065e6101",
+        "webTransactions.mjs": "16d33557bbb41203a4aecbed0f73e03eae063e1c379ebbf57123a55c87e1f92a",
+        "_Event.mjs": "bbfd97aa6bfd6820733a2be211db73c8e7075ea5e2dbaa1ae29fba3d7a328d00",
+        "fsOps.mjs": "a60922a7d71121fe0dc870e669c8f89f6b5f2e7c0537ca04858d27bd68035d48",
+        "OutputBuffer.mjs": "fdf73a3e360c715bdc8f745b5aa148dbfdf2a9c5808c18cf2e422ecf97061785",
+        "resolveDependencies.mjs": "f70c7f469d6d47ee268421e976e0f3e536f418f6b1bc8988b0c77d1c912ed08b",
+        "php8.3-web.mjs": "f54d83fe3c112ac05bb71ce0ee1dfc8654964ca7f4e90c63eca9539f10a5732f",
+        "846ab4c4d0999f57ac5270940b3820a9b6938633.wasm": "6391b5721d310aef36431dd665a41c2b727707a697aa9027eb4068aa64f9605b"
+    }
+}

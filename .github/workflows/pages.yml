@@ -61,6 +61,13 @@ jobs:
       # verbatim. That is what lets every link to it stay relative — this site
       # is served from a subdirectory, where a root-relative /playground/ would
       # point off the site entirely.
+      # The runtime is not committed — 12.5 MB of wasm does not belong in the
+      # history of this library — so it is fetched here and checked against the
+      # hashes in playground/runtime.lock.json. A substituted artefact fails the
+      # deploy instead of reaching a browser.
+      - name: Fetch and verify the wasm runtime
+        run: php tools/fetch-runtime.php
+
       - name: Put the playground inside the docs
         run: cp -r playground docs/playground
 

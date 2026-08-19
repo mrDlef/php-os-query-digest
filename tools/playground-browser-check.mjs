@@ -24,7 +24,7 @@
  *   - a permalink restores the query and runs it
  *   - an unparseable query surfaces the library's own message
  */
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -38,7 +38,17 @@ const { chromium } = createRequire(import.meta.url)('playwright');
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PORT = process.env.PLAYGROUND_PORT ?? '8901';
 const BASE = `http://127.0.0.1:${PORT}`;
-const CLI_HASH = 'q2:5b2210eb5318'; // `bin/os-query-digest` on the query typed below
+// The query typed into the page below, and the CLI's answer for it. Asked
+// rather than pinned: a literal here rotted through the v0.6.0 prefix bump and
+// nothing noticed, because this script is not in CI. Now the claim it makes —
+// the browser agrees with the CLI — is the thing it actually tests.
+const TYPED = { query: { term: { service: 'api' } }, size: 50 };
+const TYPED_INDEX = 'logs-2026.08.13';
+const CLI_HASH = execFileSync(
+    'php',
+    [path.join(ROOT, 'bin/os-query-digest'), '--hash', `--index=${TYPED_INDEX}`],
+    { input: JSON.stringify(TYPED), encoding: 'utf8' },
+).trim();
 
 const data = JSON.parse(fs.readFileSync(path.join(ROOT, 'playground/data/presets.json'), 'utf8'));
 const failures = [];
@@ -110,8 +120,8 @@ check('still no wasm', wasmBytes, 0);
 
 console.log('\n== editing boots PHP and agrees with the CLI');
 await page.click('#presets button[data-index="0"]');
-await page.fill('#body', JSON.stringify({ query: { term: { service: 'api' } }, size: 50 }, null, 2));
-await page.fill('#index', 'logs-2026.08.13');
+await page.fill('#body', JSON.stringify(TYPED, null, 2));
+await page.fill('#index', TYPED_INDEX);
 await untilPhp();
 check('hash', await page.textContent('#hash'), CLI_HASH);
 console.log('  ' + (await page.textContent('#engine')).trim()

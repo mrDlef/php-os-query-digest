@@ -8,10 +8,13 @@
  *
  * The page opens on the first engine so it is useful and instant, and switches
  * to the second the moment you change anything — which is the only moment the
- * 2.8 MB runtime is worth its download. Nothing is ever *approximated* by the
+ * 3.1 MB runtime is worth its download. Nothing is ever *approximated* by the
  * precomputed path: it is the same library, run earlier.
  */
-const RUNTIME_URL = 'https://cdn.jsdelivr.net/npm/php-wasm@0.1.0/PhpWeb.mjs';
+// Served from this site, next to this file. Fetched at build time by
+// tools/fetch-runtime.php and checked against playground/runtime.lock.json, so
+// the page contacts nothing but the origin it was loaded from.
+const RUNTIME_URL = './runtime/PhpWeb.mjs';
 const PHP_VERSION = '8.3';
 const LIBRARY_PATH = '/library.php';
 const REQUEST_PATH = '/request.json';
@@ -320,7 +323,7 @@ async function ensurePhp() {
         return state.booting;
     }
 
-    setEngine('loading php', 'about 2.8 MB, once', true);
+    setEngine('loading php', 'about 3.1 MB, once', true);
 
     state.booting = (async () => {
         const started = performance.now();
@@ -541,7 +544,7 @@ async function start() {
     // A shared link is by definition not a preset, so it needs the real thing.
     if (readFragment()) {
         ui.optionsBox.open = true;
-        setEngine('loading php', 'about 2.8 MB, once', true);
+        setEngine('loading php', 'about 3.1 MB, once', true);
         await runInPhp();
 
         return;

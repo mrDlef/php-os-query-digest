@@ -9,3 +9,6 @@
 .infection/
 site/
 docs/playground/
+# Fetched by `make playground-runtime`, pinned by playground/runtime.lock.json.
+# 12.5 MB of wasm does not belong in the history of a library this size.
+playground/runtime/
