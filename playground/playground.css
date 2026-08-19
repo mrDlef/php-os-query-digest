@@ -1,6 +1,12 @@
 /*
  * One stylesheet, no framework. The page has to be readable before 2.8 MB of
  * PHP has finished downloading, so nothing here waits on anything.
+ *
+ * The palette is the documentation's, to the value: bone is the field, pitch
+ * black is the ink, and a lobster marks anything you can act on. Every pair
+ * below clears 4.5:1, which is what the lobster itself cannot do — it reads
+ * 2.87:1 on bone and 3.88:1 on the dark pane, so the two schemes each use a
+ * value drawn from it rather than it.
  */
 :root {
     --bone: #ece2d0;
@@ -8,27 +14,40 @@
     --lobster-pink: #c46d5e;
     --pitch-black: #231c07;
 
-    --accent-bg: #fdf4e3;
-    --accent: var(--lobster-pink);
+    /* The lobster, moved until it carries text. Deep is 4.93:1 on bone; light
+       is 4.99:1 on the dark pane, the tighter of the two dark surfaces. */
+    --lobster-deep: #9c4536;
+    --lobster-light: #cd8777;
+
+    --accent: var(--lobster-deep);
+    --accent-bg: #eaddcb;
     --bg: var(--bone);
-    --error-bg: #fdf0f0;
     --error: #8a1c1c;
+    --error-bg: #f7e3dd;
     --fg: var(--pitch-black);
-    --line: #dcdcd6;
+    /* A hairline and a border are not the same job. --line separates panes,
+       where being seen is enough; --line-strong draws form fields, where 1.4.11
+       asks for 3:1 and a 1.5:1 hairline would not have said where to type. */
+    --line: #c4baa8;
+    --line-strong: #837b67;
     --mono: SFMono-Regular, Consolas, Menlo, monospace;
-    --muted: #6b6b66;
-    --pane: #ffffff;
+    --muted: #675f4b;
+    /* Bone lifted, not white. The lift is 1.15:1 either way, so the border does
+       the separating here exactly as it does in the docs' dark header. */
+    --pane: #f6f2ea;
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --accent-bg: #2a2116;
+        --accent: var(--lobster-light);
+        --accent-bg: #332410;
         --bg: var(--pitch-black);
-        --error-bg: #2c1a1a;
         --error: #f08f8f;
+        --error-bg: #2c1a1a;
         --fg: var(--bone);
-        --line: #33333a;
-        --muted: #98988f;
+        --line: #574f3b;
+        --line-strong: #8d8574;
+        --muted: #b0a794;
         --pane: var(--dark-blue);
     }
 }
@@ -42,6 +61,10 @@ body {
     background: var(--bg);
     color: var(--fg);
     font: 15px/1.55 -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+    /* Material sets both of these on body; the two pages render their shared
+       stack the same way or the seam shows in the letterforms. */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 h1 { font-size: 1.4rem; margin: 0 0 .3rem; letter-spacing: -.01em; }
@@ -73,7 +96,7 @@ a { color: var(--accent); }
     font: inherit;
     font-size: .82rem;
     padding: .18rem .55rem;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-strong);
     border-radius: 999px;
     background: var(--pane);
     color: var(--fg);
@@ -105,7 +128,7 @@ input[type="text"], textarea {
     font-size: 13px;
     color: var(--fg);
     background: var(--bg);
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-strong);
     border-radius: 6px;
     padding: .45rem .55rem;
 }
@@ -156,7 +179,7 @@ button {
     font: inherit;
     font-size: .82rem;
     padding: .3rem .7rem;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-strong);
     border-radius: 6px;
     background: var(--bg);
     color: var(--fg);
