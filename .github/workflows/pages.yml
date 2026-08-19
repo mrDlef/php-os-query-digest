@@ -42,6 +42,11 @@ jobs:
       - name: The committed data must match this commit
         run: php tools/build-playground.php --check
 
+      # Same reason, for the colours: both stylesheets are generated from one
+      # source, and this deploys them.
+      - name: The palette must be in sync
+        run: php tools/build-palette.php --check
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'

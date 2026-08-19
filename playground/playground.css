@@ -1,31 +1,60 @@
 /*
  * One stylesheet, no framework. The page has to be readable before 2.8 MB of
  * PHP has finished downloading, so nothing here waits on anything.
+ *
+ * The palette is the documentation's, to the value: bone is the field, pitch
+ * black is the ink, and a lobster marks anything you can act on. Every pair
+ * below clears 4.5:1, which is what the lobster itself cannot do — it reads
+ * 2.87:1 on bone and 3.88:1 on the dark pane, so the two schemes each use a
+ * value drawn from it rather than it.
  */
 :root {
-    --bg: #fbfbfa;
-    --fg: #1a1a19;
-    --muted: #6b6b66;
-    --line: #dcdcd6;
-    --pane: #ffffff;
-    --accent: #7a4c00;
-    --accent-bg: #fdf4e3;
+    /* >>> generated palette — run `make palette`, do not edit by hand */
+    --pitch-black:   #231c07;         /* the ink, and the dark field */
+    --bone:          #ece2d0;         /* the light field, and the light ink — never #fff */
+    --lobster-pink:  #c46d5e;         /* the hue the other two are drawn from; carries no text itself */
+    --lobster-deep:  #9c4536;         /* light mode: 4.93:1 on bone, both as the header and as a link */
+    --lobster-light: #cd8777;         /* dark mode: 4.99:1 on the raised pane, the tighter dark surface */
+    --dark-blue:     #272a35;         /* the raised pane, dark mode — the playground and the docs code blocks */
+    /* <<< generated palette */
+
+    --accent: var(--lobster-deep);
+    --accent-bg: #eaddcb;
+    --bg: var(--bone);
     --error: #8a1c1c;
-    --error-bg: #fdf0f0;
-    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --error-bg: #f7e3dd;
+    --fg: var(--pitch-black);
+    /* A hairline and a border are not the same job. --line separates panes,
+       where being seen is enough; --line-strong draws form fields, where 1.4.11
+       asks for 3:1 and a 1.5:1 hairline would not have said where to type. */
+    --line: #c4baa8;
+    --line-strong: #837b67;
+    --mono: SFMono-Regular, Consolas, Menlo, monospace;
+    /* Material's whole radius vocabulary is three values, and html sits at
+       125% there, so .1rem is 2px and .2rem is 4px. The small one is what it
+       gives controls, code and inline labels; the large one is for admonitions
+       and details, which is what a pane is. The third is .md-tag's 2.4rem pill,
+       kept literal below on the chips that already were one. */
+    --radius: 2px;
+    --radius-block: 4px;
+    --muted: #675f4b;
+    /* Bone lifted, not white. The lift is 1.15:1 either way, so the border does
+       the separating here exactly as it does in the docs' dark header. */
+    --pane: #f6f2ea;
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg: #16161a;
-        --fg: #e8e8e4;
-        --muted: #98988f;
-        --line: #33333a;
-        --pane: #1d1d22;
-        --accent: #e8b061;
-        --accent-bg: #2a2116;
+        --accent: var(--lobster-light);
+        --accent-bg: #332410;
+        --bg: var(--pitch-black);
         --error: #f08f8f;
         --error-bg: #2c1a1a;
+        --fg: var(--bone);
+        --line: #574f3b;
+        --line-strong: #8d8574;
+        --muted: #b0a794;
+        --pane: var(--dark-blue);
     }
 }
 
@@ -37,7 +66,11 @@ body {
     max-width: 1200px;
     background: var(--bg);
     color: var(--fg);
-    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+    /* Material sets both of these on body; the two pages render their shared
+       stack the same way or the seam shows in the letterforms. */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 h1 { font-size: 1.4rem; margin: 0 0 .3rem; letter-spacing: -.01em; }
@@ -69,8 +102,8 @@ a { color: var(--accent); }
     font: inherit;
     font-size: .82rem;
     padding: .18rem .55rem;
-    border: 1px solid var(--line);
-    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px; /* .md-tag's pill, the one shape Material rounds fully */
     background: var(--pane);
     color: var(--fg);
     cursor: pointer;
@@ -88,7 +121,7 @@ main { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: st
 .pane {
     background: var(--pane);
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius-block);
     padding: 1rem 1.1rem 1.2rem;
 }
 
@@ -101,8 +134,8 @@ input[type="text"], textarea {
     font-size: 13px;
     color: var(--fg);
     background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 6px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
     padding: .45rem .55rem;
 }
 textarea { resize: vertical; line-height: 1.5; tab-size: 2; }
@@ -136,7 +169,7 @@ code { font-family: var(--mono); font-size: .92em; }
     color: var(--error);
     background: var(--error-bg);
     border: 1px solid currentColor;
-    border-radius: 6px;
+    border-radius: var(--radius-block);
     padding: .5rem .6rem;
     margin-bottom: .8rem;
 }
@@ -152,8 +185,8 @@ button {
     font: inherit;
     font-size: .82rem;
     padding: .3rem .7rem;
-    border: 1px solid var(--line);
-    border-radius: 6px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
     background: var(--bg);
     color: var(--fg);
     cursor: pointer;
@@ -176,7 +209,7 @@ button.link { border: none; background: none; color: var(--accent); padding: 0; 
     border-top: 1px solid var(--line);
     font-size: .8rem;
 }
-.engine { font-family: var(--mono); font-size: 12px; padding: .1rem .45rem; border-radius: 4px; background: var(--accent-bg); color: var(--accent); }
+.engine { font-family: var(--mono); font-size: 12px; padding: .1rem .45rem; border-radius: var(--radius); background: var(--accent-bg); color: var(--accent); }
 .status button { margin-left: auto; }
 .status[data-state="loading"] .engine { animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .45; } }

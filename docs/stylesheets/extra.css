@@ -1,117 +1,103 @@
 /*
- * Paper, ink, and one ochre.
+ * The palette below is generated from tools/build-palette.php, which is also
+ * what the playground's stylesheet is generated from. PaletteTest fails if
+ * either file has drifted, and fails again if any pair in it drops under the
+ * ratio it is documented at. Edit the tool, run `make palette`.
  *
- * The playground already had an identity — a warm off-white field, near-black
- * text, and a single deep ochre for anything you can act on. These are its
- * exact values, so the documentation and the application are visibly one
- * product rather than two things served from the same domain.
- *
- * Where the documentation differs on purpose: the header is ink, not ochre.
- * Chrome should recede on a page you came to read, and it leaves ochre meaning
- * one thing only — this is a link, a control, something to click. The
- * playground can afford a coloured accent everywhere because it is a tool; a
- * documentation site cannot without becoming noisy.
+ * What this file does with the values is its own: Material's --md-* variables
+ * mean what Material says they mean, and the playground's do not.
  */
-
-:root,
-[data-md-color-scheme="default"],
-[data-md-color-primary="custom"] {
-  --paper: #fbfbfa;
-  --ink: #1a1a19;
-  --muted: #6b6b66;
-  --line: #dcdcd6;
-  --ochre: #7a4c00;
-  --cream: #fdf4e3;
-
-  --md-primary-fg-color: var(--ink);
-  --md-primary-fg-color--light: #33332f;
-  --md-primary-fg-color--dark: #000000;
-  --md-primary-bg-color: var(--paper);
-  --md-primary-bg-color--light: #d8d8d2;
-
-  --md-accent-fg-color: var(--ochre);
-  --md-accent-fg-color--transparent: #7a4c001a;
-
-  --md-default-bg-color: var(--paper);
-  --md-default-fg-color--light: var(--muted);
-
-  --md-typeset-a-color: var(--ochre);
-  --md-code-bg-color: #f3f3f0;
-  --md-footer-bg-color: var(--ink);
-  --md-footer-bg-color--dark: #000000;
+:root {
+  /* >>> generated palette — run `make palette`, do not edit by hand */
+  --pitch-black:   #231c07;         /* the ink, and the dark field */
+  --bone:          #ece2d0;         /* the light field, and the light ink — never #fff */
+  --lobster-pink:  #c46d5e;         /* the hue the other two are drawn from; carries no text itself */
+  --lobster-deep:  #9c4536;         /* light mode: 4.93:1 on bone, both as the header and as a link */
+  --lobster-light: #cd8777;         /* dark mode: 4.99:1 on the raised pane, the tighter dark surface */
+  --dark-blue:     #272a35;         /* the raised pane, dark mode — the playground and the docs code blocks */
+  /* <<< generated palette */
 }
 
-[data-md-color-scheme="slate"],
-[data-md-color-scheme="slate"][data-md-color-primary="custom"] {
-  --paper: #16161a;
-  --ink: #e8e8e4;
-  --muted: #98988f;
-  --line: #33333a;
-  --ochre: #e8b061;
-  --cream: #2a2116;
+:root  > * {
+  --md-default-bg-color: var(--bone);
+  --md-primary-fg-color: var(--lobster-deep);
+  --md-primary-fg-color--light: var(--bone);
+  --md-primary-fg-color--dark: var(--pitch-black);
+  --md-footer-bg-color: var(--pitch-black);
+  --md-accent-fg-color: var(--lobster-deep);
+  --md-footer-bg-color--dark: var(--pitch-black);
+  --md-footer-fg-color--light: var(--bone);
+  --md-footer-fg-color--lighter: var(--bone);
 
-  --md-primary-fg-color: #1d1d22;
-  --md-primary-fg-color--light: #2a2a31;
-  --md-primary-fg-color--dark: #101014;
-  --md-primary-bg-color: var(--ink);
+  /* No pure white anywhere: bone is this palette's light, and Material defaults
+     all three of these to #fff or an alpha of it. The header, the search field
+     and the drawer title take the primary pair; the banner and the footer take
+     the last one.
+     --light is bone at full strength on purpose. It is the search placeholder,
+     and every alpha Material would dim it by falls short: 3.25:1 at the default
+     70%, 4.16:1 even at 87%. The placeholder loses its dimming and keeps its
+     legibility, which is the right way round for a field nobody has typed in
+     yet. */
+  --md-primary-bg-color: var(--bone);
+  --md-primary-bg-color--light: var(--bone);
+  --md-footer-fg-color: var(--bone);
 
-  /* Lifted from the light ochre: #7a4c00 on this background fails contrast
-     badly. This is the value the playground already switches to in dark mode,
-     so the two agree there too. */
-  --md-accent-fg-color: var(--ochre);
-  --md-accent-fg-color--transparent: #e8b06126;
+  /* Material derives this from --md-primary-fg-color. Currently the same value,
+     and pinned anyway: a header is chrome behind bone and a link is text on
+     bone, so the day one of them moves the other must not follow. */
+  --md-typeset-a-color: var(--lobster-deep);
 
-  --md-default-bg-color: var(--paper);
-  --md-default-fg-color: var(--ink);
-  --md-default-fg-color--light: var(--muted);
-
-  --md-typeset-a-color: var(--ochre);
-  --md-code-bg-color: #1d1d22;
-  --md-footer-bg-color: #101014;
+  /* Material's own ink is #000000de, a neutral black, and its code blocks are
+     #f5f5f5, a neutral grey. Both are close enough to pass unnoticed alone and
+     wrong beside the playground, which has always used the palette's warm ink
+     on the palette's own surfaces. Only the two visible tokens are named: the
+     --lighter and --lightest alphas underneath still tint hairlines and
+     disabled states, and are better left as alphas than pinned to a colour. */
+  --md-default-fg-color: var(--pitch-black);
+  --md-default-fg-color--light: #675f4b;
+  --md-code-fg-color: var(--pitch-black);
+  --md-code-bg-color: #f6f2ea;
 }
 
-/*
- * In dark mode the header sits at the playground's own pane colour — the same
- * raised surface the application uses. Against a #16161a page that is barely a
- * luminance step, so the hairline does the separating. Colour alone cannot:
- * the two greys are 1.1:1 apart, and a header that dissolves into the page
- * costs the reader the one fixed landmark they have.
- */
-[data-md-color-scheme="slate"] .md-header {
-  border-bottom: 1px solid var(--line);
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: var(--pitch-black);
+  --md-footer-bg-color: var(--bone);
+  --md-footer-fg-color: var(--pitch-black);
+  --md-footer-bg-color--dark: var(--bone);
+  --md-footer-fg-color--light: var(--pitch-black);
+  --md-footer-fg-color--lighter: var(--pitch-black);
+
+  /* The deep lobster inverts: 2.67:1 on pitch black. The lifted one reads
+     5.91:1 there, and is the value the playground uses on its dark pane. */
+  --md-typeset-a-color: var(--lobster-light);
+  --md-accent-fg-color: var(--lobster-light);
+
+  --md-default-fg-color: var(--bone);
+  --md-default-fg-color--light: #b0a794;
+  --md-code-fg-color: var(--bone);
+  --md-code-bg-color: var(--dark-blue);
 }
 
-[data-md-color-scheme="slate"] .md-tabs {
-  border-bottom: 1px solid var(--line);
-}
-
-/*
- * The strip that announces the playground, in the playground's own colours
- * rather than the header's. It is the only place the playground is named on
- * this site, so it should read as a doorway into something else — not as more
- * chrome.
- *
- * The ochre rule under it is what earns it a second's attention. Cream on
- * paper is a quiet pairing by design, and quiet was wrong for the site's only
- * pointer at the thing people should try first.
- */
-.md-banner {
-  background-color: var(--cream);
-  color: var(--ink);
-  border-bottom: 2px solid var(--ochre);
-}
 
 .announce-playground {
   display: block;
   text-align: center;
-  color: var(--ochre);
-  font-weight: 500;
-  text-decoration: none;
 }
 
-.announce-playground strong {
+/*
+ * Material wraps the announce block in md-typeset, so .md-typeset a beats its
+ * own `a { color: inherit }` and paints this link the body link colour — a deep
+ * lobster on a near-black strip, 2.67:1 at the 11.2px the banner sets, and
+ * 2.87:1 the other way round in slate. Inheriting the banner's own foreground
+ * gives 13.2:1 either way and needs no value of its own in either scheme.
+ *
+ * Hover has to be told the same thing, or :hover puts the accent back. It says
+ * so with a rule under the words instead, which the strip can carry.
+ */
+.md-typeset .announce-playground,
+.md-typeset .announce-playground:focus,
+.md-typeset .announce-playground:hover {
   color: inherit;
-  font-weight: 700;
 }
 
 .announce-playground:hover strong {

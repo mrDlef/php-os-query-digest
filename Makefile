@@ -70,6 +70,11 @@ fixtures:
 playground-data:
 	php tools/build-playground.php
 
+## Write the palette into both stylesheets from one source. PaletteTest fails
+## until they match, and fails again if any pair drops under its ratio.
+palette:
+	php tools/build-palette.php
+
 ## Serve the playground on :8080. Static files only; the PHP that runs the
 ## library is the one compiled to wasm, fetched by the page.
 playground: playground-data
