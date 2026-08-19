@@ -1,11 +1,7 @@
 /*
- * The palette below is generated from tools/build-palette.php, which is also
- * what the playground's stylesheet is generated from. PaletteTest fails if
- * either file has drifted, and fails again if any pair in it drops under the
- * ratio it is documented at. Edit the tool, run `make palette`.
- *
- * What this file does with the values is its own: Material's --md-* variables
- * mean what Material says they mean, and the playground's do not.
+ * The palette is generated from tools/build-palette.php, the playground's too.
+ * Edit the tool and run `make palette`; PaletteTest fails on drift and on any
+ * pair dropping under its documented ratio.
  */
 :root {
   /* >>> generated palette — run `make palette`, do not edit by hand */
@@ -29,30 +25,22 @@
   --md-footer-fg-color--light: var(--bone);
   --md-footer-fg-color--lighter: var(--bone);
 
-  /* No pure white anywhere: bone is this palette's light, and Material defaults
-     all three of these to #fff or an alpha of it. The header, the search field
-     and the drawer title take the primary pair; the banner and the footer take
-     the last one.
-     --light is bone at full strength on purpose. It is the search placeholder,
-     and every alpha Material would dim it by falls short: 3.25:1 at the default
-     70%, 4.16:1 even at 87%. The placeholder loses its dimming and keeps its
-     legibility, which is the right way round for a field nobody has typed in
-     yet. */
+  /* Bone, never #fff — Material defaults all three to white or an alpha of it.
+     --light is the search placeholder, at full strength on purpose: every alpha
+     Material would dim it by falls short of 4.5:1. */
   --md-primary-bg-color: var(--bone);
   --md-primary-bg-color--light: var(--bone);
   --md-footer-fg-color: var(--bone);
 
-  /* Material derives this from --md-primary-fg-color. Currently the same value,
-     and pinned anyway: a header is chrome behind bone and a link is text on
-     bone, so the day one of them moves the other must not follow. */
+  /* Material derives this from --md-primary-fg-color. Pinned even though the
+     values match: a header is chrome behind bone, a link is text on it, so one
+     moving must not drag the other. */
   --md-typeset-a-color: var(--lobster-deep);
 
-  /* Material's own ink is #000000de, a neutral black, and its code blocks are
-     #f5f5f5, a neutral grey. Both are close enough to pass unnoticed alone and
-     wrong beside the playground, which has always used the palette's warm ink
-     on the palette's own surfaces. Only the two visible tokens are named: the
-     --lighter and --lightest alphas underneath still tint hairlines and
-     disabled states, and are better left as alphas than pinned to a colour. */
+  /* Material's ink is a neutral #000000de and its code blocks a neutral
+     #f5f5f5 — both wrong beside the playground's warm ink. Only the two visible
+     tokens are named; --lighter and --lightest stay alphas, since they tint
+     hairlines and disabled states rather than paint text. */
   --md-default-fg-color: var(--pitch-black);
   --md-default-fg-color--light: #675f4b;
   --md-code-fg-color: var(--pitch-black);
@@ -67,8 +55,8 @@
   --md-footer-fg-color--light: var(--pitch-black);
   --md-footer-fg-color--lighter: var(--pitch-black);
 
-  /* The deep lobster inverts: 2.67:1 on pitch black. The lifted one reads
-     5.91:1 there, and is the value the playground uses on its dark pane. */
+  /* The deep lobster is 2.67:1 on pitch black; the lifted one 5.91:1, and it is
+     what the playground uses on its dark pane. */
   --md-typeset-a-color: var(--lobster-light);
   --md-accent-fg-color: var(--lobster-light);
 
@@ -85,14 +73,11 @@
 }
 
 /*
- * Material wraps the announce block in md-typeset, so .md-typeset a beats its
- * own `a { color: inherit }` and paints this link the body link colour — a deep
- * lobster on a near-black strip, 2.67:1 at the 11.2px the banner sets, and
- * 2.87:1 the other way round in slate. Inheriting the banner's own foreground
- * gives 13.2:1 either way and needs no value of its own in either scheme.
- *
- * Hover has to be told the same thing, or :hover puts the accent back. It says
- * so with a rule under the words instead, which the strip can carry.
+ * Material wraps the announce block in md-typeset, so .md-typeset a beats its own
+ * `a { color: inherit }` and would paint this link the body link colour — 2.67:1
+ * on the strip. Inheriting the banner's foreground needs no value of its own and
+ * gives 13.2:1 in both schemes. Hover must be told the same or it restores the
+ * accent, so it underlines instead.
  */
 .md-typeset .announce-playground,
 .md-typeset .announce-playground:focus,

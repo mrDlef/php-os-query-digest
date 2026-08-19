@@ -458,8 +458,8 @@ final class NativeTypesTest extends TestCase
 
     /**
      * The flagship OpenSearch pattern — a lexical clause and a vector clause
-     * combined by a search pipeline — used to collapse to `hybrid(?)`, which
-     * said nothing at all about a query whose whole point is what it combines.
+     * combined by a search pipeline. Left opaque it would read `hybrid(?)`, which
+     * says nothing about a query whose whole point is what it combines.
      */
     public function testHybridRendersItsBranchesInsteadOfHidingThem(): void
     {

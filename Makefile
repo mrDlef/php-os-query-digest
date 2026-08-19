@@ -155,11 +155,10 @@ release-check:
 	@test -n "$(VERSION)" || { echo "usage: make release-check VERSION=v0.7.0"; exit 2; }
 	@php tools/changelog.php check $(VERSION)
 
-## The notes for one release, straight out of CHANGELOG.md — this is what the
-## GitHub release ships, so the notes are the ones reviewed in the pull request:
-## Write it to a file and look at it before publishing — do not pipe it. v0.7.0
-## went out with its blank lines stripped by a pipeline that reflowed the text,
-## and nothing checked until it was public.
+## The notes for one release, straight out of CHANGELOG.md — what the GitHub
+## release ships, so the notes are the ones reviewed in the pull request.
+## Redirect to a file and read it; piping can reflow the text and strip the
+## blank lines, which is invisible until it is published.
 release-notes:
 	@test -n "$(VERSION)" || { echo "usage: make release-notes VERSION=v0.7.0"; exit 2; }
 	@php tools/changelog.php section $(VERSION)

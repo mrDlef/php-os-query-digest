@@ -19,14 +19,13 @@ declare(strict_types=1);
  * a single term to a 200-value terms clause, and using them means the benchmark
  * cannot quietly drift towards whatever makes the numbers look good.
  *
- * Every case is compared against `json_encode()` of the same body — the thing
- * an application does today when it logs the raw request. That is the honest
- * baseline: not "is this fast in the abstract" but "what does it cost next to
- * what you are already paying to log something unreadable".
+ * Every case is compared against `json_encode()` of the same body — what an
+ * application pays today to log the raw request. The question is not whether
+ * this is fast in the abstract but what it costs next to that.
  *
- * Deliberately not a CI gate. Wall-clock on a shared runner is noise, and a
- * threshold tight enough to catch a real regression would fail on a busy
- * afternoon. What CI guards is behaviour; this reports.
+ * Deliberately not a CI gate: wall-clock on a shared runner is noise, and a
+ * threshold tight enough to catch a regression would fail on a busy runner.
+ * CI guards behaviour; this reports.
  */
 
 // Namespaced because tools/ is analysed as one body of code and every script

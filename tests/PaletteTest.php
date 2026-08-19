@@ -7,21 +7,15 @@ namespace MrDlef\OsQueryDigest\Tests;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The palette is generated into two stylesheets from tools/build-palette.php,
- * and these are the two things that can still go wrong.
+ * Two things can go wrong with a generated palette: a stylesheet drifts because
+ * someone edited the CSS instead of tools/build-palette.php, or the palette stays
+ * consistent and becomes unreadable — which is worse, since it then fails on both
+ * pages at once.
  *
- * One: a file drifts, because someone edited the CSS instead of the tool. The
- * documentation and the playground are one product on one domain, and a colour
- * that differs between them is the seam showing.
- *
- * Two: the palette stays consistent and becomes unreadable, which is worse —
- * it fails on both pages at once. Every pair below is asserted at the ratio it
- * is documented at, so lightening the lobster by two points to taste turns CI
- * red instead of shipping 3.9:1 to everyone.
- *
- * The values are parsed out of the shipped stylesheets rather than read from
- * the tool's own constant. Asserting against the source would prove only that
- * the tool agrees with itself.
+ * Every pair is asserted at the ratio it is documented at, so a colour nudged to
+ * taste turns CI red. The values are parsed out of the *shipped* stylesheets:
+ * asserting against the tool's own constant would prove only that it agrees with
+ * itself.
  */
 final class PaletteTest extends TestCase
 {
@@ -51,10 +45,9 @@ final class PaletteTest extends TestCase
     }
 
     /**
-     * One test rather than a data provider: PHPUnit's annotation and its
-     * attribute disagree across the versions this suite runs on, and a nudged
-     * colour usually breaks several pairs at once. Reporting all of them beats
-     * fixing one and rerunning.
+     * One test rather than a data provider: PHPUnit's annotation and attribute
+     * disagree across the versions this suite runs on, and one nudged colour
+     * usually breaks several pairs — reporting all of them beats one at a time.
      */
     public function testEveryPairClearsTheRatioItIsDocumentedAt(): void
     {
@@ -123,11 +116,9 @@ final class PaletteTest extends TestCase
     }
 
     /**
-     * Every custom property that applies in one scheme, later declarations
-     * winning. Both files put their dark values in a block that comes after the
-     * light ones — a media query in the playground, an attribute selector in the
-     * docs — so for this purpose "the dark scheme" is the whole file and "the
-     * light scheme" is the file up to where the dark block starts.
+     * Every custom property applying in one scheme, later declarations winning.
+     * Both files put their dark values after the light ones, so "light" is the
+     * file up to where the dark block starts and "dark" is the whole file.
      *
      * @return array<string,string>
      */
@@ -163,9 +154,8 @@ final class PaletteTest extends TestCase
     }
 
     /**
-     * A hex colour, following var() references until one turns up. Material's
-     * own defaults are not in these files, so a token that resolves to nothing
-     * is reported rather than guessed at.
+     * A hex colour, following var() references. Material's own defaults are not
+     * in these files, so a token resolving to nothing is reported, not guessed.
      *
      * @param array<string,string> $tokens
      */

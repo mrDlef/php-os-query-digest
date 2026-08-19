@@ -12,18 +12,15 @@ declare(strict_types=1);
  *
  * Maintainer tool. It is not shipped in the Composer package.
  *
- * Why a single-file bundle rather than shipping src/ and an autoloader: the
- * playground hands PHP source to a wasm runtime whose filesystem API is not
- * ours to depend on. One string prepended to the user's snippet works on any
- * runtime, is one request instead of forty, and — the part that matters — can
- * be *executed by real PHP in the test suite*. So the guard for "does the
- * browser run the same library as composer require does" needs neither a
- * browser nor wasm in CI. See tests/PlaygroundTest.php.
+ * Why one bundled file rather than src/ plus an autoloader: the playground hands
+ * PHP source to a wasm runtime whose filesystem API is not ours to depend on.
+ * One string prepended to the user's snippet works on any runtime, costs one
+ * request instead of forty, and can be executed by real PHP in the test suite —
+ * so the guard needs neither a browser nor wasm in CI. See PlaygroundTest.
  *
- * Why presets are precomputed: the page must be useful before 12 MB of wasm
- * has been downloaded. Every fixture is rendered here, at build time, by the
- * library itself — so the presets cannot drift from what the library does, and
- * a visitor who only clicks around never pays for the runtime at all.
+ * Presets are precomputed because the page must be useful before 12 MB of wasm
+ * arrives. Every fixture is rendered here by the library itself, so they cannot
+ * drift, and a visitor who only clicks never pays for the runtime.
  */
 // COMPOSER_VENDOR_DIR first, for the same reason bin/os-query-digest consults
 // it: the Docker matrix gives each PHP version its own vendor directory, and
@@ -56,9 +53,9 @@ const FIRST = [
 ];
 
 /**
- * Left out of the bundle. Neither is reachable from a browser — one wants
- * stream resources, the other a logger that is not there — and shipping dead
- * code to a page that pays for every kilobyte would be sloppy.
+ * Left out of the bundle: neither is reachable from a browser — one wants stream
+ * resources, the other a logger that is not there — and the page pays for every
+ * kilobyte.
  *
  * @var array<int,string>
  */
@@ -74,9 +71,9 @@ $arguments = $_SERVER['argv'] ?? [];
 $checking = is_array($arguments) && in_array('--check', $arguments, true);
 
 // Deliberately not `.php`: this is a text asset the page fetches, and a dev
-// server pointed at the directory would happily *execute* a .php file instead
-// of serving it. `php -S` does exactly that, and the failure is baffling — the
-// page receives the empty output of a file full of class declarations.
+// server pointed at the directory would *execute* it instead of serving it.
+// `php -S` does, and the page then receives the empty output of a file of class
+// declarations.
 $artifacts = [
     'library.php.txt' => bundle(sources()),
     'presets.json' => encode(presets()),
