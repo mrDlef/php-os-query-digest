@@ -48,3 +48,23 @@
   display: block;
   text-align: center;
 }
+
+/*
+ * Material wraps the announce block in md-typeset, so .md-typeset a beats its
+ * own `a { color: inherit }` and paints this link the body link colour — a deep
+ * lobster on a near-black strip, 2.67:1 at 11.2px, and 2.87:1 the other way in
+ * slate. Inheriting the banner's own foreground gives 16.9:1 and 13.2:1, and
+ * needs no value of its own in either scheme.
+ *
+ * Hover has to be told the same thing, or :hover puts the accent back. It says
+ * so with a rule under the words instead, which the strip can carry.
+ */
+.md-typeset .announce-playground,
+.md-typeset .announce-playground:focus,
+.md-typeset .announce-playground:hover {
+  color: inherit;
+}
+
+.announce-playground:hover strong {
+  text-decoration: underline;
+}
