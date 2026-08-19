@@ -3,30 +3,42 @@
   --bone: #ece2d0;
   --lobster-pink: #c46d5e;
 
-  /* Two deeper lobsters, and the reason is contrast rather than taste. White on
-     #c46d5e is 3.69:1 and the lobster reads 2.87:1 on bone — both under the
-     4.5:1 normal text needs. #b35a4b carries white at 4.69:1; #9c4536 clears
-     4.93:1 on bone, which is what body links sit on. */
-  --lobster-header: #b35a4b;
-  --lobster-link: #9c4536;
+  /* A deeper lobster, and the reason is contrast rather than taste. The palette
+     lobster reads 2.87:1 against bone, whichever of the two is the text — under
+     the 4.5:1 normal text needs, in both directions. This one clears 4.93:1
+     both ways, which is what lets a single value be the header bone sits on and
+     the link colour that sits on bone. */
+  --lobster-deep: #9c4536;
 }
 
 :root  > * {
   --md-default-bg-color: var(--bone);
-  --md-primary-fg-color: var(--lobster-header);
+  --md-primary-fg-color: var(--lobster-deep);
   --md-primary-fg-color--light: var(--bone);
   --md-primary-fg-color--dark: var(--pitch-black);
   --md-footer-bg-color: var(--pitch-black);
-  --md-accent-fg-color: var(--lobster-link);
+  --md-accent-fg-color: var(--lobster-deep);
   --md-footer-bg-color--dark: var(--pitch-black);
   --md-footer-fg-color--light: var(--bone);
   --md-footer-fg-color--lighter: var(--bone);
 
-  /* Material derives this from --md-primary-fg-color, so the header colour
-     would otherwise repaint every link in the page. Pinned, because a header
-     is chrome behind white text and a link is text on bone: the two cannot be
-     the same value and both clear AA. */
-  --md-typeset-a-color: var(--lobster-link);
+  /* No pure white anywhere: bone is this palette's light, and Material defaults
+     all three of these to #fff or an alpha of it. The header, the search field
+     and the drawer title take the primary pair; the banner and the footer take
+     the last one.
+     --light is bone at full strength on purpose. It is the search placeholder,
+     and every alpha Material would dim it by falls short: 3.25:1 at the default
+     70%, 4.16:1 even at 87%. The placeholder loses its dimming and keeps its
+     legibility, which is the right way round for a field nobody has typed in
+     yet. */
+  --md-primary-bg-color: var(--bone);
+  --md-primary-bg-color--light: var(--bone);
+  --md-footer-fg-color: var(--bone);
+
+  /* Material derives this from --md-primary-fg-color. Currently the same value,
+     and pinned anyway: a header is chrome behind bone and a link is text on
+     bone, so the day one of them moves the other must not follow. */
+  --md-typeset-a-color: var(--lobster-deep);
 }
 
 [data-md-color-scheme="slate"] {
@@ -37,7 +49,7 @@
   --md-footer-fg-color--light: var(--pitch-black);
   --md-footer-fg-color--lighter: var(--pitch-black);
 
-  /* The deep lobster inverts: 3.61:1 on pitch black. The original is 4.59:1
+  /* The deep lobster inverts: 2.67:1 on pitch black. The original reads 4.59:1
      there, so dark mode keeps the colour the palette is named for. */
   --md-typeset-a-color: var(--lobster-pink);
   --md-accent-fg-color: var(--lobster-pink);
@@ -52,9 +64,9 @@
 /*
  * Material wraps the announce block in md-typeset, so .md-typeset a beats its
  * own `a { color: inherit }` and paints this link the body link colour — a deep
- * lobster on a near-black strip, 2.67:1 at 11.2px, and 2.87:1 the other way in
- * slate. Inheriting the banner's own foreground gives 16.9:1 and 13.2:1, and
- * needs no value of its own in either scheme.
+ * lobster on a near-black strip, 2.67:1 at the 11.2px the banner sets, and
+ * 2.87:1 the other way round in slate. Inheriting the banner's own foreground
+ * gives 13.2:1 either way and needs no value of its own in either scheme.
  *
  * Hover has to be told the same thing, or :hover puts the accent back. It says
  * so with a rule under the words instead, which the strip can carry.
