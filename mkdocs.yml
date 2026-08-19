@@ -22,6 +22,7 @@ theme:
   language: en
   icon:
     repo: fontawesome/brands/github
+  font: false
   custom_dir: overrides
   features:
     - navigation.instant
@@ -117,8 +118,10 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/mrDlef/php-os-query-digest
+      name: GitHub
     - icon: fontawesome/brands/php
       link: https://packagist.org/packages/mr-dlef/os-query-digest
+      name: Packagist
 
 # Fail the build on a broken internal link rather than shipping one. The site is
 # generated from a repository where every other artefact is checked; this one

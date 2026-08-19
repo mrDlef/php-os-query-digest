@@ -3,26 +3,30 @@
  * PHP has finished downloading, so nothing here waits on anything.
  */
 :root {
-    --bg: #fbfbfa;
-    --fg: #1a1a19;
+    --pitch-black: #231c07;
+    --bone: #ece2d0;
+    --lobster-pink: #c46d5e;
+    --dark-blue: #272a35;
+
+    --bg: var(--bone);
+    --fg: var(--pitch-black);
     --muted: #6b6b66;
     --line: #dcdcd6;
     --pane: #ffffff;
-    --accent: #7a4c00;
+    --accent: var(--lobster-pink);
     --accent-bg: #fdf4e3;
     --error: #8a1c1c;
     --error-bg: #fdf0f0;
-    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --mono: SFMono-Regular, Consolas, Menlo, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg: #16161a;
-        --fg: #e8e8e4;
+        --bg: var(--pitch-black);
+        --fg: var(--bone);
         --muted: #98988f;
         --line: #33333a;
-        --pane: #1d1d22;
-        --accent: #e8b061;
+        --pane: var(--dark-blue);
         --accent-bg: #2a2116;
         --error: #f08f8f;
         --error-bg: #2c1a1a;
@@ -37,7 +41,7 @@ body {
     max-width: 1200px;
     background: var(--bg);
     color: var(--fg);
-    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 }
 
 h1 { font-size: 1.4rem; margin: 0 0 .3rem; letter-spacing: -.01em; }
