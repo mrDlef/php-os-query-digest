@@ -2,11 +2,10 @@
  * One stylesheet, no framework. The page has to be readable before 2.8 MB of
  * PHP has finished downloading, so nothing here waits on anything.
  *
- * The palette is the documentation's, to the value: bone is the field, pitch
- * black is the ink, and a lobster marks anything you can act on. Every pair
- * below clears 4.5:1, which is what the lobster itself cannot do — it reads
- * 2.87:1 on bone and 3.88:1 on the dark pane, so the two schemes each use a
- * value drawn from it rather than it.
+ * The palette is the documentation's, to the value, and generated from
+ * tools/build-palette.php. Every pair clears 4.5:1 — which the lobster itself
+ * cannot, at 2.87:1 on bone and 3.88:1 on the dark pane, so each scheme uses a
+ * value drawn from it instead.
  */
 :root {
     /* >>> generated palette — run `make palette`, do not edit by hand */
@@ -24,22 +23,18 @@
     --error: #8a1c1c;
     --error-bg: #f7e3dd;
     --fg: var(--pitch-black);
-    /* A hairline and a border are not the same job. --line separates panes,
-       where being seen is enough; --line-strong draws form fields, where 1.4.11
-       asks for 3:1 and a 1.5:1 hairline would not have said where to type. */
+    /* --line separates panes, where being seen is enough. --line-strong draws
+       form fields, where 1.4.11 asks 3:1. */
     --line: #c4baa8;
     --line-strong: #837b67;
     --mono: SFMono-Regular, Consolas, Menlo, monospace;
-    /* Material's whole radius vocabulary is three values, and html sits at
-       125% there, so .1rem is 2px and .2rem is 4px. The small one is what it
-       gives controls, code and inline labels; the large one is for admonitions
-       and details, which is what a pane is. The third is .md-tag's 2.4rem pill,
-       kept literal below on the chips that already were one. */
+    /* Material's three radii, at its 125% root: .1rem = 2px for controls, code
+       and inline labels; .2rem = 4px for admonitions, which is what a pane is.
+       The third is .md-tag's pill, literal below on the chips. */
     --radius: 2px;
     --radius-block: 4px;
     --muted: #675f4b;
-    /* Bone lifted, not white. The lift is 1.15:1 either way, so the border does
-       the separating here exactly as it does in the docs' dark header. */
+    /* Bone lifted, not white. The lift is 1.15:1, so the border separates. */
     --pane: #f6f2ea;
 }
 
@@ -67,8 +62,8 @@ body {
     background: var(--bg);
     color: var(--fg);
     font: 15px/1.55 -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
-    /* Material sets both of these on body; the two pages render their shared
-       stack the same way or the seam shows in the letterforms. */
+    /* Material sets both on body; without them the shared stack renders
+       differently on the two pages. */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -86,10 +81,8 @@ h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color:
 .masthead .links { margin-top: .6rem; display: flex; gap: 1rem; }
 .masthead .links a { display: inline-flex; align-items: center; gap: .35rem; }
 
-/* Sized in em so the marks track their label rather than a fixed pixel size,
-   and filled with currentColor so they follow the accent in either theme.
-   Inlined in the markup, like everything else here: this page fetches nothing,
-   which is the claim it makes two paragraphs above these links. */
+/* em so the marks track their label, currentColor so they follow the accent.
+   Inlined in the markup: this page fetches nothing, which it claims above. */
 .icon { width: 1em; height: 1em; flex: none; }
 
 a { color: var(--accent); }

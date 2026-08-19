@@ -12,28 +12,22 @@ declare(strict_types=1);
  *
  * Maintainer tool. It is not shipped in the Composer package.
  *
- * Why generate six hex values instead of writing them twice: because they were
- * written twice, and the second copy drifted within a day. The documentation
- * and the playground are one product on one domain — a reader moves between
- * them without a page load's worth of warning — so a lobster that is #c46d5e on
- * one and #9c4536 on the other is not a small bug, it is the seam showing.
+ * The documentation and the playground are one product on one domain, so a
+ * colour that differs between them is the seam showing. Six hex values live
+ * here and are written into both stylesheets.
  *
- * Only the palette block is generated. What each side *does* with these values
- * is not shared and should not be: Material wants --md-* variables it defines
- * the meaning of, the playground wants its own --bg and --accent, and pretending
- * those are the same list would force one of them to lie. The generated region
- * is fenced by the two markers below and nothing outside it is touched.
+ * Only the palette is generated. What each side *does* with the values is not
+ * shared and should not be: Material's --md-* variables mean what Material says,
+ * the playground's do not. Nothing outside the two markers below is touched.
  *
- * The contrast ratios in PaletteTest are the other half of this. A palette that
- * is consistent and unreadable is worse than two that disagree, because it fails
- * everywhere at once.
+ * PaletteTest holds the ratios — a consistent, unreadable palette fails on both
+ * pages at once.
  */
 const OPEN = '/* >>> generated palette — run `make palette`, do not edit by hand */';
 const CLOSE = '/* <<< generated palette */';
 
 /**
- * The palette. Six values, and each one earns its place or says why it cannot
- * be fewer.
+ * The palette.
  *
  * @var array<string,array{0:string,1:string}> name => [hex, why]
  */
@@ -103,10 +97,7 @@ if ($stale !== []) {
 echo "The palette is in sync.\n";
 exit(0);
 
-/**
- * The generated region, indented to match the file it lands in. Both markers
- * are emitted, so a file that has them once keeps having them exactly once.
- */
+/** The generated region, indented to match the file it lands in. */
 function block(string $indent): string
 {
     $width = 0;
@@ -127,10 +118,8 @@ function block(string $indent): string
 }
 
 /**
- * Swap the fenced region for a freshly generated one. A file without the fence
- * is an error rather than something to guess at: appending a palette to the
- * wrong place in a stylesheet would produce a file that still parses, which is
- * the worst kind of wrong.
+ * Swap the fenced region for a fresh one. A missing fence is an error, not
+ * something to guess at: a palette appended to the wrong place still parses.
  */
 function replace(string $contents, string $block, string $path): string
 {
@@ -143,8 +132,7 @@ function replace(string $contents, string $block, string $path): string
         exit(1);
     }
 
-    // Back up over the marker's own indentation so it is replaced too, rather
-    // than left behind in front of the new block.
+    // Back up over the marker's indentation so it is replaced rather than kept.
     $lineStart = strrpos(substr($contents, 0, $start), "\n");
     $lineStart = $lineStart === false ? 0 : $lineStart + 1;
 

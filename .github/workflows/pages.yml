@@ -38,7 +38,7 @@ jobs:
 
       # Checked, never regenerated here. The generated files are committed so
       # they can be reviewed in a diff; rebuilding them at deploy time would
-      # publish something nobody read.
+      # publish something unreviewed.
       - name: The committed data must match this commit
         run: php tools/build-playground.php --check
 

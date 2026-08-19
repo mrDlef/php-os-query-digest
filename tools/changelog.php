@@ -12,16 +12,15 @@ declare(strict_types=1);
  *     php tools/changelog.php section v0.6.0     the notes for one release
  *     php tools/changelog.php check v0.7.0       may that version be tagged?
  *
- * Why it exists rather than a changelog generator: the prose here is not
- * derivable from the commits. v0.6.0's notes run to four and a half thousand
- * characters over a single commit, and what they explain — which query types
- * were promoted, why the thirteen left are a settled position, that both prefix
- * bumps kept every hex character — is a judgement nobody's `git log` contains.
+ * Why this rather than a changelog generator: the prose is not derivable from
+ * the commits. Which types were promoted, why the remaining opaque ones are a
+ * settled position, whether a prefix bump kept every hex character — none of
+ * that is in a `git log`.
  *
  * What *is* mechanical is whether the entry tells the truth. Every section
  * carries a `Fingerprints:` line, and `check` compares it against the hashes
- * pinned in tests/fixtures — so a release cannot promise your dashboards
- * survived when they did not, or move every hash without saying so.
+ * pinned in tests/fixtures, so a release cannot claim dashboards survived when
+ * they did not.
  */
 const CHANGELOG = __DIR__ . '/../CHANGELOG.md';
 

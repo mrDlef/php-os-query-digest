@@ -22,11 +22,9 @@ services:
       # packages. It lives in the bind mount so it inherits host ownership —
       # a named volume would be created root-owned and unwritable here.
       COMPOSER_VENDOR_DIR: /app/.vendor/php${PHP_VERSION:-8.3}
-    # composer.lock is shared by every version through the bind mount, so it is
-    # dropped before resolving and again afterwards: each PHP gets its own
-    # highest-compatible PHPUnit, and no version-specific lock is left behind to
-    # confuse the next run. The lock is gitignored and disposable here — this is
-    # a library, it does not commit one.
+    # composer.lock is shared through the bind mount, so it is dropped before
+    # resolving and after: each PHP gets its own highest-compatible PHPUnit and
+    # leaves no version-specific lock behind. A library commits no lock.
     command: >
       sh -c "php -v | head -1 &&
              rm -f composer.lock &&
@@ -56,13 +54,11 @@ services:
       - .:/app
     environment:
       COMPOSER_HOME: /tmp/composer
-      # No COMPOSER_VENDOR_DIR override, unlike the `php` service: PHPUnit is
-      # invoked by Infection through phpunit.xml.dist, which bootstraps
-      # vendor/autoload.php. Sending composer somewhere else leaves it with no
-      # autoloader. This job runs on one PHP version, so the per-version split
-      # buys nothing here anyway — it exists because PHPUnit differs across
-      # 7.4 to 8.5, and this is 8.5 either way.
-      # So a run can be narrowed without editing this file:
+      # No COMPOSER_VENDOR_DIR override, unlike `php`: Infection invokes PHPUnit
+      # through phpunit.xml.dist, which bootstraps vendor/autoload.php, so
+      # sending composer elsewhere leaves it with no autoloader.
+      #
+      # Narrow a run without editing this file:
       #   INFECTION_ARGS="--filter=src/Parser" make mutation
       INFECTION_ARGS: ${INFECTION_ARGS:-}
     command: >
@@ -76,11 +72,10 @@ services:
 
 
   # Real clusters, for `make certify`. Behind a profile so they never start for
-  # the unit suite: that one is offline and must stay that way.
+  # the unit suite, which is offline and must stay that way.
   #
-  # Security is disabled on purpose. These nodes hold an empty index for a few
-  # seconds and are thrown away; a password would only buy ceremony, and 2.12+
-  # otherwise refuses to boot without OPENSEARCH_INITIAL_ADMIN_PASSWORD.
+  # Security is off on purpose: these nodes are thrown away, and 2.12+ otherwise
+  # refuses to boot without OPENSEARCH_INITIAL_ADMIN_PASSWORD.
   os2:
     profiles: [certify]
     image: opensearchproject/opensearch:${OS2_VERSION:-2}
@@ -90,10 +85,8 @@ services:
       # The default heap is a quarter of host RAM, which on a dev machine is
       # gigabytes for an index that stays empty.
       OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
-      # A dev machine with a full-ish disk trips the flood-stage watermark, and
-      # the node then refuses to create the index with a bare
-      # `index_create_block_exception` — nothing to do with the queries under
-      # test. The node is empty and disposable, so the watermark buys nothing.
+      # A full-ish disk trips the flood-stage watermark and index creation 403s
+      # with index_create_block_exception, unrelated to the queries under test.
       cluster.routing.allocation.disk.threshold_enabled: "false"
     ports:
       - "9202:9200"
@@ -110,13 +103,10 @@ services:
       discovery.type: single-node
       DISABLE_SECURITY_PLUGIN: "true"
       OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
-      # Same as os2, and it bites harder here. 3.x adds a *headroom* to the
-      # flood-stage watermark, so the block trips when free space falls under
-      # ~100 GB regardless of the percentage — a 455 GB disk at 92% has 36 GB
-      # free, well inside the 95% threshold and well inside the headroom. The
-      # node then answers index creation with a bare 403
-      # `index_create_block_exception` that says nothing about disks, and every
-      # integration test fails in setUp. The node is empty and disposable.
+      # As os2, and it bites harder: 3.x adds a headroom to the flood-stage
+      # watermark, so the block trips under ~100 GB free whatever the
+      # percentage. Index creation then 403s with index_create_block_exception,
+      # which mentions no disk, and every integration test fails in setUp.
       cluster.routing.allocation.disk.threshold_enabled: "false"
     ports:
       - "9203:9200"

@@ -10,9 +10,8 @@ use PHPUnit\Framework\TestCase;
  * Re-checks `resources/versions.json` against a live cluster.
  *
  * `tools/certify.php` *writes* the matrix; this *verifies* it, which is what
- * makes it a regression guard rather than a snapshot of one afternoon. Point it
- * at a node and it fails if that version stopped accepting something the file
- * says it accepts.
+ * makes it a regression guard rather than a snapshot. Point it at a node and it
+ * fails if that version stopped accepting something the file says it accepts.
  *
  *     OPENSEARCH_URL=http://localhost:9202 vendor/bin/phpunit --testsuite=integration
  *
@@ -60,12 +59,10 @@ final class ServerAcceptanceTest extends TestCase
      * The major line under test has to be one the matrix covers, otherwise the
      * run proves nothing about the file it is meant to guard.
      *
-     * Matched by major rather than by exact version on purpose. The scheduled
-     * job pulls the floating `:2` and `:3` tags, so it drifts onto a new patch
-     * whenever upstream cuts one — failing on that would mean a red build every
-     * few weeks for a release that changed nothing about the query DSL, which is
-     * how people learn to ignore a job. A query type appearing or vanishing
-     * still fails, and that is the thing worth waking up for.
+     * Matched by major, not exact version: the scheduled job pulls the floating
+     * `:2` and `:3` tags, so it drifts onto every new patch. Failing on that
+     * would be noise for a release that changed nothing about the DSL. A query
+     * type appearing or vanishing still fails.
      */
     public function testTheClusterMajorIsCertified(): void
     {

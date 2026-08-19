@@ -17,8 +17,8 @@ use PHPUnit\Framework\TestCase;
  * make the suite need Docker and a network to say anything at all.
  *
  * What this test is for: making it impossible to claim a version is certified
- * because nobody looked. Every query type is either probed against a live
- * cluster or carries a written reason why it cannot be.
+ * without checking. Every query type is either probed against a live cluster or
+ * carries a written reason why it cannot be.
  */
 final class CertificationTest extends TestCase
 {

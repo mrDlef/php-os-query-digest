@@ -12,20 +12,13 @@ use PHPUnit\Framework\TestCase;
  *
  *     OPENSEARCH_URL=http://localhost:9202 vendor/bin/phpunit --testsuite=integration
  *
- * Those pages make claims that are only worth making if they are true: that this
- * query finds the shape that regressed, that the obvious one finds the wrong
- * shape instead, that dropping a `bucket_selector` makes the request fail. None
- * of it is inferred from the OpenSearch documentation — it is run.
- *
  * **The pages are the source.** Each aggregation is extracted from the markdown
- * by its `<!-- verified: name -->` marker rather than copied here, so there is
- * one copy of every query and it is the one a reader sees. Editing a page edits
- * what this test executes.
+ * by its `<!-- verified: name -->` marker, never copied here: one copy of every
+ * query, and it is the one a reader sees.
  *
- * The index it builds is the scenario those pages describe: four query shapes
- * over six hours, digested by the library itself so no hash is written by hand.
- * One shape regresses at 14:00 and one appears at 15:00, an hour apart, because
- * telling those two events apart is the point of the first two pages.
+ * The index is the scenario the pages describe — four shapes over six hours,
+ * digested by the library so no hash is hand-written. One regresses at 14:00,
+ * one appears at 15:00, and telling those apart is the point of two of the pages.
  */
 final class UseCaseTest extends TestCase
 {
@@ -33,7 +26,7 @@ final class UseCaseTest extends TestCase
 
     private const PAGES = __DIR__ . '/../../docs/use-cases';
 
-    /** Fixed, because a documentation example that moves cannot be reproduced. */
+    /** Fixed: a documentation example that moves cannot be reproduced. */
     private const BASE = '2026-08-19T10:00:00Z';
 
     private const HOURS = 6;
@@ -78,9 +71,8 @@ final class UseCaseTest extends TestCase
     }
 
     /**
-     * The naive ranking is on the page as a counter-example, so it has to keep
-     * being wrong. If p95 ever puts the regressed shape first, the page's whole
-     * argument evaporates and the section needs rewriting rather than patching.
+     * On the page as a counter-example, so it has to keep being wrong: p95 must
+     * still surface the always-slow shape ahead of the regressed one.
      */
     public function testRankingByPercentileFindsTheWrongShape(): void
     {
@@ -120,10 +112,7 @@ final class UseCaseTest extends TestCase
         );
     }
 
-    /**
-     * The claim this one guards is the counter-intuitive one: the shape that
-     * costs the most is not the shape that runs the most.
-     */
+    /** Guards the counter-intuitive claim: the costliest shape is not the busiest. */
     public function testTheCostliestShapeIsNotTheMostFrequent(): void
     {
         $buckets = $this->aggregate('worth-fixing');
@@ -156,10 +145,8 @@ final class UseCaseTest extends TestCase
     }
 
     /**
-     * The page tells the reader that dropping `established` breaks the request,
-     * and quotes the exception. Left unguarded that is the first line to become
-     * folklore — OpenSearch could start tolerating it, and the page would be
-     * warning about nothing.
+     * The page quotes the exception dropping `established` produces. Guarded so
+     * the warning cannot outlive the behaviour if OpenSearch starts tolerating it.
      */
     public function testTheRegressionQueryFailsWithoutItsBucketSelector(): void
     {
@@ -174,9 +161,8 @@ final class UseCaseTest extends TestCase
     }
 
     /**
-     * Every hash printed on a page must be one this library still produces. A
-     * promotion that moves fingerprints turns the pages stale in a way no build
-     * would notice, and their whole selling point is that the numbers are real.
+     * A promotion that moves fingerprints would leave the pages quoting hashes
+     * nothing produces, and no build would notice.
      */
     public function testEveryHashOnThePagesIsOneTheLibraryStillProduces(): void
     {
@@ -203,9 +189,8 @@ final class UseCaseTest extends TestCase
     }
 
     /**
-     * Marked blocks and expectations have to stay in step: a page that gains a
-     * `<!-- verified: -->` marker nobody wrote a test for is a query claiming to
-     * be verified that never runs.
+     * Markers and expectations must stay in step: a marked query nobody runs
+     * claims to be verified and is not.
      */
     public function testEveryMarkedAggregationIsExercised(): void
     {
@@ -224,10 +209,8 @@ final class UseCaseTest extends TestCase
     }
 
     /**
-     * The page's regression query with `established` taken out. Every level is
-     * validated on the way down rather than reached through: the point of the
-     * test is that this specific structure is what fails, so a page that no
-     * longer has that structure must say so rather than silently pass.
+     * The regression query with `established` taken out. Each level is validated
+     * on the way down, so a restructured page fails loudly instead of passing.
      *
      * @return array<string,mixed>
      */
@@ -273,9 +256,8 @@ final class UseCaseTest extends TestCase
     }
 
     /**
-     * The JSON block a `<!-- verified: name -->` marker introduces. Fails loudly
-     * rather than skipping: a marker whose block cannot be found means the page
-     * was restructured and this test is silently checking nothing.
+     * The JSON block a `<!-- verified: name -->` marker introduces. A missing
+     * block fails rather than skips, or the test checks nothing in silence.
      *
      * @return array<string,mixed>
      */
@@ -297,10 +279,7 @@ final class UseCaseTest extends TestCase
         self::fail('No <!-- verified: ' . $name . ' --> block in ' . self::PAGES);
     }
 
-    /**
-     * Builds the scenario. Every document's digest comes from the library, so a
-     * hash here is a hash a user would get.
-     */
+    /** Every digest comes from the library, so a hash here is one a user gets. */
     private function index(): void
     {
         $formatter = Formatter::create();
@@ -366,8 +345,8 @@ final class UseCaseTest extends TestCase
     }
 
     /**
-     * Every hash the committed fixtures currently produce. Wider than the four
-     * the scenario uses, so a page may quote any fixture's hash.
+     * Every hash the fixtures produce — wider than the scenario's four, so a
+     * page may quote any of them.
      *
      * @return array<int,string>
      */
@@ -394,9 +373,7 @@ final class UseCaseTest extends TestCase
             $hashes[] = $formatter->describe($request, $index)->hash();
         }
 
-        // The pages also digest queries written inline rather than as fixtures:
-        // the multi-tenant filter, the email line, the selectivity pair and the
-        // reordered bool. Kept here so the page and the test cannot disagree.
+        // Queries the pages write inline rather than as fixtures.
         foreach (self::inlineExamples() as $body => $index) {
             $decoded = json_decode($body, true);
             self::assertIsArray($decoded, 'An inline example is not valid JSON.');
@@ -455,8 +432,8 @@ final class UseCaseTest extends TestCase
     }
 
     /**
-     * A number out of a response, validated rather than cast. `self::fail()`
-     * never returns, which is what makes the cast below a real one.
+     * Validated rather than cast: `self::fail()` never returns, which is what
+     * makes the cast below sound.
      *
      * @param mixed             $node
      * @param array<int,string> $path
@@ -488,8 +465,7 @@ final class UseCaseTest extends TestCase
     }
 
     /**
-     * The markdown files, as a list. `glob()` can return false and a short
-     * ternary is not allowed here.
+     * `glob()` can return false, and a short ternary is not allowed here.
      *
      * @return array<int,string>
      */
