@@ -31,6 +31,13 @@
     --line: #c4baa8;
     --line-strong: #837b67;
     --mono: SFMono-Regular, Consolas, Menlo, monospace;
+    /* Material's whole radius vocabulary is three values, and html sits at
+       125% there, so .1rem is 2px and .2rem is 4px. The small one is what it
+       gives controls, code and inline labels; the large one is for admonitions
+       and details, which is what a pane is. The third is .md-tag's 2.4rem pill,
+       kept literal below on the chips that already were one. */
+    --radius: 2px;
+    --radius-block: 4px;
     --muted: #675f4b;
     /* Bone lifted, not white. The lift is 1.15:1 either way, so the border does
        the separating here exactly as it does in the docs' dark header. */
@@ -97,7 +104,7 @@ a { color: var(--accent); }
     font-size: .82rem;
     padding: .18rem .55rem;
     border: 1px solid var(--line-strong);
-    border-radius: 999px;
+    border-radius: 999px; /* .md-tag's pill, the one shape Material rounds fully */
     background: var(--pane);
     color: var(--fg);
     cursor: pointer;
@@ -115,7 +122,7 @@ main { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: st
 .pane {
     background: var(--pane);
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius-block);
     padding: 1rem 1.1rem 1.2rem;
 }
 
@@ -129,7 +136,7 @@ input[type="text"], textarea {
     color: var(--fg);
     background: var(--bg);
     border: 1px solid var(--line-strong);
-    border-radius: 6px;
+    border-radius: var(--radius);
     padding: .45rem .55rem;
 }
 textarea { resize: vertical; line-height: 1.5; tab-size: 2; }
@@ -163,7 +170,7 @@ code { font-family: var(--mono); font-size: .92em; }
     color: var(--error);
     background: var(--error-bg);
     border: 1px solid currentColor;
-    border-radius: 6px;
+    border-radius: var(--radius-block);
     padding: .5rem .6rem;
     margin-bottom: .8rem;
 }
@@ -180,7 +187,7 @@ button {
     font-size: .82rem;
     padding: .3rem .7rem;
     border: 1px solid var(--line-strong);
-    border-radius: 6px;
+    border-radius: var(--radius);
     background: var(--bg);
     color: var(--fg);
     cursor: pointer;
@@ -203,7 +210,7 @@ button.link { border: none; background: none; color: var(--accent); padding: 0; 
     border-top: 1px solid var(--line);
     font-size: .8rem;
 }
-.engine { font-family: var(--mono); font-size: 12px; padding: .1rem .45rem; border-radius: 4px; background: var(--accent-bg); color: var(--accent); }
+.engine { font-family: var(--mono); font-size: 12px; padding: .1rem .45rem; border-radius: var(--radius); background: var(--accent-bg); color: var(--accent); }
 .status button { margin-left: auto; }
 .status[data-state="loading"] .engine { animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .45; } }
