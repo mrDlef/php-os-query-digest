@@ -87,6 +87,15 @@ plugins:
 nav:
   - Home: index.md
   - Getting started: getting-started.md
+  # Problem-shaped, and deliberately before the feature-shaped guides: a reader
+  # who has just installed this wants to know what it answers, not what its
+  # options are. Every aggregation on these pages is executed against a live
+  # node by UseCaseTest, which extracts them from the markdown itself.
+  - Use cases:
+      - Overview: use-cases/index.md
+      - Which shape got slow: use-cases/what-got-slow.md
+      - What a deploy changed: use-cases/what-a-deploy-changed.md
+      - What the hash is not for: use-cases/what-the-hash-is-not.md
   - Guides:
       - Log your queries: guides/logging.md
       - Options: guides/options.md
