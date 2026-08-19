@@ -30,7 +30,13 @@ make mutation               # would the tests notice? ~35s
 make bench                  # what a digest costs
 make playground             # serve the browser playground on :8080
 make docs                   # serve the documentation site on :8000
+make palette                # write the palette into both stylesheets
 ```
+
+The colours of the documentation and the playground come from
+`tools/build-palette.php` and are generated into both stylesheets. Edit the tool,
+not the CSS: `PaletteTest` fails if either file has drifted, and fails again if
+any pair drops under the contrast ratio it is documented at.
 
 ### The Docker matrix
 
