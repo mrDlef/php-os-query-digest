@@ -1,23 +1,21 @@
+/*
+ * The palette below is generated from tools/build-palette.php, which is also
+ * what the playground's stylesheet is generated from. PaletteTest fails if
+ * either file has drifted, and fails again if any pair in it drops under the
+ * ratio it is documented at. Edit the tool, run `make palette`.
+ *
+ * What this file does with the values is its own: Material's --md-* variables
+ * mean what Material says they mean, and the playground's do not.
+ */
 :root {
-  --pitch-black: #231c07;
-  --bone: #ece2d0;
-  --lobster-pink: #c46d5e;
-  /* The playground's raised pane. Its code blocks and this site's are the same
-     surface, so they are the same colour. */
-  --dark-blue: #272a35;
-
-  /* A deeper lobster, and the reason is contrast rather than taste. The palette
-     lobster reads 2.87:1 against bone, whichever of the two is the text — under
-     the 4.5:1 normal text needs, in both directions. This one clears 4.93:1
-     both ways, which is what lets a single value be the header bone sits on and
-     the link colour that sits on bone. */
-  --lobster-deep: #9c4536;
-
-  /* And one lifted, for dark mode. The palette lobster clears 4.5:1 on pitch
-     black at 4.59:1, but the playground puts the same accent on a raised pane
-     where it falls to 3.88:1. One value for both pages beats two that agree
-     only on one of them. */
-  --lobster-light: #cd8777;
+  /* >>> generated palette — run `make palette`, do not edit by hand */
+  --pitch-black:   #231c07;         /* the ink, and the dark field */
+  --bone:          #ece2d0;         /* the light field, and the light ink — never #fff */
+  --lobster-pink:  #c46d5e;         /* the hue the other two are drawn from; carries no text itself */
+  --lobster-deep:  #9c4536;         /* light mode: 4.93:1 on bone, both as the header and as a link */
+  --lobster-light: #cd8777;         /* dark mode: 4.99:1 on the raised pane, the tighter dark surface */
+  --dark-blue:     #272a35;         /* the raised pane, dark mode — the playground and the docs code blocks */
+  /* <<< generated palette */
 }
 
 :root  > * {

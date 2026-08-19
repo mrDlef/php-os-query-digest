@@ -9,15 +9,14 @@
  * value drawn from it rather than it.
  */
 :root {
-    --bone: #ece2d0;
-    --dark-blue: #272a35;
-    --lobster-pink: #c46d5e;
-    --pitch-black: #231c07;
-
-    /* The lobster, moved until it carries text. Deep is 4.93:1 on bone; light
-       is 4.99:1 on the dark pane, the tighter of the two dark surfaces. */
-    --lobster-deep: #9c4536;
-    --lobster-light: #cd8777;
+    /* >>> generated palette — run `make palette`, do not edit by hand */
+    --pitch-black:   #231c07;         /* the ink, and the dark field */
+    --bone:          #ece2d0;         /* the light field, and the light ink — never #fff */
+    --lobster-pink:  #c46d5e;         /* the hue the other two are drawn from; carries no text itself */
+    --lobster-deep:  #9c4536;         /* light mode: 4.93:1 on bone, both as the header and as a link */
+    --lobster-light: #cd8777;         /* dark mode: 4.99:1 on the raised pane, the tighter dark surface */
+    --dark-blue:     #272a35;         /* the raised pane, dark mode — the playground and the docs code blocks */
+    /* <<< generated palette */
 
     --accent: var(--lobster-deep);
     --accent-bg: #eaddcb;
