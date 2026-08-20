@@ -73,7 +73,7 @@ final class SlowlogTest extends TestCase
     public function testItReadsBothJsonAppenders(): void
     {
         $log = implode("\n", [
-            // OpenSearch, and Elasticsearch up to 7: bare keys, values as text.
+            // The common shape: bare keys, every value written as text.
             (string) json_encode([
                 'type' => 'index_search_slowlog',
                 'timestamp' => '2026-08-20T10:00:01,123+02:00',
@@ -81,7 +81,8 @@ final class SlowlogTest extends TestCase
                 'took_millis' => '145',
                 'source' => self::BODY,
             ]),
-            // Elasticsearch 8: the same record under a key prefix.
+            // A layout that namespaces its keys — read, though only OpenSearch
+            // is a certified product here.
             (string) json_encode([
                 '@timestamp' => '2026-08-20T08:00:02.001Z',
                 'elasticsearch.slowlog.message' => '[logs-2026.08.20][0]',
@@ -300,7 +301,7 @@ final class SlowlogTest extends TestCase
         $records = [
             // Nothing but the `[index][shard]` message every appender opens with.
             ['message' => '[orders-2026.08][1]', 'source' => self::OTHER],
-            // Elasticsearch 8 names it outright.
+            // A layout that names the index outright.
             ['elasticsearch.index.name' => 'people-2026.08', 'elasticsearch.slowlog.source' => self::OTHER],
             // Neither: the digest has no index to normalise.
             ['source' => self::OTHER],
@@ -455,11 +456,35 @@ final class SlowlogTest extends TestCase
         self::assertStringContainsString('mean*', $out);
     }
 
+    public function testOnePhaseIsCountedAndAnUnnamedPhaseIsNeverDropped(): void
+    {
+        $log = implode("\n", [
+            (string) json_encode(['component' => 'i.s.s.query', 'message' => '[logs-x][0]',
+                'took_millis' => 10, 'source' => self::OTHER]),
+            (string) json_encode(['component' => 'i.s.s.fetch', 'message' => '[logs-x][0]',
+                'took_millis' => 90, 'source' => self::OTHER]),
+            // A layout that names no logger: unknown is not the same as other.
+            (string) json_encode(['message' => '[logs-x][0]', 'took_millis' => 5, 'source' => self::OTHER]),
+        ]);
+
+        [$status, $query] = $this->invoke([], $log);
+        [, $fetch] = $this->invoke(['--phase', 'fetch'], $log);
+        [, $both] = $this->invoke(['-p', 'both'], $log);
+
+        self::assertSame(Command::OK, $status);
+        self::assertStringContainsString('2 records', $query);
+        self::assertStringContainsString('1 record from another phase, see --phase', $query);
+        self::assertStringContainsString('2 records', $fetch);
+        self::assertStringContainsString('3 records', $both);
+        self::assertStringNotContainsString('another phase', $both);
+    }
+
     public function testBadInvocationsExplainThemselvesAndExitTwo(): void
     {
         $cases = [
             'unknown sort' => [['--sort=nope'], 'total, count, p95, max, mean'],
             'unknown top' => [['--top=lots'], 'a number, or `none`'],
+            'unknown phase' => [['--phase=nope'], 'query, fetch, both'],
             'half a number' => [['--top=1x'], 'a number, or `none`'],
             'value on a flag' => [['--json=yes'], 'takes no value'],
             'unknown option' => [['--nope'], 'unknown option --nope'],

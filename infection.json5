@@ -22,13 +22,13 @@
     },
     "tmpDir": ".infection",
     "timeout": 30,
-    // A ratchet, not a target. The suite sits at ~79% covered MSI with nothing
+    // A ratchet, not a target. The suite sits at ~80% covered MSI with nothing
     // uncovered at all, and most of what survives is string concatenation in
     // CLI help and error text — reordering a message nobody asserts on. The
     // threshold exists so that number cannot quietly fall; raise it when real
     // escapes are killed, never lower it to make a build pass.
-    "minMsi": 78,
-    "minCoveredMsi": 78,
+    "minMsi": 79,
+    "minCoveredMsi": 79,
     "logs": {
         "text": ".infection/escaped.log",
         "summary": ".infection/summary.log"

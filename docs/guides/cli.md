@@ -79,12 +79,14 @@ $ os-query-digest slowlog --json --top=1 slowlog.log | jq '.[0] | {count, p95_ms
 }
 ```
 
-Both appenders are read, the plain one and the JSON one beside it, OpenSearch
-and Elasticsearch alike — including Elasticsearch 8, which prefixes every field
-with `elasticsearch.slowlog.`. Files are read a line at a time, so a rotated
-log of any size is fine, and every fingerprint flag above applies here too:
-group the report under the same rules your application logs under, or the two
-are about different things.
+Both appenders are read, the plain one and the JSON one beside it. Files are
+read a line at a time, so a rotated log of any size is fine, and every
+fingerprint flag above applies here too: group the report under the same rules
+your application logs under, or the two are about different things.
+
+Records whose JSON keys are namespaced — `…slowlog.source` rather than `source`
+— are read as well. That is tolerance for a layout, not a claim: OpenSearch is
+what this library certifies, and it is the only thing it promises.
 
 **Lines that hold no search record are skipped in silence.** A slow log also
 holds allocation notices and stack traces, and a tool that refused the file over
@@ -96,3 +98,38 @@ shape it belonged to.
 If nothing in the input is a slow log record, that is an error rather than an
 empty table — pointing this at the wrong file should not look like a healthy
 cluster.
+
+### What a slow log record actually holds
+
+Three things about the file itself, each of which changes how the report reads.
+They are not deductions: the reader is tested against records captured from
+OpenSearch 2.19.6 and 3.8.0, committed under `tests/slowlog/`.
+
+**A search is logged once per phase.** The query phase and the fetch phase each
+write a record, and both carry the same body — so counting both doubles every
+number. One phase is read at a time and `query`, the one you tune, is the
+default; `--phase=fetch` or `--phase=both` when you want the others. The summary
+line says how many records the other phase held, so the choice is never silent.
+
+**The body is the query the shard ran, not the one your client sent.** It has
+been rewritten by then: `boost` and `adjust_pure_negative` appear, a `term`
+becomes `{"value": …, "boost": 1.0}`, a range that matches nothing on that shard
+collapses to `match_none`, and a resolved range keeps its shape while losing its
+bounds — which is why a real record renders `range(?)` where the request said
+`@timestamp >= now-15m`.
+
+!!! warning "Slow log fingerprints are not your application's fingerprints"
+    The same request digests differently from the two sides, because the shard
+    rewrote it. The hash still tells you *which shape*, and it does that on both
+    sides — but group slow log records against slow log records, and application
+    digests against application digests. The two sets do not join.
+
+**Records are per shard.** A search over five shards writes five of them, so
+`count` is shards touched rather than requests served. That is the right number
+for *what is this shape costing the cluster* and the wrong one for *how often was
+it called*.
+
+One more, in the same spirit of not deducing: **OpenSearch 3 escapes the body
+twice in the JSON layout**, from the same configuration file 2.19.6 escapes it
+once with. The extra layer comes off through the JSON decoder rather than by
+stripping backslashes, so a query holding an escaped quote survives it.
