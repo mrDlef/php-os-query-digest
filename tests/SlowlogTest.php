@@ -73,7 +73,7 @@ final class SlowlogTest extends TestCase
     public function testItReadsBothJsonAppenders(): void
     {
         $log = implode("\n", [
-            // OpenSearch, and Elasticsearch up to 7: bare keys, values as text.
+            // The common shape: bare keys, every value written as text.
             (string) json_encode([
                 'type' => 'index_search_slowlog',
                 'timestamp' => '2026-08-20T10:00:01,123+02:00',
@@ -81,7 +81,8 @@ final class SlowlogTest extends TestCase
                 'took_millis' => '145',
                 'source' => self::BODY,
             ]),
-            // Elasticsearch 8: the same record under a key prefix.
+            // A layout that namespaces its keys — read, though only OpenSearch
+            // is a certified product here.
             (string) json_encode([
                 '@timestamp' => '2026-08-20T08:00:02.001Z',
                 'elasticsearch.slowlog.message' => '[logs-2026.08.20][0]',
@@ -300,7 +301,7 @@ final class SlowlogTest extends TestCase
         $records = [
             // Nothing but the `[index][shard]` message every appender opens with.
             ['message' => '[orders-2026.08][1]', 'source' => self::OTHER],
-            // Elasticsearch 8 names it outright.
+            // A layout that names the index outright.
             ['elasticsearch.index.name' => 'people-2026.08', 'elasticsearch.slowlog.source' => self::OTHER],
             // Neither: the digest has no index to normalise.
             ['source' => self::OTHER],

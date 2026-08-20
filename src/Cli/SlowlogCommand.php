@@ -563,9 +563,9 @@ cluster already writes.
 Usage:
   {$this->name} [options] [FILE…]
 
-Reads `index.search.slowlog` records — the plain appender and the JSON one,
-OpenSearch and Elasticsearch — from every FILE, or from stdin. Lines that hold
-no search record are skipped in silence: a slow log holds more than searches.
+Reads OpenSearch `index.search.slowlog` records — the plain appender and the
+JSON one — from every FILE, or from stdin. Lines that hold no search record are
+skipped in silence: a slow log holds more than searches.
 
 Groups the records by fingerprint and ranks the groups, so one shape hit four
 thousand times outranks one slow record you would otherwise read four thousand

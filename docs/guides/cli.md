@@ -79,12 +79,14 @@ $ os-query-digest slowlog --json --top=1 slowlog.log | jq '.[0] | {count, p95_ms
 }
 ```
 
-Both appenders are read, the plain one and the JSON one beside it, OpenSearch
-and Elasticsearch alike — including Elasticsearch 8, which prefixes every field
-with `elasticsearch.slowlog.`. Files are read a line at a time, so a rotated
-log of any size is fine, and every fingerprint flag above applies here too:
-group the report under the same rules your application logs under, or the two
-are about different things.
+Both appenders are read, the plain one and the JSON one beside it. Files are
+read a line at a time, so a rotated log of any size is fine, and every
+fingerprint flag above applies here too: group the report under the same rules
+your application logs under, or the two are about different things.
+
+Records whose JSON keys are namespaced — `…slowlog.source` rather than `source`
+— are read as well. That is tolerance for a layout, not a claim: OpenSearch is
+what this library certifies, and it is the only thing it promises.
 
 **Lines that hold no search record are skipped in silence.** A slow log also
 holds allocation notices and stack traces, and a tool that refused the file over

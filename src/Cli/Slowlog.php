@@ -11,9 +11,12 @@ namespace MrDlef\OsQueryDigest\Cli;
  * that ends up in `*_index_search_slowlog.log`, and the JSON one beside it.
  * Both are read here — they carry the same fields and differ only in
  * packaging, and understanding one of them would leave half the clusters
- * unable to run the report. Elasticsearch 8 prefixes its JSON keys with
- * `elasticsearch.slowlog.`; that is the whole difference, so it is a prefix
- * list rather than a second parser.
+ * unable to run the report.
+ *
+ * Layouts that namespace their JSON keys — `elasticsearch.slowlog.source` and
+ * the like — are read too, which is why the lookup takes a prefix list rather
+ * than a second parser. That is tolerance, not a supported product: no
+ * distribution but OpenSearch is certified here, and none is claimed.
  *
  * **A line with no search source is not an error.** Slow log files also hold
  * rotation notices, stack traces and whatever else log4j put there, and a tool

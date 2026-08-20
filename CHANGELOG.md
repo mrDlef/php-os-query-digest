@@ -61,11 +61,13 @@ the group's, and they are not. `--json` carries the slowest sample labelled as a
 sample, beside the timestamps the group spans — which is how a shape that has
 always been there is told from one that arrived with this morning's deploy.
 
-Both appenders are read: the plain one and the JSON one beside it, OpenSearch
-and Elasticsearch, including Elasticsearch 8's `elasticsearch.slowlog.` field
-prefix. Input is consumed a line at a time rather than slurped, because rotated
-slow logs run to gigabytes and the whole premise is that you can point this at
-the file you already have.
+Both appenders are read, the plain one and the JSON one beside it. A layout
+that namespaces its keys — `…slowlog.source` rather than `source` — is read too,
+which is tolerance rather than a promise: OpenSearch remains the only thing
+certified here, as it has been since v0.7.0 dropped the `elasticsearch` keyword.
+Input is consumed a line at a time rather than slurped, because rotated slow
+logs run to gigabytes and the whole premise is that you can point this at the
+file you already have.
 
 ### Two things a slow log does that a query file does not
 
