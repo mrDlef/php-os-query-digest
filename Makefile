@@ -10,6 +10,7 @@ export DOCKER_GID := $(shell id -g)
 
 .PHONY: test test-all stan cs cs-check rector rector-check check hooks fixtures spec \
         playground playground-data playground-runtime playground-check mutation \
+        dashboards \
         release-check release-notes bench docs docs-build docs-playground \
         certify integration clusters clusters-down clean
 
@@ -69,6 +70,12 @@ fixtures:
 ## PlaygroundTest fails until the committed data matches src/.
 playground-data:
 	php tools/build-playground.php
+
+## Rebuild the importable dashboard pack from the Use cases pages. Two files,
+## one per Dashboards major: 2.x bundles vega-lite 4 and 3.x bundles 6, and the
+## plugin refuses the other's schema. DashboardPackTest fails until both match.
+dashboards:
+	php tools/build-dashboards.php
 
 ## Write the palette into both stylesheets from one source. PaletteTest fails
 ## until they match, and fails again if any pair drops under its ratio.

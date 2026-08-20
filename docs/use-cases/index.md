@@ -19,26 +19,22 @@ search.
 
 The digest gives you four fields. Two of them need a mapping you would not get
 by default, and getting it wrong is the difference between an aggregation and a
-pile of word fragments.
+pile of word fragments. The library ships that mapping as an index template —
+this is the file, not a copy of it:
 
-```json
-{
-  "mappings": {
-    "properties": {
-      "@timestamp": { "type": "date" },
-      "took":       { "type": "integer" },
-      "os": {
-        "properties": {
-          "hash": { "type": "keyword" },
-          "sig":  { "type": "keyword", "ignore_above": 1024 },
-          "q":    { "type": "text" },
-          "idx":  { "type": "keyword" }
-        }
-      }
-    }
-  }
-}
+```json title="resources/dashboards/index-template.json"
+--8<-- "resources/dashboards/index-template.json"
 ```
+
+```bash
+curl -XPUT localhost:9200/_index_template/os-query-digest \
+     -H 'Content-Type: application/json' \
+     --data-binary @resources/dashboards/index-template.json
+```
+
+`release` is there for [What a deploy changed](what-a-deploy-changed.md) and is
+your own field, not the digest's — drop it if you do not log one. Everything
+else on these pages needs the four `os.*` fields and `took`.
 
 `os.hash` and `os.sig` are **`keyword`**, not `text`. A `text` field is analysed,
 so a `terms` aggregation on it returns `logs`, `timestamp`, `service` — the words
@@ -87,5 +83,9 @@ the whole exercise: **something got slow at 14:00, and a deploy shipped at
 - :material-hand-back-left: **[What the hash is not for](what-the-hash-is-not.md)**
 
     Three things people try. One of them silently corrupts data.
+
+- :material-view-dashboard-outline: **[The dashboard pack](../guides/dashboards.md)**
+
+    The same four questions, imported once instead of pasted.
 
 </div>

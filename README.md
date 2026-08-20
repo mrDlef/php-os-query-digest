@@ -104,6 +104,9 @@ browser playground.
 - **Your log volume drops.** A 40-line body becomes one line, capped.
 - **Slow queries become countable.** `terms` on the hash and the top of the list
   is the shape to fix.
+- **The dashboard is written already.** An index template and four panels ship
+  in the package — import them and you are looking at which shape costs you,
+  which one regressed, and which one the last release added.
 - **It cannot break your logging.** Nothing is required at runtime, the digest
   is lazy, and a request it cannot parse yields an error field rather than an
   exception. You lose the digest, never the log line.
@@ -123,6 +126,7 @@ browser playground.
 | [Log your queries](https://mrdlef.github.io/php-os-query-digest/guides/logging/) | the Monolog processor, and how to read the line |
 | [Options](https://mrdlef.github.io/php-os-query-digest/guides/options/) | normalisation levels, redaction, display limits |
 | [Command line](https://mrdlef.github.io/php-os-query-digest/guides/cli/) | `slowlog`, `--ndjson`, `--explain`, `--hash` |
+| [The dashboard pack](https://mrdlef.github.io/php-os-query-digest/guides/dashboards/) | the index template and four panels, imported once |
 | [How the fingerprint works](https://mrdlef.github.io/php-os-query-digest/explanation/how-it-works/) | why two different-looking queries share a hash |
 | [Hash stability](https://mrdlef.github.io/php-os-query-digest/explanation/hash-stability/) | read this before storing a fingerprint |
 | [Public API](https://mrdlef.github.io/php-os-query-digest/reference/api/) | the fourteen classes you may depend on |
