@@ -2,5 +2,5 @@
     "idx": "orders",
     "q": "orders | q=(country:FR and status:(new or paid or shipped or cancelled or refunded or +3))",
     "sig": "orders | q=(country:? and status:(? or ? or ? or ? or ? or +3))",
-    "hash": "q3:e9794c1be608"
+    "hash": "q4:e9794c1be608"
 }

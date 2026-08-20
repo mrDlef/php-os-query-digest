@@ -21,13 +21,18 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 | `q1:` | v0.1.0 | the first published rules |
 | `q2:` | v0.2.0 | three query types promoted out of `type(?)` |
 | `q3:` | v0.6.0 | eight more promoted |
-| `q3x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
+| `q4:` | v0.10.0 | the older `from`/`to` spelling of a range is read, and a range left without bounds became an `exists` |
+| `q4x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
 ## v0.10.0 — unreleased
 
 _the report you can run before you integrate anything_
 
-**Fingerprints:** `q3:` unchanged.
+**Fingerprints:** `q3:` → `q4:` — a range written the older way is now read
+rather than shrugged at. **Every hex is unchanged**: a signature that did not
+move kept its twelve characters, so `q3:fe168406e702` and `q4:fe168406e702`
+describe the same query, and a dashboard grouping by hash needs its stored
+values re-prefixed, not recomputed.
 
 ### `os-query-digest slowlog`
 
@@ -113,6 +118,42 @@ have:
   configuration file 2.19.6 escapes it once with. Every 3.8.0 JSON record was
   unreadable until that layer was taken off — through the decoder rather than by
   stripping backslashes, so an escaped quote inside the query survives.
+
+### A range you could not read, in every slow log record
+
+`{"range": {"@timestamp": {"gte": "now-15m"}}}` was rendered. The same range
+as the shard rewrote it — `{"from": …, "to": …, "include_lower": true}` — was
+not, and came out as `range(?)`, which does not even name the field. Since every
+record in a slow log carries the rewritten form, the report was unreadable
+exactly where it mattered:
+
+```
+logs-* | q=(not status:? and range(?) and service:?)      before
+logs-* | q=(@timestamp:* and not status:? and service:?)  after
+```
+
+Two rules, both reported by `explain()`:
+
+- **`from`/`to` with `include_lower`/`include_upper` are read as
+  `gte`/`gt`/`lte`/`lt`.** The two spellings are one query, and they now share a
+  fingerprint: `{"from": 20, "to": 150}` and `{"gte": 20, "lte": 150}` hash
+  identically, which is the same trade `bool.filter` → `and` makes.
+- **A range left with no bound at all becomes an `exists`.** It matches every
+  document that has the field, which is what `@timestamp:*` says — and says
+  better than `range(?)` did. A shard rewrites a range every document satisfies
+  into exactly that.
+
+A payload naming no bound and no bound setting is still opaque: `range(?)` is
+what "this library failed to read it" looks like, and it should keep meaning
+that.
+
+**This is why the prefix moved.** No committed fixture changed — none of them
+used the older spelling — so `make release-check` had nothing to report, and the
+decision could not be a mechanical one. The hashes that do move are those of
+queries that read as `range(?)` until now.
+
+`tests/fixtures/18-rewritten-range` is a record captured from a live 2.19.6 node,
+kept as the fixture for exactly this, and it is a playground preset too.
 
 ### The fingerprint flags now live in one place
 

@@ -8,7 +8,7 @@ namespace MrDlef\OsQueryDigest\Fingerprint;
  * sha256, truncated, and prefixed with the algorithm version.
  *
  * The prefix is not decoration: when the normalisation rules change, every
- * hash changes. Carrying `q1:` / `q2:` / `q3:` in the value makes that break visible in
+ * hash changes. Carrying `q1:` / `q2:` / `q3:` / `q4:` in the value makes that break visible in
  * the data rather than silently invalidating existing dashboards.
  *
  * xxh3 would be faster but only exists from PHP 8.1, and this library targets

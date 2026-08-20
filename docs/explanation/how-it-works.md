@@ -45,7 +45,7 @@ echo $explanation;
 ```
 text: logs-* | q=(env:prod and msg:timeout and service:api) | size=0 | should=1
 sig:  logs-* | q=(env:? and msg:~? and service:?) | size=0 | should=1
-hash: q3:a5d822c18ab3
+hash: q4:a5d822c18ab3
 notes: should=1
 
 rules applied:

@@ -85,8 +85,8 @@ function check(string $version, string $body): int
         fwrite(STDERR, sprintf(
             "%s has no usable `Fingerprints:` line.\n"
             . "Write one of:\n"
-            . "  **Fingerprints:** `q3:` unchanged.\n"
-            . "  **Fingerprints:** `q3:` → `q4:` — why.\n",
+            . "  **Fingerprints:** `q4:` unchanged.\n"
+            . "  **Fingerprints:** `q4:` → `q5:` — why.\n",
             $version,
         ));
 

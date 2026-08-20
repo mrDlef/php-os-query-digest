@@ -2,5 +2,5 @@
     "idx": "articles",
     "q": "articles | q=(script(doc['word_count'].value > params.floor) and title|body:like(\"distributed consensus algorithms\")) | size=10",
     "sig": "articles | q=(script(?) and title|body:like(?)) | size=10",
-    "hash": "q3:522066bb4084"
+    "hash": "q4:522066bb4084"
 }

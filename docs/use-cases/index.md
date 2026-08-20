@@ -65,10 +65,10 @@ one afternoon, and four query shapes:
 
 | shape | what it is | how it behaves |
 |---|---|---|
-| `q3:fe168406e702` | the error-rate filter | 1200/hour, 8 ms, all afternoon |
-| `q3:63a1ca5c80b9` | a dashboard's aggregation | 60/hour, and it changes at 14:00 |
-| `q3:e9794c1be608` | a report over `orders` | 5/hour, and always slow |
-| `q3:4dde138a2ad7` | a vector search | does not exist before 15:00 |
+| `q4:fe168406e702` | the error-rate filter | 1200/hour, 8 ms, all afternoon |
+| `q4:63a1ca5c80b9` | a dashboard's aggregation | 60/hour, and it changes at 14:00 |
+| `q4:e9794c1be608` | a report over `orders` | 5/hour, and always slow |
+| `q4:4dde138a2ad7` | a vector search | does not exist before 15:00 |
 
 Two things happened that afternoon, an hour apart, and telling them apart is
 the whole exercise: **something got slow at 14:00, and a deploy shipped at

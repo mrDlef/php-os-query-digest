@@ -90,6 +90,76 @@ final class CanonicalizationTest extends TestCase
         self::assertSame($this->hash($a), $this->hash($b));
     }
 
+    /**
+     * The spelling that predates `gte`/`lte`, and the one a shard rewrites every
+     * range into before running it — so a slow log record and the request that
+     * produced it describe the same shape.
+     */
+    public function testTheOlderRangeSpellingIsTheSameQuery(): void
+    {
+        $modern = ['query' => ['range' => ['price' => ['gte' => 20, 'lte' => 150]]]];
+        $legacy = ['query' => ['range' => ['price' => [
+            'from' => 20,
+            'to' => 150,
+            'include_lower' => true,
+            'include_upper' => true,
+            'boost' => 1.0,
+        ]]]];
+
+        self::assertSame($this->hash($modern), $this->hash($legacy));
+    }
+
+    public function testTheInclusivityFlagsAreRead(): void
+    {
+        $exclusive = ['query' => ['range' => ['price' => [
+            'from' => 20,
+            'to' => 150,
+            'include_lower' => false,
+            'include_upper' => false,
+        ]]]];
+
+        self::assertSame(
+            'q=(price > 20 and price < 150)',
+            $this->formatter->describe($exclusive)->text(),
+        );
+        self::assertNotSame(
+            $this->hash(['query' => ['range' => ['price' => ['gte' => 20, 'lte' => 150]]]]),
+            $this->hash($exclusive),
+        );
+    }
+
+    /**
+     * A range with every bound gone still requires the field to be there, which
+     * is what an exists query says — and says better than `range(?)` did.
+     */
+    public function testARangeWithNoBoundsLeftIsAnExists(): void
+    {
+        $unbounded = ['query' => ['range' => ['ts' => [
+            'from' => null,
+            'to' => null,
+            'include_lower' => true,
+            'include_upper' => true,
+        ]]]];
+
+        self::assertSame('q=(ts:*)', $this->formatter->describe($unbounded)->text());
+        self::assertSame(
+            $this->hash(['query' => ['exists' => ['field' => 'ts']]]),
+            $this->hash($unbounded),
+        );
+    }
+
+    /**
+     * Not everything unreadable inside a `range` is an unbounded range: a
+     * payload naming no bound and no bound setting is still something this
+     * library failed to read, and says so.
+     */
+    public function testAnUnreadableRangePayloadStaysOpaque(): void
+    {
+        $digest = $this->formatter->describe(['query' => ['range' => ['ts' => ['whatever' => 1]]]]);
+
+        self::assertSame('q=(range(?))', $digest->text());
+    }
+
     public function testMustNotIsNotDeMorganed(): void
     {
         // must_not: [A, B] is (NOT A) AND (NOT B), never NOT (A AND B).
