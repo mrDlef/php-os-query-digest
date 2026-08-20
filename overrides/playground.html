@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{#
+  The playground, as a page of this site rather than an application parked beside
+  it. Selected by `template: playground.html` in docs/playground.md, whose prose
+  arrives through {{ super() }} in the content block below.
+
+  Three deliberate choices:
+
+  base.html, not main.html — main.html carries the strip that points here, and a
+  page does not advertise itself.
+
+  The markup lives here rather than in the markdown because it is markup. Every
+  id is prefixed `pg-`: it shares a document with headings whose anchors are
+  slugs, and `body`, `text`, `notes` and `status` are all slugs waiting to happen.
+
+  What is deliberately *not* here is the stylesheet and the module. Both are
+  declared site-wide in mkdocs.yml, because instant navigation swaps neither the
+  <head> nor the scripts at the end of the body: an asset this template declared
+  would be missing on every arrival that was not a page load.
+#}
+
+{% block content %}
+  {{ super() }}
+
+  <div class="playground" id="pg-app">
+    <nav class="presets" aria-label="Example queries">
+      <span class="presets-label">examples</span>
+      <div id="pg-presets" class="preset-chips"></div>
+    </nav>
+
+    <div class="panes">
+      <section class="pane" aria-labelledby="pg-input-heading">
+        <h2 id="pg-input-heading">Query</h2>
+
+        <label class="field">
+          <span>index</span>
+          <input id="pg-index" type="text" spellcheck="false" autocomplete="off"
+                 placeholder="logs-2026.08.13">
+        </label>
+
+        <label class="field">
+          <span>search body, or an {"index": …, "body": …} envelope</span>
+          <textarea id="pg-body" spellcheck="false" autocomplete="off" rows="18"></textarea>
+        </label>
+
+        <details id="pg-options-box">
+          <summary>options <span id="pg-options-summary" class="muted"></span></summary>
+          <div class="options">
+            <fieldset>
+              <legend>normalization</legend>
+              <div id="pg-levels" class="radios"></div>
+            </fieldset>
+
+            <label class="option"><span>max clauses</span>
+              <input id="pg-maxClauses" type="text" inputmode="numeric" size="5"></label>
+            <label class="option"><span>max values</span>
+              <input id="pg-maxValues" type="text" inputmode="numeric" size="5"></label>
+            <label class="option"><span>max length</span>
+              <input id="pg-maxLength" type="text" inputmode="numeric" size="5"></label>
+
+            <label class="option checkbox"><input id="pg-aggNames" type="checkbox">
+              <span>keep aggregation names</span></label>
+            <label class="option checkbox"><input id="pg-rawIndex" type="checkbox">
+              <span>keep dated index names</span></label>
+
+            <p class="muted note">A cap accepts a number or <code>none</code>.
+            Changing anything here needs PHP, so the runtime loads.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="pane" aria-labelledby="pg-result-heading">
+        <h2 id="pg-result-heading">Digest</h2>
+        <p class="hint muted">paste <code>text</code> into Dashboards ·
+        read <code>sig</code> for the shape · <code>terms</code>-aggregate on
+        <code>hash</code></p>
+
+        <div id="pg-error" class="error" hidden></div>
+
+        <dl class="digest">
+          <dt>idx</dt><dd id="pg-idx" class="mono"></dd>
+          <dt>text</dt><dd id="pg-text" class="mono wrap"></dd>
+          <dt>sig</dt><dd id="pg-sig" class="mono wrap"></dd>
+          <dt>hash</dt><dd id="pg-hash" class="mono hash"></dd>
+        </dl>
+
+        <div id="pg-notes-box" class="notes" hidden>
+          <h3>notes</h3>
+          <ul id="pg-notes"></ul>
+        </div>
+
+        <div class="actions">
+          <button id="pg-pin" type="button">Pin as reference</button>
+          <button id="pg-copy-link" type="button">Copy link</button>
+        </div>
+
+        <div id="pg-compare" class="compare" hidden>
+          <h3>against the pinned query <button id="pg-unpin" type="button" class="link">forget</button></h3>
+          <p id="pg-compare-verdict"></p>
+          <ul id="pg-compare-rules"></ul>
+        </div>
+
+        <div class="rules">
+          <h3>rules applied <span id="pg-rules-count" class="muted"></span></h3>
+          <ul id="pg-rules"></ul>
+          <p id="pg-rules-empty" class="muted" hidden>
+            No normalisation rule fired: the query was already canonical.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <div id="pg-status" class="status">
+      <span id="pg-engine" class="engine">precomputed</span>
+      <span id="pg-engine-detail" class="muted"></span>
+      <button id="pg-boot" type="button">Run it for real</button>
+    </div>
+  </div>
+{% endblock %}

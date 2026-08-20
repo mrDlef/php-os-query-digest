@@ -9,7 +9,7 @@ export DOCKER_UID := $(shell id -u)
 export DOCKER_GID := $(shell id -g)
 
 .PHONY: test test-all stan cs cs-check rector rector-check check hooks fixtures spec \
-        playground playground-data playground-check mutation \
+        playground playground-data playground-runtime playground-check mutation \
         release-check release-notes bench docs docs-build docs-playground \
         certify integration clusters clusters-down clean
 
@@ -81,18 +81,19 @@ palette:
 playground-runtime:
 	@php tools/fetch-runtime.php
 
-## Serve the playground on :8080. Static files only, and nothing leaves the
-## origin: the wasm is served from playground/runtime, not a CDN.
-playground: playground-data playground-runtime
-	@echo "→ http://localhost:8080"
-	@php -S localhost:8080 -t playground
+## Serve the playground, which means serving the site: it is a page of the
+## documentation now, generated from overrides/playground.html. Regenerates its
+## data first, then hands over to `make docs`.
+playground: playground-data
+	@$(MAKE) docs
 
-## Drive the playground in a real browser and assert what it renders.
+## Drive the playground in a real browser and assert what it renders. Against
+## the built site, since that is where the page is assembled.
 ##   npm install -g playwright && npx playwright install chromium
 ## NODE_PATH is how node finds a globally installed playwright. CI never runs
 ## this: the guard that has to be automatic is PlaygroundTest, which needs
 ## neither node nor a browser.
-playground-check: playground-runtime
+playground-check: docs-build
 	NODE_PATH="$${NODE_PATH:-$$(npm root -g)}" node tools/playground-browser-check.mjs
 
 ## Refresh the OpenSearch spec snapshot, then let the tests flag what changed.
@@ -139,9 +140,10 @@ docs-build: docs-playground
 	@docker run --rm -v "$(PWD)":/docs -u "$(shell id -u):$(shell id -g)" \
 		$(MKDOCS_IMAGE) build --strict
 
-## The playground is copied into docs/ so MkDocs owns /playground/ and every
-## link to it can stay relative. Gitignored: the committed copy is playground/.
-docs-playground:
+## What the playground page loads — its stylesheet, its module, the generated
+## data, the wasm runtime — copied where MkDocs will emit it beside the page it
+## generates at the same path. Gitignored: the committed copy is playground/.
+docs-playground: playground-runtime
 	@rm -rf docs/playground && cp -r playground docs/playground
 
 ## What a digest costs on the request path, measured on the committed fixtures.

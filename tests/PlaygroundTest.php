@@ -28,6 +28,15 @@ final class PlaygroundTest extends TestCase
 
     private const PAGE = __DIR__ . '/../playground';
 
+    /** The markup, which MkDocs renders at /playground/ for docs/playground.md. */
+    private const TEMPLATE = __DIR__ . '/../overrides/playground.html';
+
+    private const MARKDOWN = __DIR__ . '/../docs/playground.md';
+
+    private const LOADER = __DIR__ . '/../docs/javascripts/playground.js';
+
+    private const CONFIG = __DIR__ . '/../mkdocs.yml';
+
     /**
      * The page's own claim is that nothing it loads comes from anywhere but the
      * site serving it — which is why the wasm runtime is fetched at build time
@@ -36,28 +45,129 @@ final class PlaygroundTest extends TestCase
      * Matched on hosts rather than on the shape of a loader call: the URL that
      * used to be here reached `import()` through a constant, so a pattern
      * looking for `import('https://…')` would have passed the very code this
-     * exists to forbid. Two hosts are allowed and both are anchors — a link the
-     * reader may click is not a request the page makes.
+     * exists to forbid. No host at all is allowed now — the two links the
+     * standalone page carried are the site's own header and footer since it
+     * became a page of it.
      */
-    public function testThePageReferencesNoHostButTheTwoItLinksTo(): void
+    public function testTheseFilesNameNoHostAtAll(): void
     {
-        $allowed = ['github.com', 'packagist.org'];
+        $files = [
+            self::TEMPLATE,
+            self::LOADER,
+            self::PAGE . '/playground.js',
+            self::PAGE . '/playground.css',
+        ];
 
-        foreach (['index.html', 'playground.js', 'playground.css'] as $file) {
-            $source = (string) file_get_contents(self::PAGE . '/' . $file);
+        foreach ($files as $file) {
+            $source = (string) file_get_contents($file);
 
             preg_match_all('#\bhttps?://([a-z0-9.-]+)#i', $source, $found);
 
-            foreach (array_unique($found[1]) as $host) {
-                self::assertContains(
-                    strtolower($host),
-                    $allowed,
-                    $file . ' names ' . $host . '. The runtime is fetched by '
-                    . 'tools/fetch-runtime.php and served from this site; nothing here '
-                    . 'may load from another origin.',
-                );
-            }
+            self::assertSame(
+                [],
+                array_values(array_unique($found[1])),
+                basename($file) . ' names a host. The runtime is fetched by '
+                . 'tools/fetch-runtime.php and served from this site; nothing the '
+                . 'playground loads may come from another origin.',
+            );
         }
+    }
+
+    /**
+     * The markup is in a template and the code that drives it is in a module, so
+     * a renamed id breaks the page in a way no PHP test would otherwise see —
+     * and the browser check that would see it is deliberately not in CI.
+     */
+    public function testEveryElementTheModuleAsksForExistsInTheMarkup(): void
+    {
+        $module = (string) file_get_contents(self::PAGE . '/playground.js');
+        $markup = (string) file_get_contents(self::TEMPLATE);
+
+        preg_match("/const el = \(id\) => document\.getElementById\('([a-z-]+)' \+ id\)/", $module, $matched);
+        $prefix = $matched[1] ?? null;
+        self::assertIsString(
+            $prefix,
+            'The module no longer looks elements up through one prefixed helper; this test reads that helper.',
+        );
+
+        preg_match_all("/\bel\('([a-zA-Z-]+)'\)/", $module, $matches);
+        $asked = $matches[1];
+        self::assertNotSame([], $asked, 'The module asks for no element; this test is reading the wrong file.');
+
+        preg_match_all('/\bid="([a-zA-Z-]+)"/', $markup, $matches);
+        $ids = $matches[1];
+
+        foreach (array_unique($asked) as $id) {
+            self::assertContains(
+                $prefix . $id,
+                $ids,
+                'The module asks for #' . $prefix . $id . ', which the markup does not define.',
+            );
+        }
+
+        self::assertContains($prefix . 'app', $ids, 'The markup has no root for the module to find.');
+    }
+
+    /**
+     * The stylesheet and the module have to be the site's rather than the page's,
+     * and the reason is not stylistic: instant navigation swaps neither the
+     * <head> nor the scripts at the end of the body, so anything this page alone
+     * declared is simply absent when a reader arrives by an internal link. The
+     * page then renders unstyled, or inert, for every visitor who did not land on
+     * it first — and `mkdocs build` is perfectly happy.
+     *
+     * `make playground-check` catches it in a browser. It is not in CI, so this
+     * is the guard that is.
+     */
+    public function testTheAssetsAreDeclaredForTheSiteAndNotForThePage(): void
+    {
+        $config = (string) file_get_contents(self::CONFIG);
+
+        self::assertStringContainsString(
+            '- playground/playground.css',
+            $config,
+            'The stylesheet is not in extra_css, so it will not be there on an instant arrival.',
+        );
+        self::assertMatchesRegularExpression(
+            '/-\s+path:\s+javascripts\/playground\.js\s+type:\s+module/',
+            $config,
+            'The loader is not in extra_javascript as a module, so nothing imports the playground.',
+        );
+
+        $template = (string) file_get_contents(self::TEMPLATE);
+
+        self::assertStringNotContainsString(
+            '<link',
+            $template,
+            'The template declares a stylesheet. Instant navigation does not swap the <head>.',
+        );
+        self::assertStringNotContainsString(
+            '<script',
+            $template,
+            'The template declares a script. Instant navigation does not re-run the page\'s scripts.',
+        );
+    }
+
+    /**
+     * Without the template the page renders its prose and nothing else: no
+     * markup, no stylesheet, no module. And a playground/index.html would be
+     * copied over the page MkDocs generates at the same path, silently.
+     */
+    public function testThePageSelectsTheTemplateAndNothingShadowsIt(): void
+    {
+        $markdown = (string) file_get_contents(self::MARKDOWN);
+
+        self::assertStringContainsString(
+            'template: playground.html',
+            $markdown,
+            'docs/playground.md does not select the template that carries the application.',
+        );
+
+        self::assertFileDoesNotExist(
+            self::PAGE . '/index.html',
+            'playground/index.html is copied into docs/playground/ and would take the path '
+            . 'MkDocs generates the page at.',
+        );
     }
 
     /**

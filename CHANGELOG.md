@@ -23,6 +23,79 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 | `q3:` | v0.6.0 | eight more promoted |
 | `q3x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
+## v0.9.0 — unreleased
+
+_the playground is a page of the documentation_
+
+**Fingerprints:** `q3:` unchanged.
+
+### One page instead of two
+
+The playground was an application parked beside the site: its own document, its
+own masthead, its own copy of the links, its own header — sharing a palette with
+the documentation and nothing else. It is
+[a page of it](https://mrdlef.github.io/php-os-query-digest/playground/) now.
+`docs/playground.md` carries the prose and `overrides/playground.html` the
+markup, so the site's header, footer, search and palette switch are the site's,
+declared once. The stylesheet lost `body`, `h1`, `a`, `code`, the box-sizing
+reset and the font stack — eleven bare elements Material already styles — and
+everything left is scoped to `.playground`.
+
+The panes are the same width they were, 586 px each: the page hides the
+navigation sidebar and the table of contents, which leaves Material's grid at the
+1200-odd pixels the standalone page set for itself.
+
+**The dark scheme is now the reader's choice rather than the operating system's.**
+It was `@media (prefers-color-scheme: dark)`, which ignored the switch in the
+header; it follows `[data-md-color-scheme="slate"]` like the rest of the site.
+
+### What instant navigation costs, and what it teaches
+
+`navigation.instant` swaps the parts of a document Material knows about. It does
+not re-run the `<head>`, and it does not re-run the scripts at the end of the
+body — so **a stylesheet or a module that only one page declares is missing for
+every reader who arrives by a link rather than a reload.** The page renders
+unstyled, or renders and does nothing, and `mkdocs build --strict` is perfectly
+happy. Both are declared for the whole site instead: the stylesheet is inert
+outside `.playground`, and the module is loaded by nine lines that import it when
+a document actually contains the playground.
+
+The module then boots on a signal rather than on being loaded — `document$`, which
+emits on load and on every navigation — and its boot is idempotent, flagged on the
+root element rather than in the module, so a document that has just been replaced
+boots while the one it replaced cannot boot twice. The interpreter outlives the
+page: navigating away and back no longer costs 3.1 MB twice. Every asset resolves
+against `import.meta.url`, because the document's base moves and the module's does
+not.
+
+**This was found by a test that first passed for the wrong reason.** Material
+decides which links to intercept from `sitemap.xml`, whose URLs are absolute and
+built from `site_url` — so on any origin but the published one, every link is an
+ordinary page load and instant navigation never happens at all. Served from
+`127.0.0.1`, the new check went green against the very failure it was written for.
+It rewrites the sitemap to its own origin now, and the assertion it added is that
+the document was never reloaded.
+
+### The guards
+
+`make playground-check` drives the built site, since that is where the page is
+assembled — seventeen presets, a permalink, an arrival by internal link — but it
+needs node and a browser and is deliberately not in CI. So three things it would
+catch are now in the suite that runs everywhere:
+
+- **every id the module asks for exists in the markup**, which is the failure a
+  split between a template and a module makes possible. Ids are prefixed `pg-`
+  now: the page shares a document with headings whose anchors are slugs, and
+  `body`, `text`, `notes` and `status` are all slugs waiting to happen;
+- **the stylesheet and the module are declared for the site**, not by the page;
+- **the page selects the template**, and no `playground/index.html` exists to be
+  copied over the page MkDocs generates at that path.
+
+`PaletteTest` reads the dark block from a selector at the start of a line rather
+than the first mention of one anywhere in the file. The stylesheet now explains in
+a comment why the scheme is an attribute and not a media query, and that sentence
+was enough to make every light value resolve to nothing.
+
 ## v0.8.0 — 2026-08-20
 
 _a documentation site, and a playground that answers to nobody_

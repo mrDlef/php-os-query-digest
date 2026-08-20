@@ -78,11 +78,26 @@ markdown_extensions:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
+# Both of the playground's assets are the site's, not the page's: instant
+# navigation swaps neither the <head> nor the trailing scripts, so a stylesheet
+# or a module declared by one page alone never applies when that page is arrived
+# at rather than loaded. Everything in playground.css is scoped to .playground,
+# and javascripts/playground.js does nothing until a document contains it.
 extra_css:
   - stylesheets/extra.css
+  - playground/playground.css
+
+extra_javascript:
+  - path: javascripts/playground.js
+    type: module
 
 plugins:
   - search
+
+# Outside the nav on purpose (see the note below the tree), which MkDocs would
+# otherwise report on every build.
+not_in_nav: |
+  playground.md
 
 nav:
   - Home: index.md
@@ -110,16 +125,18 @@ nav:
       - What it costs: explanation/performance.md
       - How the playground works: explanation/playground.md
 
-# The playground application is copied into docs/ before the build, so MkDocs
-# owns /playground/ and emits it verbatim. That is what keeps every link to it
-# relative: the site is served from a subdirectory on GitHub Pages, where a
-# root-relative /playground/ would resolve off the site entirely.
+# docs/playground.md *is* the playground: it selects overrides/playground.html,
+# which carries the application's markup, its stylesheet and its module. What the
+# workflow copies into docs/playground/ is only what the page loads — the
+# stylesheet, the module, the generated data and the wasm runtime — and MkDocs
+# emits those verbatim beside the page it generates at the same path.
+#
+# So the two must not both claim /playground/index.html. They no longer can:
+# playground/ holds no index.html, and the Pages workflow checks that the built
+# page is the application rather than a stray copy.
 #
 # It is deliberately not a nav entry — the announcement strip carries it, on
-# every page. Never add a docs page called playground.md: it maps to the same
-# output path and silently replaces the application's index.html, leaving its
-# data files orphaned. MkDocs does not warn, so the Pages workflow checks that
-# the built page is still the application.
+# every page, and the page itself hides the sidebar to give two panes the width.
 
 extra:
   social:

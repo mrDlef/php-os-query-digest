@@ -3,6 +3,11 @@
  *
  *     make playground-check
  *
+ * It serves the *built site*, because the playground is a page of it now: the
+ * markup comes from overrides/playground.html through MkDocs, so a check against
+ * the source directory would test something nobody visits. `make playground-check`
+ * builds the site first.
+ *
  * Needs node, playwright and a Chromium:
  *
  *     npm install -g playwright && npx playwright install chromium
@@ -63,9 +68,13 @@ const check = (name, actual, expected) => {
     failures.push(name);
 };
 
-const server = spawn('php', ['-S', `127.0.0.1:${PORT}`, '-t', path.join(ROOT, 'playground')], {
-    stdio: 'ignore',
-});
+const SITE = path.join(ROOT, 'site');
+if (!fs.existsSync(path.join(SITE, 'playground/index.html'))) {
+    console.error('No built site. Run: make docs-build');
+    process.exit(2);
+}
+
+const server = spawn('php', ['-S', `127.0.0.1:${PORT}`, '-t', SITE], { stdio: 'ignore' });
 const stop = () => { try { server.kill(); } catch { /* already gone */ } };
 process.on('exit', stop);
 
@@ -75,6 +84,23 @@ const browser = await chromium.launch(
     process.env.PLAYWRIGHT_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE } : {},
 );
 const context = await browser.newContext();
+
+/*
+ * Material decides what to intercept from sitemap.xml, whose URLs are absolute
+ * and come from site_url — so on any origin but the published one, every link is
+ * an ordinary page load and navigation.instant is inert. Served from here, the
+ * one thing this check exists to exercise would silently not happen.
+ *
+ * So the sitemap is rewritten to this origin on the way to the page. Nothing
+ * else is touched, and if a future Material asks for sitemap.xml.gz instead, the
+ * marker assertion below goes red rather than quietly passing.
+ */
+const sitemap = fs.readFileSync(path.join(ROOT, 'site/sitemap.xml'), 'utf8');
+const published = sitemap.match(/<loc>(.*?)<\/loc>/)[1];
+await context.route('**/sitemap.xml', (route) => route.fulfill({
+    contentType: 'application/xml',
+    body: sitemap.replaceAll(published, BASE + '/'),
+}));
 const page = await context.newPage();
 
 let wasmBytes = 0;
@@ -93,75 +119,102 @@ page.on('pageerror', (error) => {
 
 const settle = () => page.waitForTimeout(2500);
 const untilPhp = () => page.waitForFunction(
-    'document.getElementById("engine").textContent.startsWith("php ")',
+    'document.getElementById("pg-engine").textContent.startsWith("php ")',
     null,
     { timeout: 120000 },
 );
 
-await page.goto(BASE + '/', { waitUntil: 'load' });
-await page.waitForFunction('document.getElementById("hash").textContent !== ""');
+await page.goto(BASE + '/playground/', { waitUntil: 'load' });
+await page.waitForFunction('document.getElementById("pg-hash").textContent !== ""');
 
 console.log('\n== opens precomputed, nothing downloaded');
-check('first preset hash', await page.textContent('#hash'), data.presets[0].digest.hash);
-check('engine', (await page.textContent('#engine')).trim(), 'precomputed');
+check('first preset hash', await page.textContent('#pg-hash'), data.presets[0].digest.hash);
+check('engine', (await page.textContent('#pg-engine')).trim(), 'precomputed');
 check('wasm bytes', wasmBytes, 0);
 
 console.log('\n== every preset renders its committed digest');
 for (const [index, preset] of data.presets.entries()) {
-    await page.click(`#presets button[data-index="${index}"]`);
+    await page.click(`#pg-presets button[data-index="${index}"]`);
     await page.waitForFunction(
-        (expected) => document.getElementById('hash').textContent === expected,
+        (expected) => document.getElementById('pg-hash').textContent === expected,
         preset.digest.hash,
         { timeout: 5000 },
     ).catch(() => { /* the assertion below reports it */ });
-    check(preset.id, await page.textContent('#hash'), preset.digest.hash);
+    check(preset.id, await page.textContent('#pg-hash'), preset.digest.hash);
 }
 check('still no wasm', wasmBytes, 0);
 
 console.log('\n== editing boots PHP and agrees with the CLI');
-await page.click('#presets button[data-index="0"]');
-await page.fill('#body', JSON.stringify(TYPED, null, 2));
-await page.fill('#index', TYPED_INDEX);
+await page.click('#pg-presets button[data-index="0"]');
+await page.fill('#pg-body', JSON.stringify(TYPED, null, 2));
+await page.fill('#pg-index', TYPED_INDEX);
 await untilPhp();
-check('hash', await page.textContent('#hash'), CLI_HASH);
-console.log('  ' + (await page.textContent('#engine')).trim()
-    + ' · ' + (await page.textContent('#engine-detail')).trim()
+check('hash', await page.textContent('#pg-hash'), CLI_HASH);
+console.log('  ' + (await page.textContent('#pg-engine')).trim()
+    + ' · ' + (await page.textContent('#pg-engine-detail')).trim()
     + ' · wasm ' + (wasmBytes / 1048576).toFixed(2) + ' MB');
 
 console.log('\n== an option moves the fingerprint');
-await page.click('#options-box summary');
-await page.click('#levels input[value="structural"]');
+await page.click('#pg-options-box summary');
+await page.click('#pg-levels input[value="structural"]');
 await settle();
-const structural = await page.textContent('#hash');
+const structural = await page.textContent('#pg-hash');
 check('structural differs from values', structural !== CLI_HASH, true);
 
 console.log('\n== pin, then edit, reports whether it moved');
-await page.click('#pin');
-await page.fill('#body', JSON.stringify({ query: { term: { service: 'worker' } }, size: 50 }, null, 2));
+await page.click('#pg-pin');
+await page.fill('#pg-body', JSON.stringify({ query: { term: { service: 'worker' } }, size: 50 }, null, 2));
 await settle();
-check('comparison shown', await page.isVisible('#compare'), true);
+check('comparison shown', await page.isVisible('#pg-compare'), true);
 // Under `structural` the literal is erased, so two services are one shape.
-check('same shape under structural', (await page.textContent('#compare-verdict')).includes('Same fingerprint'), true);
+check('same shape under structural', (await page.textContent('#pg-compare-verdict')).includes('Same fingerprint'), true);
 
 console.log('\n== a permalink restores the query and runs it');
 const link = await page.evaluate('location.href');
-const expected = await page.textContent('#hash');
+const expected = await page.textContent('#pg-hash');
 const shared = await context.newPage();
 await shared.goto(link, { waitUntil: 'load' });
 await shared.waitForFunction(
-    'document.getElementById("engine").textContent.startsWith("php ")',
+    'document.getElementById("pg-engine").textContent.startsWith("php ")',
     null,
     { timeout: 120000 },
 );
-check('permalink hash', await shared.textContent('#hash'), expected);
+check('permalink hash', await shared.textContent('#pg-hash'), expected);
+// navigation.tracking rewrites the hash to the heading in view as you scroll,
+// which would eat the permalink. The page hides the table of contents, so there
+// are no anchors to track — this is the test of that reasoning.
+await shared.mouse.wheel(0, 1200);
+await shared.waitForTimeout(600);
+check('scrolling left the permalink alone', (await shared.evaluate('location.hash')).startsWith('#b='), true);
+
+console.log('\n== reached by an internal link, not a reload');
+// The one failure mode the site brings with it: navigation.instant swaps the
+// document without re-evaluating a module that has already been evaluated, so a
+// playground that boots at import time is inert when it is arrived at rather
+// than loaded. It boots from document$ instead, and this is the test of that.
+const walked = await context.newPage();
+await walked.goto(BASE + '/', { waitUntil: 'load' });
+// The marker proves the navigation was the instant kind. Without it this test
+// would pass on a full page load, which is the case that never broke.
+await walked.evaluate('window.__notReloaded = true');
+await walked.click('a.announce-playground');
+await walked.waitForFunction(
+    'document.getElementById("pg-hash") !== null && document.getElementById("pg-hash").textContent !== ""',
+    null,
+    { timeout: 15000 },
+).catch(() => { /* reported below */ });
+check('instant navigation left a live form', await walked.textContent('#pg-hash'), data.presets[0].digest.hash);
+check('and the URL is the page', new URL(await walked.evaluate('location.href')).pathname, '/playground/');
+check('and the document was never reloaded', await walked.evaluate('window.__notReloaded === true'), true);
+await walked.close();
 
 console.log('\n== an unparseable query is reported');
-await page.fill('#body', '{not json');
+await page.fill('#pg-body', '{not json');
 await settle();
-check('error visible', await page.isVisible('#error'), true);
+check('error visible', await page.isVisible('#pg-error'), true);
 check(
     'the library said it',
-    (await page.textContent('#error')).includes('could not be decoded as JSON'),
+    (await page.textContent('#pg-error')).includes('could not be decoded as JSON'),
     true,
 );
 
