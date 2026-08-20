@@ -95,6 +95,9 @@ browser playground.
 
 ## What you get
 
+- **You can try it before integrating.** `os-query-digest slowlog` reads the
+  slow log your cluster already writes and ranks the query *shapes* in it by
+  what they cost — no code change, nothing to deploy, no index to create.
 - **Logs you can read.** One line replaces the body — and it is DQL, so you
   select it, paste it into the Dashboards search bar, and you are looking at the
   same query.
@@ -119,7 +122,7 @@ browser playground.
 | [Getting started](https://mrdlef.github.io/php-os-query-digest/getting-started/) | install to a readable log line, in five minutes |
 | [Log your queries](https://mrdlef.github.io/php-os-query-digest/guides/logging/) | the Monolog processor, and how to read the line |
 | [Options](https://mrdlef.github.io/php-os-query-digest/guides/options/) | normalisation levels, redaction, display limits |
-| [Command line](https://mrdlef.github.io/php-os-query-digest/guides/cli/) | `--ndjson`, `--explain`, `--hash` |
+| [Command line](https://mrdlef.github.io/php-os-query-digest/guides/cli/) | `slowlog`, `--ndjson`, `--explain`, `--hash` |
 | [How the fingerprint works](https://mrdlef.github.io/php-os-query-digest/explanation/how-it-works/) | why two different-looking queries share a hash |
 | [Hash stability](https://mrdlef.github.io/php-os-query-digest/explanation/hash-stability/) | read this before storing a fingerprint |
 | [Public API](https://mrdlef.github.io/php-os-query-digest/reference/api/) | the fourteen classes you may depend on |

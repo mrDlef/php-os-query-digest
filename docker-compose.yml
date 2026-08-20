@@ -60,12 +60,18 @@ services:
       #
       # Narrow a run without editing this file:
       #   INFECTION_ARGS="--filter=src/Parser" make mutation
+      #
+      # The run is given no memory ceiling: Infection deletes its tmpDir by
+      # materialising every file in it into one array, so the image's 128M is a
+      # limit on how many mutants may exist, not on what this code does. It is
+      # reached at the end of a green run, and reported as a fatal error with
+      # the score already printed above it.
       INFECTION_ARGS: ${INFECTION_ARGS:-}
     command: >
       sh -c "rm -f composer.lock &&
              composer update --no-progress &&
              COMPOSER_VENDOR_DIR=/app/tools/infection/vendor composer --working-dir=tools/infection install --no-progress &&
-             tools/infection/vendor/bin/infection --threads=max --show-mutations --no-progress --no-interaction $$INFECTION_ARGS;
+             php -d memory_limit=-1 tools/infection/vendor/bin/infection --threads=max --show-mutations --no-progress --no-interaction $$INFECTION_ARGS;
              status=$$?;
              rm -f composer.lock;
              exit $$status"

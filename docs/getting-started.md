@@ -10,6 +10,27 @@ composer require mr-dlef/os-query-digest
 
 Requires PHP 7.4 or newer and `ext-json`. That is the whole dependency list.
 
+## First, on the log you already have
+
+Before touching your code: the binary that ships with the package reads the slow
+log your cluster is already writing, and ranks what is in it by what it costs.
+
+```bash
+$ vendor/bin/os-query-digest slowlog /var/log/opensearch/*_index_search_slowlog.log
+60 lines, 59 records, 3 shapes, 13,515 ms total
+
+  count  total ms*  mean    p95    max  shape
+     41      6,807   166    246    258  q3:fe168406e702
+                                        logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
+      6      5,978   996  1,325  1,325  q3:6b6fb17c6640
+                                        orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)
+```
+
+Two minutes, no code change, nothing deployed — and if that table is not
+interesting on your own traffic, you have your answer before writing a line.
+[The whole sub-command](guides/cli.md#from-the-log-your-cluster-already-writes)
+is one page.
+
 ## Your first digest
 
 Take a request you already send to OpenSearch — the array you hand to

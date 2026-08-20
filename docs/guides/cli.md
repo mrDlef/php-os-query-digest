@@ -33,3 +33,66 @@ different days, with two different `service` values.
 A malformed line is reported on stderr and skipped, so one mangled record does
 not cost you the rest of the file. Exit codes: `0` ok, `1` an input could not be
 parsed, `2` a bad invocation. `--help` lists every flag.
+
+## From the log your cluster already writes
+
+`--ndjson` still asks you for a file of query bodies, which you probably do not
+have yet. Your cluster does: `index.search.slowlog` is on in most of them, and
+`os-query-digest slowlog` reads it as it is.
+
+```bash
+$ vendor/bin/os-query-digest slowlog /var/log/opensearch/*_index_search_slowlog.log
+60 lines, 59 records, 3 shapes, 13,515 ms total
+
+  count  total ms*  mean    p95    max  shape
+     41      6,807   166    246    258  q3:fe168406e702
+                                        logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
+      6      5,978   996  1,325  1,325  q3:6b6fb17c6640
+                                        orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)
+     12        730    61     86     86  q3:810928290c12
+                                        catalog-* | q=(title:~?) | size=10
+```
+
+**No application change, nothing to deploy, no index to create** — and the
+question the whole library exists for is answered on the file you already have.
+
+**Ranked by total time, not by the slowest record.** A query that took 1.3
+seconds once is a bad afternoon; a query that takes 166 ms forty-one times is
+the afternoon, and a slow log lists the second one forty-one times without ever
+adding them up. `--sort` takes `count`, `mean`, `p95` or `max` when you want the
+other reading — `--sort=p95` puts that `date_histogram` on top, which is the
+answer to a different and equally real question.
+
+The second line of each row is the **signature**, not one record's values: under
+a count of forty-one, a single sample's `service` and timestamps would read as
+the group's. `--json` carries both, and labels the sample as one — plus the
+timestamps the group spans, which is how you tell a shape that has always been
+there from one that arrived with this morning's deploy.
+
+```bash
+$ os-query-digest slowlog --json --top=1 slowlog.log | jq '.[0] | {count, p95_ms, first, last}'
+{
+  "count": 41,
+  "p95_ms": 246,
+  "first": "2026-08-20T14:00:03,970",
+  "last": "2026-08-20T14:02:03,355"
+}
+```
+
+Both appenders are read, the plain one and the JSON one beside it, OpenSearch
+and Elasticsearch alike — including Elasticsearch 8, which prefixes every field
+with `elasticsearch.slowlog.`. Files are read a line at a time, so a rotated
+log of any size is fine, and every fingerprint flag above applies here too:
+group the report under the same rules your application logs under, or the two
+are about different things.
+
+**Lines that hold no search record are skipped in silence.** A slow log also
+holds allocation notices and stack traces, and a tool that refused the file over
+them would be useless exactly where it is pointed. One line is *not* treated as
+noise: a record whose `source[` never closes, which is what log rotation does to
+a line. That is reported, because staying quiet about it would understate the
+shape it belonged to.
+
+If nothing in the input is a slow log record, that is an error rather than an
+empty table — pointing this at the wrong file should not look like a healthy
+cluster.

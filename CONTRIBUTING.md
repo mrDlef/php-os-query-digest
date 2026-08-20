@@ -8,7 +8,7 @@ will fail your build if you meet them by surprise.
 
 ```bash
 composer install
-vendor/bin/phpunit          # 184 tests, offline, under a second
+vendor/bin/phpunit          # 215 tests, offline, under a second
 ```
 
 The full gate, which is what CI runs:

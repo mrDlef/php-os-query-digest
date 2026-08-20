@@ -8,16 +8,18 @@ use MrDlef\OsQueryDigest\Exception\InvalidOptionException;
 use MrDlef\OsQueryDigest\Exception\InvalidQueryException;
 use MrDlef\OsQueryDigest\Explain\Explanation;
 use MrDlef\OsQueryDigest\Formatter;
-use MrDlef\OsQueryDigest\IndexNormalizer;
-use MrDlef\OsQueryDigest\Normalization;
 use MrDlef\OsQueryDigest\Options;
 
 /**
  * The library on a pipe.
  *
- * The payoff is `--ndjson --hash`: point it at a slow log and
+ * The payoff is `--ndjson --hash`: point it at a file of query bodies and
  * `sort | uniq -c | sort -rn` answers which *shape* of query is hurting you,
  * which no amount of reading individual slow queries will tell you.
+ *
+ * {@see SlowlogCommand} is the same answer for anyone who has no such file —
+ * read from the log their cluster already writes, and ranked by what each
+ * shape costs rather than counted.
  *
  * Streams are injected rather than taken from the `STDIN` constants so the
  * whole thing is testable in-process, without spawning a shell.
@@ -31,20 +33,16 @@ final class Command
     public const USAGE = 2;
 
     /**
-     * Options that consume a value, in either `--key=value` or `--key value`
-     * form. Everything else is a flag and rejects `=`.
+     * Options this command consumes a value for, in either `--key=value` or
+     * `--key value` form; the fingerprint's own are in {@see FingerprintFlags}.
+     * Everything else is a flag and rejects `=`.
      *
      * @var array<int,string>
      */
-    private const VALUED = [
-        '-i', '--index',
-        '-n', '--normalization',
-        '--max-clauses',
-        '--max-values',
-        '--max-length',
-        '--hash-version',
-        '--hash-length',
-    ];
+    private const VALUED = ['-i', '--index'];
+
+    /** The one sub-command, dispatched before anything is parsed. */
+    private const SLOWLOG = 'slowlog';
 
     private string $name;
 
@@ -86,6 +84,14 @@ final class Command
         $literal = false;
 
         $args = array_slice($argv, 1);
+
+        // Before the options, so the sub-command owns its own flags entirely.
+        // A file actually named `slowlog` is `./slowlog` or `-- slowlog`.
+        if (($args[0] ?? null) === self::SLOWLOG) {
+            return (new SlowlogCommand($this->stdin, $this->stdout, $this->stderr, $this->name))
+                ->run(array_slice($args, 1));
+        }
+
         $count = count($args);
         $i = 0;
 
@@ -111,7 +117,7 @@ final class Command
                 $inline = substr($arg, $equals + 1);
             }
 
-            if (in_array($name, self::VALUED, true)) {
+            if (in_array($name, self::VALUED, true) || in_array($name, FingerprintFlags::VALUED, true)) {
                 if ($inline !== null) {
                     $given = $inline;
                 } elseif ($i < $count) {
@@ -121,41 +127,36 @@ final class Command
                     return $this->fail($name . ' needs a value');
                 }
 
+                if ($name === '-i' || $name === '--index') {
+                    $index = $given;
+
+                    continue;
+                }
+
                 try {
-                    switch ($name) {
-                        case '-i':
-                        case '--index':
-                            $index = $given;
-                            break;
-                        case '-n':
-                        case '--normalization':
-                            $spec['normalization'] = $given;
-                            break;
-                        case '--max-clauses':
-                            $spec['maxClauses'] = self::cap($name, $given);
-                            break;
-                        case '--max-values':
-                            $spec['maxValues'] = self::cap($name, $given);
-                            break;
-                        case '--max-length':
-                            $spec['maxLength'] = self::cap($name, $given);
-                            break;
-                        case '--hash-version':
-                            $spec['hashVersion'] = $given;
-                            break;
-                        case '--hash-length':
-                            $spec['hashLength'] = self::number($name, $given);
-                            break;
-                    }
+                    $updated = FingerprintFlags::valued($spec, $name, $given);
                 } catch (InvalidOptionException $exception) {
                     return $this->fail($exception->getMessage());
                 }
+
+                if ($updated === null) {
+                    return $this->fail('unknown option ' . $name);
+                }
+
+                $spec = $updated;
 
                 continue;
             }
 
             if ($inline !== null) {
                 return $this->fail($name . ' takes no value');
+            }
+
+            $updated = FingerprintFlags::flag($spec, $name);
+            if ($updated !== null) {
+                $spec = $updated;
+
+                continue;
             }
 
             switch ($name) {
@@ -172,12 +173,6 @@ final class Command
                     break;
                 case '--ndjson':
                     $ndjson = true;
-                    break;
-                case '--agg-names':
-                    $spec['aggNames'] = true;
-                    break;
-                case '--raw-index':
-                    $spec['indexNormalizer'] = IndexNormalizer::IDENTITY;
                     break;
                 case '-h':
                 case '--help':
@@ -402,32 +397,6 @@ final class Command
     }
 
     /**
-     * A cap: a number, or `none` to lift it.
-     *
-     * @throws InvalidOptionException
-     */
-    private static function cap(string $option, string $value): ?int
-    {
-        if ($value === 'none') {
-            return null;
-        }
-
-        return self::number($option, $value);
-    }
-
-    /**
-     * @throws InvalidOptionException
-     */
-    private static function number(string $option, string $value): int
-    {
-        if ($value === '' || preg_match('/^\d+$/', $value) !== 1) {
-            throw InvalidOptionException::notAllowed($option, $value, ['a number', 'none']);
-        }
-
-        return (int) $value;
-    }
-
-    /**
      * The JSON of a digest or an explanation, or null when the strings it holds
      * are not valid UTF-8.
      */
@@ -465,7 +434,8 @@ final class Command
 
     private function usage(): string
     {
-        $levels = implode('|', Normalization::LEVELS);
+        $fingerprint = FingerprintFlags::usage();
+        $slowlog = self::SLOWLOG;
 
         return <<<TXT
 {$this->name} — a readable line, a signature and a stable hash for an
@@ -476,6 +446,10 @@ Usage:
 
 Reads a search body, an {"index": …, "body": …} envelope, or the JSON of
 either, from FILE or from stdin (`-` also means stdin).
+
+Sub-commands:
+  {$slowlog} [FILE…]          rank the query shapes in a search slow log, by
+                           what they cost — `{$this->name} {$slowlog} --help`
 
 Output:
   -e, --explain            list the normalisation rules that fired
@@ -488,15 +462,7 @@ Query:
   -i, --index=NAME         the index the query was sent to, when the input is
                            a bare body
 
-Fingerprint:
-  -n, --normalization=L    {$levels} (default: values)
-      --max-clauses=N      sibling clauses rendered per level, or `none`
-      --max-values=N       values rendered inside a terms clause, or `none`
-      --max-length=N       hard cap on the rendered lines, or `none`
-      --agg-names          keep user-given aggregation names
-      --raw-index          do not collapse logs-2026.08.13 to logs-*
-      --hash-version=V     prefix marking which rules produced the hash
-      --hash-length=N      hex characters kept from the sha256
+{$fingerprint}
 
   -h, --help               this text
   -V, --version            the fingerprint version this build produces
