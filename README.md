@@ -45,7 +45,7 @@ thousands of these a day:
 ```
 text  logs-* | q=(@timestamp >= now-15m and @timestamp < now and not status:200 and service:api) | size=50 sort=@timestamp:desc
 sig   logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
-hash  q3:fe168406e702
+hash  q4:fe168406e702
 ```
 
 ```php
@@ -54,7 +54,7 @@ $digest = MrDlef\OsQueryDigest\Formatter::create()
 
 $digest->text();       // the line above — select it, paste it into Dashboards
 $digest->signature();  // the same query with its literals erased: the shape
-$digest->hash();       // q3:fe168406e702 — stable, versioned, groupable
+$digest->hash();       // q4:fe168406e702 — stable, versioned, groupable
 ```
 
 |             | what it is                             | what it is for                          |

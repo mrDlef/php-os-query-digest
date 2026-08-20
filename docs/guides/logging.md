@@ -24,7 +24,7 @@ The digest serialises to a compact object:
   "idx": "logs-*",
   "q": "logs-* | q=(@timestamp >= now-15m and service:api) | size=0",
   "sig": "logs-* | q=(@timestamp >= ? and service:?) | size=0",
-  "hash": "q3:b7cc218cda09"
+  "hash": "q4:b7cc218cda09"
 }
 ```
 

@@ -52,7 +52,7 @@ final class FormatterTest extends TestCase
         $digest = Formatter::create()->describe([], 'idx');
 
         self::assertSame('idx', $digest->text());
-        self::assertMatchesRegularExpression('/^q3:[0-9a-f]{12}$/', $digest->hash());
+        self::assertMatchesRegularExpression('/^q4:[0-9a-f]{12}$/', $digest->hash());
     }
 
     public function testDigestSerialisesToASmallLogPayload(): void

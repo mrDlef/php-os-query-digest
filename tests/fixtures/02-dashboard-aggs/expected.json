@@ -2,5 +2,5 @@
     "idx": "logs-*",
     "q": "logs-* | q=(@timestamp >= now-24h and env:prod) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0",
     "sig": "logs-* | q=(@timestamp >= ? and env:?) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0",
-    "hash": "q3:63a1ca5c80b9"
+    "hash": "q4:63a1ca5c80b9"
 }

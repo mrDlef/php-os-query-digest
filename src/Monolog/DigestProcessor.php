@@ -18,7 +18,7 @@ use MrDlef\OsQueryDigest\Formatter;
  *     ]);
  *
  * The `query` key comes out as `{"idx": "logs-*", "q": "…", "sig": "…",
- * "hash": "q3:…"}` instead of the wall of nested braces. Nothing else in the
+ * "hash": "q4:…"}` instead of the wall of nested braces. Nothing else in the
  * context is touched.
  *
  * The point is that you do not have to change every call site: an application

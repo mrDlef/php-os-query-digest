@@ -105,7 +105,7 @@ namespace MrDlef\OsQueryDigest {
             return $this->signature;
         }
 
-        /** Versioned fingerprint of the signature, e.g. `q3:8f3ac1d2b901`. */
+        /** Versioned fingerprint of the signature, e.g. `q4:8f3ac1d2b901`. */
         public function hash(): string
         {
             return $this->hash;
@@ -372,6 +372,8 @@ namespace MrDlef\OsQueryDigest\Explain {
         // Parse-time rewrites: the DSL shape the library refuses to distinguish.
         public const MUST_FILTER_MERGED = 'must_filter_merged';
         public const BOOST_DROPPED = 'boost_dropped';
+        public const RANGE_LEGACY_BOUNDS = 'range_legacy_bounds';
+        public const RANGE_UNBOUNDED = 'range_unbounded';
         public const SHOULD_BOOST_ONLY = 'should_boost_only';
         public const CONSTANT_SCORE_UNWRAPPED = 'constant_score_unwrapped';
         public const FUNCTION_SCORE_UNWRAPPED = 'function_score_unwrapped';
@@ -405,6 +407,8 @@ namespace MrDlef\OsQueryDigest\Explain {
         private const DESCRIPTIONS = [
             self::MUST_FILTER_MERGED => 'bool.must and bool.filter both became AND: they differ in scoring, not in which documents match.',
             self::BOOST_DROPPED => 'A boost was ignored: it reorders results, it does not change them.',
+            self::RANGE_LEGACY_BOUNDS => 'A range written from/to with inclusivity flags was read as gte/gt/lte/lt: the two spellings are one query, and the older one is what a rewritten record carries.',
+            self::RANGE_UNBOUNDED => 'A range left with no bound became an exists: what it matches is every document that has the field.',
             self::SHOULD_BOOST_ONLY => 'A should group beside a must/filter, with no minimum_should_match, only boosts — moved to the notes instead of being rendered as a filter.',
             self::CONSTANT_SCORE_UNWRAPPED => 'constant_score was replaced by its filter: it only flattens scoring.',
             self::FUNCTION_SCORE_UNWRAPPED => 'function_score was replaced by its inner query: the functions only rescore.',
@@ -721,7 +725,7 @@ namespace MrDlef\OsQueryDigest\Fingerprint {
      * sha256, truncated, and prefixed with the algorithm version.
      *
      * The prefix is not decoration: when the normalisation rules change, every
-     * hash changes. Carrying `q1:` / `q2:` / `q3:` in the value makes that break visible in
+     * hash changes. Carrying `q1:` / `q2:` / `q3:` / `q4:` in the value makes that break visible in
      * the data rather than silently invalidating existing dashboards.
      *
      * xxh3 would be faster but only exists from PHP 8.1, and this library targets
@@ -808,10 +812,10 @@ namespace MrDlef\OsQueryDigest {
          *
          * A registered {@see ClauseRenderer} is a local normalisation rule: it
          * changes the fingerprint of every query using its type. That is exactly
-         * what a prefix bump exists to make visible — `q1:` → `q2:` → `q3:` says
-         * "an older set of rules minted this", and `q3x:` says "someone's plugin
-         * code took part in minting this, so do not expect it to match a stock
-         * digest of the same query".
+         * what a prefix bump exists to make visible — `q1:` → `q2:` → `q3:` → `q4:`
+         * says "an older set of rules minted this", and `q4x:` says "someone's
+         * plugin code took part in minting this, so do not expect it to match a
+         * stock digest of the same query".
          *
          * A plain marker rather than a digest of the registered types: a renderer's
          * *behaviour* can change without its type name changing, so anything more
@@ -1508,7 +1512,7 @@ namespace MrDlef\OsQueryDigest {
          * Bumped whenever the normalisation rules change, so an algorithm change is
          * visible in the data instead of silently rewriting every dashboard.
          */
-        private string $hashVersion = 'q3';
+        private string $hashVersion = 'q4';
 
         private function __construct()
         {
@@ -2347,6 +2351,59 @@ namespace MrDlef\OsQueryDigest\Parser {
         }
 
         /**
+         * The bounds of the older spelling — `from`/`to` with `include_lower` and
+         * `include_upper` beside them — as the four this library renders.
+         *
+         * Worth reading rather than treating as unknown: it is still accepted, and
+         * it is what a search slow log carries, because the shard rewrites every
+         * range into it before running the query.
+         *
+         * @param array<mixed> $bounds
+         *
+         * @return array<string,mixed> lower bound first, so both spellings of one
+         *                             range render in the same order
+         */
+        private function legacyBounds(array $bounds): array
+        {
+            $values = [];
+
+            $from = $bounds['from'] ?? null;
+            if ($from !== null) {
+                $values[($bounds['include_lower'] ?? true) === false ? 'gt' : 'gte'] = $from;
+            }
+
+            $to = $bounds['to'] ?? null;
+            if ($to !== null) {
+                $values[($bounds['include_upper'] ?? true) === false ? 'lt' : 'lte'] = $to;
+            }
+
+            if ($values !== []) {
+                $this->trace->record(Rule::RANGE_LEGACY_BOUNDS);
+            }
+
+            return $values;
+        }
+
+        /**
+         * Whether a payload with no usable bound is still a range — an unbounded
+         * one — rather than something this library has failed to read. Anything
+         * naming a bound, even as null, or configuring how bounds are compared,
+         * is one.
+         *
+         * @param array<mixed> $bounds
+         */
+        private static function isRange(array $bounds): bool
+        {
+            foreach (['from', 'to', 'include_lower', 'include_upper', 'format', 'time_zone', 'relation'] as $key) {
+                if (array_key_exists($key, $bounds)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
          * @param array<mixed> $body
          */
         private function range(array $body): Node
@@ -2371,7 +2428,21 @@ namespace MrDlef\OsQueryDigest\Parser {
                 }
 
                 if ($values === []) {
-                    continue;
+                    $values = $this->legacyBounds($bounds);
+                }
+
+                if ($values === []) {
+                    if (!self::isRange($bounds)) {
+                        continue;
+                    }
+
+                    // Every bound gone, the field still required to be there: that
+                    // is an exists, and rendering it as one says more than
+                    // `range(?)` did. A shard rewrites a range it knows every
+                    // document satisfies into exactly this.
+                    $this->trace->record(Rule::RANGE_UNBOUNDED);
+
+                    return new LeafNode((string) $field, LeafNode::OP_EXISTS);
                 }
 
                 return new LeafNode((string) $field, LeafNode::OP_RANGE, $values);

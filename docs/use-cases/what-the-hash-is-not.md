@@ -20,9 +20,9 @@ $digest = Formatter::create()->describe([
 ```
 
 ```
-tenant 41     q3:b9b2fe44f67a    invoices | q=(@timestamp >= now-1d and tenant_id:41) | size=20
-tenant 42     q3:b9b2fe44f67a    invoices | q=(@timestamp >= now-1d and tenant_id:42) | size=20
-tenant 9999   q3:b9b2fe44f67a    invoices | q=(@timestamp >= now-1d and tenant_id:9999) | size=20
+tenant 41     q4:b9b2fe44f67a    invoices | q=(@timestamp >= now-1d and tenant_id:41) | size=20
+tenant 42     q4:b9b2fe44f67a    invoices | q=(@timestamp >= now-1d and tenant_id:42) | size=20
+tenant 9999   q4:b9b2fe44f67a    invoices | q=(@timestamp >= now-1d and tenant_id:9999) | size=20
 ```
 
 **One hash, three tenants.** Cache on it and tenant 42 is served tenant 41's
@@ -44,7 +44,7 @@ The hash is safe to put anywhere. `os.q` is not, and they arrive together:
   "idx":  "logs-*",
   "q":    "logs-* | q=(email:alice@example.com and status:shipped) | size=20",
   "sig":  "logs-* | q=(email:? and status:?) | size=20",
-  "hash": "q3:614ecdff8fdf"
+  "hash": "q4:614ecdff8fdf"
 }
 ```
 
@@ -65,8 +65,8 @@ Two requests with the same hash can differ by orders of magnitude in `took`. The
 shape is identical; the work is not:
 
 ```
-q3:5b2210eb5318   logs-* | q=(service:?) | size=50    ← service:api        1.2M matches
-q3:5b2210eb5318   logs-* | q=(service:?) | size=50    ← service:cron-jobs      3 matches
+q4:5b2210eb5318   logs-* | q=(service:?) | size=50    ← service:api        1.2M matches
+q4:5b2210eb5318   logs-* | q=(service:?) | size=50    ← service:cron-jobs      3 matches
 ```
 
 Same signature, same hash, wildly different queries to execute. This is why
@@ -96,8 +96,8 @@ And one property worth knowing, which is the reverse of the cache-key problem:
 two queries written differently but asking the same thing land on the same hash.
 
 ```
-filter: [ status:open, team:core ]   →   q3:62a3e27e69de
-filter: [ team:core, status:open ]   →   q3:62a3e27e69de
+filter: [ status:open, team:core ]   →   q4:62a3e27e69de
+filter: [ team:core, status:open ]   →   q4:62a3e27e69de
 ```
 
 Clause order does not survive normalisation, so a refactor that reorders a `bool`

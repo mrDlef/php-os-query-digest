@@ -30,7 +30,7 @@ you can `terms` aggregate on.
 ```
 text  logs-* | q=(@timestamp >= now-15m and @timestamp < now and not status:200 and service:api) | size=50 sort=@timestamp:desc
 sig   logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
-hash  q3:fe168406e702
+hash  q4:fe168406e702
 ```
 
 |             | what it is                             | what it is for                          |

@@ -399,6 +399,59 @@ final class QueryParser
     }
 
     /**
+     * The bounds of the older spelling — `from`/`to` with `include_lower` and
+     * `include_upper` beside them — as the four this library renders.
+     *
+     * Worth reading rather than treating as unknown: it is still accepted, and
+     * it is what a search slow log carries, because the shard rewrites every
+     * range into it before running the query.
+     *
+     * @param array<mixed> $bounds
+     *
+     * @return array<string,mixed> lower bound first, so both spellings of one
+     *                             range render in the same order
+     */
+    private function legacyBounds(array $bounds): array
+    {
+        $values = [];
+
+        $from = $bounds['from'] ?? null;
+        if ($from !== null) {
+            $values[($bounds['include_lower'] ?? true) === false ? 'gt' : 'gte'] = $from;
+        }
+
+        $to = $bounds['to'] ?? null;
+        if ($to !== null) {
+            $values[($bounds['include_upper'] ?? true) === false ? 'lt' : 'lte'] = $to;
+        }
+
+        if ($values !== []) {
+            $this->trace->record(Rule::RANGE_LEGACY_BOUNDS);
+        }
+
+        return $values;
+    }
+
+    /**
+     * Whether a payload with no usable bound is still a range — an unbounded
+     * one — rather than something this library has failed to read. Anything
+     * naming a bound, even as null, or configuring how bounds are compared,
+     * is one.
+     *
+     * @param array<mixed> $bounds
+     */
+    private static function isRange(array $bounds): bool
+    {
+        foreach (['from', 'to', 'include_lower', 'include_upper', 'format', 'time_zone', 'relation'] as $key) {
+            if (array_key_exists($key, $bounds)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param array<mixed> $body
      */
     private function range(array $body): Node
@@ -423,7 +476,21 @@ final class QueryParser
             }
 
             if ($values === []) {
-                continue;
+                $values = $this->legacyBounds($bounds);
+            }
+
+            if ($values === []) {
+                if (!self::isRange($bounds)) {
+                    continue;
+                }
+
+                // Every bound gone, the field still required to be there: that
+                // is an exists, and rendering it as one says more than
+                // `range(?)` did. A shard rewrites a range it knows every
+                // document satisfies into exactly this.
+                $this->trace->record(Rule::RANGE_UNBOUNDED);
+
+                return new LeafNode((string) $field, LeafNode::OP_EXISTS);
             }
 
             return new LeafNode((string) $field, LeafNode::OP_RANGE, $values);

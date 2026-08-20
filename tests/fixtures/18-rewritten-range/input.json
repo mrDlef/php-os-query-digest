@@ -1,0 +1,50 @@
+{
+    "index": "logs-2026.08.20",
+    "request": {
+        "size": 50,
+        "query": {
+            "bool": {
+                "filter": [
+                    {
+                        "term": {
+                            "service": {
+                                "value": "api",
+                                "boost": 1.0
+                            }
+                        }
+                    },
+                    {
+                        "range": {
+                            "@timestamp": {
+                                "from": null,
+                                "to": null,
+                                "include_lower": true,
+                                "include_upper": true,
+                                "boost": 1.0
+                            }
+                        }
+                    }
+                ],
+                "must_not": [
+                    {
+                        "term": {
+                            "status": {
+                                "value": 200,
+                                "boost": 1.0
+                            }
+                        }
+                    }
+                ],
+                "adjust_pure_negative": true,
+                "boost": 1.0
+            }
+        },
+        "sort": [
+            {
+                "@timestamp": {
+                    "order": "desc"
+                }
+            }
+        ]
+    }
+}

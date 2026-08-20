@@ -18,6 +18,8 @@ final class Rule implements \JsonSerializable
     // Parse-time rewrites: the DSL shape the library refuses to distinguish.
     public const MUST_FILTER_MERGED = 'must_filter_merged';
     public const BOOST_DROPPED = 'boost_dropped';
+    public const RANGE_LEGACY_BOUNDS = 'range_legacy_bounds';
+    public const RANGE_UNBOUNDED = 'range_unbounded';
     public const SHOULD_BOOST_ONLY = 'should_boost_only';
     public const CONSTANT_SCORE_UNWRAPPED = 'constant_score_unwrapped';
     public const FUNCTION_SCORE_UNWRAPPED = 'function_score_unwrapped';
@@ -51,6 +53,8 @@ final class Rule implements \JsonSerializable
     private const DESCRIPTIONS = [
         self::MUST_FILTER_MERGED => 'bool.must and bool.filter both became AND: they differ in scoring, not in which documents match.',
         self::BOOST_DROPPED => 'A boost was ignored: it reorders results, it does not change them.',
+        self::RANGE_LEGACY_BOUNDS => 'A range written from/to with inclusivity flags was read as gte/gt/lte/lt: the two spellings are one query, and the older one is what a rewritten record carries.',
+        self::RANGE_UNBOUNDED => 'A range left with no bound became an exists: what it matches is every document that has the field.',
         self::SHOULD_BOOST_ONLY => 'A should group beside a must/filter, with no minimum_should_match, only boosts — moved to the notes instead of being rendered as a filter.',
         self::CONSTANT_SCORE_UNWRAPPED => 'constant_score was replaced by its filter: it only flattens scoring.',
         self::FUNCTION_SCORE_UNWRAPPED => 'function_score was replaced by its inner query: the functions only rescore.',

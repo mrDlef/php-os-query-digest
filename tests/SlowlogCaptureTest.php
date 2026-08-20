@@ -24,7 +24,8 @@ use PHPUnit\Framework\TestCase;
  *   was unreadable before it was handled.
  * - **The body in a record is the query the shard ran, not the one the client
  *   sent** — rewritten, `boost` and `adjust_pure_negative` added, a range
- *   matching nothing collapsed to `match_none`. So these fingerprints are not
+ *   matching nothing collapsed to `match_none`, a range every document
+ *   satisfies stripped of its bounds. So these fingerprints are not
  *   the ones the application would log for the same request, and the pinned
  *   hashes below are the rewritten shapes.
  *
@@ -35,10 +36,10 @@ final class SlowlogCaptureTest extends TestCase
 {
     /** Every version and appender must agree on these, or the reader is guessing. */
     private const SHAPES = [
-        'q3:3d2f59f81444' => 'logs-* | q=(none) | size=50 sort=@timestamp:desc',
-        'q3:6b6fb17c6640' => 'orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)',
-        'q3:8203e75719e5' => 'logs-* | q=(not status:? and range(?) and service:?) | size=50 sort=@timestamp:desc',
-        'q3:c2c79d39a171' => 'logs-* | q=(note:~?) | size=10',
+        'q4:3d2f59f81444' => 'logs-* | q=(none) | size=50 sort=@timestamp:desc',
+        'q4:6b6fb17c6640' => 'orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)',
+        'q4:a3cd3114b946' => 'logs-* | q=(@timestamp:* and not status:? and service:?) | size=50 sort=@timestamp:desc',
+        'q4:c2c79d39a171' => 'logs-* | q=(note:~?) | size=10',
     ];
 
     /**
@@ -98,12 +99,12 @@ final class SlowlogCaptureTest extends TestCase
         $both = $this->ranking([$file], ['--phase=both']);
         $fetch = $this->ranking([$file], ['--phase=fetch']);
 
-        self::assertSame(1, $query['q3:3d2f59f81444']['count'] ?? null);
-        self::assertSame(2, $both['q3:3d2f59f81444']['count'] ?? null);
-        self::assertSame(1, $fetch['q3:3d2f59f81444']['count'] ?? null);
+        self::assertSame(1, $query['q4:3d2f59f81444']['count'] ?? null);
+        self::assertSame(2, $both['q4:3d2f59f81444']['count'] ?? null);
+        self::assertSame(1, $fetch['q4:3d2f59f81444']['count'] ?? null);
 
         // Only two of the four searches were slow enough to log a fetch record.
-        self::assertSame(['q3:3d2f59f81444', 'q3:8203e75719e5'], array_keys($fetch));
+        self::assertSame(['q4:3d2f59f81444', 'q4:a3cd3114b946'], array_keys($fetch));
     }
 
     public function testTheTableSaysHowManyRecordsTheOtherPhaseHeld(): void

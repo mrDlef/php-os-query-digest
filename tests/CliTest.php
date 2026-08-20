@@ -21,7 +21,7 @@ final class CliTest extends TestCase
         . '],"must_not":[{"term":{"status":200}}]}},"size":50,"sort":[{"@timestamp":"desc"}]}';
 
     /** The hash fixture 01 pins for the same body. */
-    private const HASH = 'q3:fe168406e702';
+    private const HASH = 'q4:fe168406e702';
 
     public function testTheDefaultBlockNamesTheIndexTextSignatureAndHash(): void
     {
@@ -138,7 +138,7 @@ final class CliTest extends TestCase
         [$status, $out] = $this->invoke(['--hash', $file]);
 
         self::assertSame(Command::OK, $status);
-        self::assertStringStartsWith('q3:', $out);
+        self::assertStringStartsWith('q4:', $out);
     }
 
     public function testNdjsonEmitsOneLinePerQuery(): void
@@ -293,7 +293,7 @@ final class CliTest extends TestCase
         [$status, $out] = $this->invoke(['--version']);
 
         self::assertSame(Command::OK, $status);
-        self::assertStringContainsString('fingerprint version q3', $out);
+        self::assertStringContainsString('fingerprint version q4', $out);
     }
 
     public function testADoubleDashEndsTheOptions(): void

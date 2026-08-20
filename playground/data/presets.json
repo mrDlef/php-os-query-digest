@@ -26,7 +26,7 @@
             "maxLength": 512,
             "indexNormalizer": "date-patterns",
             "aggNames": false,
-            "hashVersion": "q3",
+            "hashVersion": "q4",
             "hashLength": 12
         },
         "rules": {
@@ -44,6 +44,8 @@
             "indexed_shape": "A shape query pointed at a pre-indexed geometry: what it is cannot be read from the query, only that it is indexed.",
             "must_filter_merged": "bool.must and bool.filter both became AND: they differ in scoring, not in which documents match.",
             "percolate_lookup": "A percolate query tested a document fetched from another index: what was percolated cannot be read from the query, only that it was.",
+            "range_legacy_bounds": "A range written from/to with inclusivity flags was read as gte/gt/lte/lt: the two spellings are one query, and the older one is what a rewritten record carries.",
+            "range_unbounded": "A range left with no bound became an exists: what it matches is every document that has the field.",
             "reorder": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
             "script_score_unwrapped": "script_score was replaced by its inner query: the script only rescores. A min_score, which does exclude documents, is reported in the notes.",
             "section_ignored": "Top-level sections that say nothing about what a query is for were ignored.",
@@ -64,7 +66,7 @@
                 "idx": "logs-*",
                 "q": "logs-* | q=(@timestamp >= now-15m and @timestamp < now and not status:200 and service:api) | size=50 sort=@timestamp:desc",
                 "sig": "logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc",
-                "hash": "q3:fe168406e702"
+                "hash": "q4:fe168406e702"
             },
             "rules": [
                 {
@@ -103,7 +105,7 @@
                 "idx": "logs-*",
                 "q": "logs-* | q=(@timestamp >= now-24h and env:prod) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0",
                 "sig": "logs-* | q=(@timestamp >= ? and env:?) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0",
-                "hash": "q3:63a1ca5c80b9"
+                "hash": "q4:63a1ca5c80b9"
             },
             "rules": [
                 {
@@ -142,7 +144,7 @@
                 "idx": "catalog-v2",
                 "q": "catalog-v2 | q=(in_stock:true and price >= 20 and price <= 150 and title:\"chaussures de running\") | size=20 from=40 sort=_score:desc,price:asc | should=2",
                 "sig": "catalog-v2 | q=(in_stock:? and price >= ? and price <= ? and title:~?) | size=20 from=40 sort=_score:desc,price:asc | should=2",
-                "hash": "q3:cde7babeb8a7",
+                "hash": "q4:cde7babeb8a7",
                 "notes": [
                     "should=2"
                 ]
@@ -181,7 +183,7 @@
                 "idx": "orders",
                 "q": "orders | q=(country:FR and status:(new or paid or shipped or cancelled or refunded or +3))",
                 "sig": "orders | q=(country:? and status:(? or ? or ? or ? or ? or +3))",
-                "hash": "q3:e9794c1be608"
+                "hash": "q4:e9794c1be608"
             },
             "rules": [
                 {
@@ -204,7 +206,7 @@
                 "idx": "catalog-v2",
                 "q": "catalog-v2 | q=(variants:{ variants.color:red and variants.price <= 100 })",
                 "sig": "catalog-v2 | q=(variants:{ variants.color:? and variants.price <= ? })",
-                "hash": "q3:24d5e6929ac3"
+                "hash": "q4:24d5e6929ac3"
             },
             "rules": []
         },
@@ -218,7 +220,7 @@
                 "idx": "logs-*",
                 "q": "logs-* | q=(message:timeout or message:\"connection reset by peer\") | size=10",
                 "sig": "logs-* | q=(message:~? or message:\"?\") | size=10",
-                "hash": "q3:4f1eaee8e165"
+                "hash": "q4:4f1eaee8e165"
             },
             "rules": [
                 {
@@ -257,7 +259,7 @@
                 "idx": "metrics-*",
                 "q": "metrics-* | q=(host:* and host:web-* and span_near(?)) | +collapse +highlight",
                 "sig": "metrics-* | q=(host:* and host:?* and span_near(?)) | +collapse +highlight",
-                "hash": "q3:a235723d04dc",
+                "hash": "q4:a235723d04dc",
                 "notes": [
                     "+collapse",
                     "+highlight"
@@ -292,7 +294,7 @@
                 "idx": "docs",
                 "q": "docs | q=(lang:fr and (body:alpha or body:beta or body:gamma){msm=2})",
                 "sig": "docs | q=(lang:? and (body:~? or body:~? or body:~?){msm=2})",
-                "hash": "q3:862a058a0f91"
+                "hash": "q4:862a058a0f91"
             },
             "rules": []
         },
@@ -306,7 +308,7 @@
                 "idx": "logs-*",
                 "q": "logs-* | q=((status:500 AND host:web-*) and path:/api/v1/*) | size=100",
                 "sig": "logs-* | q=(raw(?) and path:*?*) | size=100",
-                "hash": "q3:6fb4a2d9c302"
+                "hash": "q4:6fb4a2d9c302"
             },
             "rules": []
         },
@@ -323,7 +325,7 @@
                 "idx": "logs-*",
                 "q": "logs-* | q=(@timestamp >= \"2026-08-13T00:00:00Z\" and @timestamp < \"2026-08-14T00:00:00Z\" and service:(api or worker or cron)) | aggs=over_time:date_histogram(@timestamp,1h)>unique_users:cardinality(user_id) | size=0",
                 "sig": "logs-* | q=(@timestamp >= ? and @timestamp < ? and service:(?)) | aggs=over_time:date_histogram(@timestamp,1h)>unique_users:cardinality(user_id) | size=0",
-                "hash": "q3:8b4c9e9aebc2"
+                "hash": "q4:8b4c9e9aebc2"
             },
             "rules": [
                 {
@@ -354,7 +356,7 @@
                 "idx": "shop-catalog",
                 "q": "shop-catalog | q=(name:\"running shoes\" and price >= 20 and price < 200) | post=(brand:acme and in_stock:true) | aggs=terms(brand,20) | size=24",
                 "sig": "shop-catalog | q=(name:~? and price >= ? and price < ?) | post=(brand:? and in_stock:?) | aggs=terms(brand,20) | size=24",
-                "hash": "q3:ce0146715c07"
+                "hash": "q4:ce0146715c07"
             },
             "rules": []
         },
@@ -368,7 +370,7 @@
                 "idx": "products-v3",
                 "q": "products-v3 | q=(image_embedding:knn(k=20) and in_stock:true or text_embedding:neural(query=\"waterproof hiking boots\",k=20)) | size=20",
                 "sig": "products-v3 | q=(image_embedding:knn(k=?) and in_stock:? or text_embedding:neural(query=?,k=?)) | size=20",
-                "hash": "q3:4dde138a2ad7"
+                "hash": "q4:4dde138a2ad7"
             },
             "rules": [
                 {
@@ -391,7 +393,7 @@
                 "idx": "stores",
                 "q": "stores | q=(delivery_area:geo_bbox() and has_child(review):{ rating >= 4 } and has_parent(chain):{ active:true } and location:geo_distance(25km)) | size=50",
                 "sig": "stores | q=(delivery_area:geo_bbox() and has_child(review):{ rating >= ? } and has_parent(chain):{ active:? } and location:geo_distance(?)) | size=50",
-                "hash": "q3:ccb4fb77328e"
+                "hash": "q4:ccb4fb77328e"
             },
             "rules": [
                 {
@@ -414,7 +416,7 @@
                 "idx": "articles",
                 "q": "articles | q=(script(doc['word_count'].value > params.floor) and title|body:like(\"distributed consensus algorithms\")) | size=10",
                 "sig": "articles | q=(script(?) and title|body:like(?)) | size=10",
-                "hash": "q3:522066bb4084"
+                "hash": "q4:522066bb4084"
             },
             "rules": [
                 {
@@ -442,7 +444,7 @@
                 "idx": "forum-*",
                 "q": "forum-* | q=(parent_id(comment):4712 and created_at >= now-7d) | size=20 | script_score:min_score",
                 "sig": "forum-* | q=(parent_id(comment):? and created_at >= ?) | size=20 | script_score:min_score",
-                "hash": "q3:621e3adba249",
+                "hash": "q4:621e3adba249",
                 "notes": [
                     "script_score:min_score"
                 ]
@@ -473,7 +475,7 @@
                 "idx": "deliveries",
                 "q": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
                 "sig": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
-                "hash": "q3:cb5e4609d066",
+                "hash": "q4:cb5e4609d066",
                 "notes": [
                     "indexed_shape"
                 ]
@@ -499,7 +501,7 @@
                 "idx": "catalog-*",
                 "q": "catalog-* | q=(in_stock:true and (embedding:knn(k=20) or title|description:\"waterproof hiking boots\") and popularity:rank_feature() and released_at:distance_feature(pivot=30d)) | size=24",
                 "sig": "catalog-* | q=(in_stock:? and (embedding:knn(k=?) or title|description:~?) and popularity:rank_feature() and released_at:distance_feature(pivot=?)) | size=24",
-                "hash": "q3:b1d9d5875df4"
+                "hash": "q4:b1d9d5875df4"
             },
             "rules": [
                 {
@@ -528,6 +530,51 @@
                     "rule": "wrapper_decoded",
                     "count": 1,
                     "why": "A wrapper was base64-decoded and parsed: the query it carried is rendered in full, so nothing about it is hidden."
+                }
+            ]
+        },
+        {
+            "id": "18-rewritten-range",
+            "label": "Rewritten range",
+            "index": "logs-2026.08.20",
+            "options": {},
+            "body": "{\n    \"size\": 50,\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"service\": {\n                            \"value\": \"api\",\n                            \"boost\": 1\n                        }\n                    }\n                },\n                {\n                    \"range\": {\n                        \"@timestamp\": {\n                            \"from\": null,\n                            \"to\": null,\n                            \"include_lower\": true,\n                            \"include_upper\": true,\n                            \"boost\": 1\n                        }\n                    }\n                }\n            ],\n            \"must_not\": [\n                {\n                    \"term\": {\n                        \"status\": {\n                            \"value\": 200,\n                            \"boost\": 1\n                        }\n                    }\n                }\n            ],\n            \"adjust_pure_negative\": true,\n            \"boost\": 1\n        }\n    },\n    \"sort\": [\n        {\n            \"@timestamp\": {\n                \"order\": \"desc\"\n            }\n        }\n    ]\n}",
+            "digest": {
+                "idx": "logs-*",
+                "q": "logs-* | q=(@timestamp:* and not status:200 and service:api) | size=50 sort=@timestamp:desc",
+                "sig": "logs-* | q=(@timestamp:* and not status:? and service:?) | size=50 sort=@timestamp:desc",
+                "hash": "q4:a3cd3114b946"
+            },
+            "rules": [
+                {
+                    "rule": "boost_dropped",
+                    "count": 2,
+                    "why": "A boost was ignored: it reorders results, it does not change them.",
+                    "on": [
+                        "service",
+                        "status"
+                    ]
+                },
+                {
+                    "rule": "index_pattern",
+                    "count": 1,
+                    "why": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",
+                    "on": [
+                        "logs-2026.08.20 -> logs-*"
+                    ]
+                },
+                {
+                    "rule": "range_unbounded",
+                    "count": 1,
+                    "why": "A range left with no bound became an exists: what it matches is every document that has the field."
+                },
+                {
+                    "rule": "reorder",
+                    "count": 1,
+                    "why": "Commutative siblings were reordered by a stable key, so the order they were written in stops mattering.",
+                    "on": [
+                        "and"
+                    ]
                 }
             ]
         }

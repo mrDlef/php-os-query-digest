@@ -45,9 +45,9 @@ Three properties make this safe to hand out:
   runs. That is structural, not a list that could drift — registering one for
   `term` does nothing at all.
 - **The hash version is marked.** Register anything and fingerprints become
-  `q3x:` instead of `q3:`. Your rules are no longer this library's alone, and
+  `q4x:` instead of `q4:`. Your rules are no longer this library's alone, and
   that is exactly what a prefix exists to make visible. The twelve hex
-  characters are untouched, so `q3:abc…` and `q3x:abc…` are still recognisably
+  characters are untouched, so `q4:abc…` and `q4x:abc…` are still recognisably
   the same query.
 - **`explain()` names it.** A digest that depended on someone's plugin code
   reports `extension_rendered`, rather than looking like one this library

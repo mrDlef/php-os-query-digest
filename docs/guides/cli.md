@@ -9,7 +9,7 @@ $ echo '{"query":{"term":{"service":"api"}},"size":50}' \
 idx:  logs-*
 text: logs-* | q=(service:api) | size=50
 sig:  logs-* | q=(service:?) | size=50
-hash: q3:5b2210eb5318
+hash: q4:5b2210eb5318
 ```
 
 `--explain` appends the rules table, `--json` emits the digest object, `--hash`
@@ -23,8 +23,8 @@ a `uniq -c` away:
 
 ```bash
 $ os-query-digest --ndjson --hash < slow.ndjson | sort | uniq -c | sort -rn
-      3 q3:2e2169e22798
-      1 q3:33a434d95576
+      3 q4:2e2169e22798
+      1 q4:33a434d95576
 ```
 
 Those three are not three slow queries to read: they are one shape, hit on two
@@ -45,11 +45,11 @@ $ vendor/bin/os-query-digest slowlog /var/log/opensearch/*_index_search_slowlog.
 60 lines, 59 records, 3 shapes, 13,515 ms total
 
   count  total ms*  mean    p95    max  shape
-     41      6,807   166    246    258  q3:fe168406e702
+     41      6,807   166    246    258  q4:fe168406e702
                                         logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
-      6      5,978   996  1,325  1,325  q3:6b6fb17c6640
+      6      5,978   996  1,325  1,325  q4:6b6fb17c6640
                                         orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)
-     12        730    61     86     86  q3:810928290c12
+     12        730    61     86     86  q4:810928290c12
                                         catalog-* | q=(title:~?) | size=10
 ```
 
@@ -114,9 +114,11 @@ line says how many records the other phase held, so the choice is never silent.
 **The body is the query the shard ran, not the one your client sent.** It has
 been rewritten by then: `boost` and `adjust_pure_negative` appear, a `term`
 becomes `{"value": …, "boost": 1.0}`, a range that matches nothing on that shard
-collapses to `match_none`, and a resolved range keeps its shape while losing its
-bounds — which is why a real record renders `range(?)` where the request said
-`@timestamp >= now-15m`.
+collapses to `match_none`, and a range every document on it satisfies keeps the
+field while losing its bounds — so `@timestamp >= now-15m` reaches the log as
+`@timestamp:*`, an unbounded range, which is genuinely all the record says. The
+older `from`/`to` spelling every rewritten range uses is read as of v0.10.0;
+before that the whole clause came out as `range(?)`.
 
 !!! warning "Slow log fingerprints are not your application's fingerprints"
     The same request digests differently from the two sides, because the shard
