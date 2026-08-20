@@ -24,7 +24,7 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 | `q4:` | v0.10.0 | the older `from`/`to` spelling of a range is read, and a range left without bounds became an `exists` |
 | `q4x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
-## v0.10.0 — unreleased
+## v0.10.0 — 2026-08-21
 
 _the report you can run before you integrate anything_
 
@@ -45,9 +45,9 @@ $ os-query-digest slowlog /var/log/opensearch/*_index_search_slowlog.log
 60 lines, 59 records, 3 shapes, 13,515 ms total
 
   count  total ms*  mean    p95    max  shape
-     41      6,807   166    246    258  q3:fe168406e702
+     41      6,807   166    246    258  q4:fe168406e702
                                         logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
-      6      5,978   996  1,325  1,325  q3:6b6fb17c6640
+      6      5,978   996  1,325  1,325  q4:6b6fb17c6640
                                         orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)
 ```
 
