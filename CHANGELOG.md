@@ -83,6 +83,33 @@ reported instead: staying quiet about it would understate the shape it belonged
 to. And a file with no records at all is an error rather than an empty table,
 since pointing this at the wrong file should not look like a healthy cluster.
 
+### What the real nodes said
+
+The formats above were first read from what the appenders are documented to
+emit, which is only ever as right as the person writing it. Four files captured
+from OpenSearch 2.19.6 and 3.8.0 — plain appender and JSON, verbatim — are
+committed under `tests/slowlog/` and read by `SlowlogCaptureTest`. Every one of
+them ranks as the same four shapes, whichever version and whichever appender
+wrote it. Three things they said that no amount of reading documentation would
+have:
+
+- **A search is logged once per phase**, query and fetch, both records carrying
+  the same body — so counting both doubled every number in the report. One phase
+  is read at a time now, `query` by default, and the summary says how many
+  records the other phase held. `--phase=fetch|both` for the rest.
+- **The body in a record is the query the shard ran**, not the one the client
+  sent: `boost` and `adjust_pure_negative` appear, a `term` becomes
+  `{"value": …, "boost": 1.0}`, a range matching nothing collapses to
+  `match_none`, and a resolved range keeps its shape while losing its bounds.
+  The consequence is worth stating plainly, and the guide states it: **a slow
+  log fingerprint and an application fingerprint of the same request are not the
+  same hash**. Each groups correctly against its own kind; the two sets do not
+  join. Records are also per shard, so `count` is shards touched.
+- **OpenSearch 3 escapes the body twice in the JSON layout**, from the same
+  configuration file 2.19.6 escapes it once with. Every 3.8.0 JSON record was
+  unreadable until that layer was taken off — through the decoder rather than by
+  stripping backslashes, so an escaped quote inside the query survives.
+
 ### The fingerprint flags now live in one place
 
 Every sub-command has to accept all of them — a report grouped under different
@@ -97,7 +124,11 @@ Infection deletes its temporary directory by materialising every file in it into
 a single array, so the image's 128 MB limit was a limit on how many mutants may
 exist rather than on anything this library does. It was reached at the *end* of a
 green run: the score printed, then a fatal error, then exit 255. The run is given
-no memory ceiling now. Covered MSI is unchanged at 79%, with nothing uncovered.
+no memory ceiling now.
+
+Covered MSI is **80%**, up from 79, with nothing uncovered — the tests written
+for the captured records killed escapes rather than adding any — so the ratchet
+in `infection.json5` moves 78 → 79.
 
 ## v0.9.0 — 2026-08-20
 

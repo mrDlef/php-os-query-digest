@@ -455,11 +455,35 @@ final class SlowlogTest extends TestCase
         self::assertStringContainsString('mean*', $out);
     }
 
+    public function testOnePhaseIsCountedAndAnUnnamedPhaseIsNeverDropped(): void
+    {
+        $log = implode("\n", [
+            (string) json_encode(['component' => 'i.s.s.query', 'message' => '[logs-x][0]',
+                'took_millis' => 10, 'source' => self::OTHER]),
+            (string) json_encode(['component' => 'i.s.s.fetch', 'message' => '[logs-x][0]',
+                'took_millis' => 90, 'source' => self::OTHER]),
+            // A layout that names no logger: unknown is not the same as other.
+            (string) json_encode(['message' => '[logs-x][0]', 'took_millis' => 5, 'source' => self::OTHER]),
+        ]);
+
+        [$status, $query] = $this->invoke([], $log);
+        [, $fetch] = $this->invoke(['--phase', 'fetch'], $log);
+        [, $both] = $this->invoke(['-p', 'both'], $log);
+
+        self::assertSame(Command::OK, $status);
+        self::assertStringContainsString('2 records', $query);
+        self::assertStringContainsString('1 record from another phase, see --phase', $query);
+        self::assertStringContainsString('2 records', $fetch);
+        self::assertStringContainsString('3 records', $both);
+        self::assertStringNotContainsString('another phase', $both);
+    }
+
     public function testBadInvocationsExplainThemselvesAndExitTwo(): void
     {
         $cases = [
             'unknown sort' => [['--sort=nope'], 'total, count, p95, max, mean'],
             'unknown top' => [['--top=lots'], 'a number, or `none`'],
+            'unknown phase' => [['--phase=nope'], 'query, fetch, both'],
             'half a number' => [['--top=1x'], 'a number, or `none`'],
             'value on a flag' => [['--json=yes'], 'takes no value'],
             'unknown option' => [['--nope'], 'unknown option --nope'],

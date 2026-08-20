@@ -40,12 +40,20 @@ final class Slowlog
 
     private ?string $timestamp;
 
-    private function __construct(string $source, ?string $index, ?float $tookMillis, ?string $timestamp)
-    {
+    private ?string $phase;
+
+    private function __construct(
+        string $source,
+        ?string $index,
+        ?float $tookMillis,
+        ?string $timestamp,
+        ?string $phase
+    ) {
         $this->source = $source;
         $this->index = $index;
         $this->tookMillis = $tookMillis;
         $this->timestamp = $timestamp;
+        $this->phase = $phase;
     }
 
     /** The record this line holds, or null when it holds none. */
@@ -88,6 +96,38 @@ final class Slowlog
         return $this->timestamp;
     }
 
+    /**
+     * `query` or `fetch` — the two phases a search is logged in, both carrying
+     * the same body. Null when the record does not say which, and a record that
+     * does not say is never filtered out on the strength of a guess.
+     */
+    public function phase(): ?string
+    {
+        return $this->phase;
+    }
+
+    /**
+     * Both products abbreviate the logger in the plain layout — `i.s.s.query`
+     * for `index.search.slowlog.query` — so the suffix is what is read, not the
+     * whole name.
+     */
+    private static function phaseOf(?string $logger): ?string
+    {
+        if ($logger === null) {
+            return null;
+        }
+
+        $logger = trim($logger);
+
+        foreach (['query', 'fetch'] as $phase) {
+            if (substr($logger, -strlen($phase) - 1) === '.' . $phase) {
+                return $phase;
+            }
+        }
+
+        return null;
+    }
+
     private static function fromJson(string $line): ?self
     {
         $decoded = json_decode($line, true);
@@ -105,6 +145,8 @@ final class Slowlog
             return null;
         }
 
+        $source = self::unescaped($source);
+
         $timestamp = null;
         foreach (['timestamp', '@timestamp'] as $key) {
             $candidate = $decoded[$key] ?? null;
@@ -114,12 +156,49 @@ final class Slowlog
             }
         }
 
+        $logger = null;
+        foreach (['component', 'log.logger', 'logger'] as $key) {
+            $candidate = $decoded[$key] ?? null;
+            if (is_string($candidate)) {
+                $logger = $candidate;
+                break;
+            }
+        }
+
         return new self(
             $source,
             self::jsonIndex($decoded),
             self::millis(self::field($decoded, 'took_millis')),
             $timestamp,
+            self::phaseOf($logger),
         );
+    }
+
+    /**
+     * OpenSearch 3's JSON layout escapes the body a second time, so the field
+     * decodes to `{\"size\":50}` where 2.x gives `{"size":50}` — same config
+     * file, different node. One layer is taken back off, through the decoder
+     * rather than by stripping backslashes: a query holding `\\"` inside a
+     * string would not survive the crude version.
+     *
+     * Only a body that opens `{\"` is touched, which no JSON object does, and
+     * only when what comes out is valid. Anything else is handed on unchanged,
+     * so a genuinely broken record is still reported as the record it is.
+     */
+    private static function unescaped(string $source): string
+    {
+        if (strpos($source, '{\\"') !== 0) {
+            return $source;
+        }
+
+        $once = json_decode('"' . $source . '"');
+        if (!is_string($once)) {
+            return $source;
+        }
+
+        json_decode($once);
+
+        return json_last_error() === JSON_ERROR_NONE ? $once : $source;
     }
 
     /**
@@ -173,7 +252,14 @@ final class Slowlog
             $timestamp = $match[1];
         }
 
-        return new self($source, $index, $took, $timestamp);
+        // Third bracket group of the layout every distribution ships:
+        // `[timestamp][LEVEL][logger] [node] …`.
+        $logger = null;
+        if (preg_match('/^\[[^\[\]]*\]\[[^\[\]]*\]\[([^\[\]]*)\]/', $line, $match) === 1) {
+            $logger = $match[1];
+        }
+
+        return new self($source, $index, $took, $timestamp, self::phaseOf($logger));
     }
 
     /**

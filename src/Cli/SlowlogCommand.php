@@ -36,8 +36,18 @@ final class SlowlogCommand
 
     private const DEFAULT_TOP = 20;
 
+    /**
+     * A search is logged twice, once per phase, both records carrying the same
+     * body. Counting both would double every number in the report, so one phase
+     * is read at a time and the query phase — the one people tune — is the
+     * default.
+     *
+     * @var array<int,string>
+     */
+    private const PHASES = ['query', 'fetch', 'both'];
+
     /** @var array<int,string> */
-    private const VALUED = ['-s', '--sort', '-t', '--top'];
+    private const VALUED = ['-s', '--sort', '-t', '--top', '-p', '--phase'];
 
     private string $name;
 
@@ -74,6 +84,7 @@ final class SlowlogCommand
         /** @var array<string,mixed> $spec */
         $spec = [];
         $sort = 'total';
+        $phase = 'query';
         $top = self::DEFAULT_TOP;
         $json = false;
         $files = [];
@@ -123,6 +134,15 @@ final class SlowlogCommand
                             );
                         }
                         $sort = $given;
+                        continue 2;
+                    case '-p':
+                    case '--phase':
+                        if (!in_array($given, self::PHASES, true)) {
+                            return $this->fail(
+                                $name . ' takes one of ' . implode(', ', self::PHASES) . ', not ' . $given,
+                            );
+                        }
+                        $phase = $given;
                         continue 2;
                     case '-t':
                     case '--top':
@@ -182,19 +202,33 @@ final class SlowlogCommand
             return $this->fail($exception->getMessage());
         }
 
-        return $this->report(Formatter::create($options), $files === [] ? ['-'] : $files, $sort, $top, $json);
+        return $this->report(
+            Formatter::create($options),
+            $files === [] ? ['-'] : $files,
+            $sort,
+            $phase,
+            $top,
+            $json,
+        );
     }
 
     /**
      * @param array<int,string> $files
      */
-    private function report(Formatter $formatter, array $files, string $sort, ?int $top, bool $json): int
-    {
+    private function report(
+        Formatter $formatter,
+        array $files,
+        string $sort,
+        string $phase,
+        ?int $top,
+        bool $json
+    ): int {
         /** @var array<string,Shape> $shapes */
         $shapes = [];
         $lines = 0;
         $records = 0;
         $failed = 0;
+        $otherPhase = 0;
         $labelled = count($files) > 1;
 
         foreach ($files as $file) {
@@ -223,6 +257,16 @@ final class SlowlogCommand
                         );
                         $failed++;
                     }
+
+                    continue;
+                }
+
+                // A record that does not name its phase is kept whatever was
+                // asked for: dropping data on the strength of a guess about an
+                // unknown layout is worse than counting it.
+                $its = $record->phase();
+                if ($phase !== 'both' && $its !== null && $its !== $phase) {
+                    $otherPhase++;
 
                     continue;
                 }
@@ -279,7 +323,7 @@ final class SlowlogCommand
         } else {
             $this->write(
                 $this->stdout,
-                self::summary($lines, $records, count($ranked), $failed, $shapes)
+                self::summary($lines, $records, count($ranked), $failed, $otherPhase, $shapes)
                 . self::table($kept, $sort)
                 . self::footer(count($ranked), count($kept)),
             );
@@ -337,8 +381,14 @@ final class SlowlogCommand
     /**
      * @param array<string,Shape> $shapes
      */
-    private static function summary(int $lines, int $records, int $shapeCount, int $failed, array $shapes): string
-    {
+    private static function summary(
+        int $lines,
+        int $records,
+        int $shapeCount,
+        int $failed,
+        int $otherPhase,
+        array $shapes
+    ): string {
         $total = 0.0;
         foreach ($shapes as $shape) {
             $total += $shape->total();
@@ -352,8 +402,15 @@ final class SlowlogCommand
             self::thousands($total),
         );
 
+        $notes = [];
+        if ($otherPhase > 0) {
+            $notes[] = sprintf('%s from another phase, see --phase', self::plural($otherPhase, 'record'));
+        }
         if ($failed > 0) {
-            $summary .= sprintf(' (%s unreadable, reported above)', self::thousands((float) $failed));
+            $notes[] = sprintf('%s unreadable, reported above', self::thousands((float) $failed));
+        }
+        if ($notes !== []) {
+            $summary .= ' (' . implode('; ', $notes) . ')';
         }
 
         return $summary . "\n\n";
@@ -495,6 +552,7 @@ final class SlowlogCommand
     private function usage(): string
     {
         $sorts = implode('|', self::SORTS);
+        $phases = implode('|', self::PHASES);
         $fingerprint = FingerprintFlags::usage();
         $top = self::DEFAULT_TOP;
 
@@ -514,6 +572,9 @@ thousand times outranks one slow record you would otherwise read four thousand
 times. The table prints the signature of each group, not one record's values.
 
 Report:
+  -p, --phase=WHICH        {$phases} (default: query) — a search is logged
+                           once per phase and both records carry the same
+                           body, so counting both doubles every number
   -s, --sort=KEY           {$sorts} (default: total)
   -t, --top=N              shapes listed, or `none` (default: {$top})
   -j, --json               emit the ranking as JSON, with the slowest sample

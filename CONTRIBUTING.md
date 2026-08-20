@@ -8,7 +8,7 @@ will fail your build if you meet them by surprise.
 
 ```bash
 composer install
-vendor/bin/phpunit          # 215 tests, offline, under a second
+vendor/bin/phpunit          # 220 tests, offline, under a second
 ```
 
 The full gate, which is what CI runs:
@@ -108,7 +108,7 @@ make mutation      # ~35s, plus the image build the first time
 
 Infection rewrites the source one small change at a time and re-runs the suite
 against each. **Nothing in `src/` is uncovered**, and the covered mutation score
-sits at 79%, guarded in CI so it cannot quietly fall.
+sits at 80%, guarded in CI so it cannot quietly fall.
 
 It has already earned its keep. Three findings on the first run:
 
