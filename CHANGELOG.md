@@ -25,9 +25,140 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 
 ## v0.8.0 — unreleased
 
-_contributing and security_
+_a documentation site, and a playground that answers to nobody_
 
 **Fingerprints:** `q3:` unchanged.
+
+### A documentation site
+
+**<https://mrdlef.github.io/php-os-query-digest/>** — built with MkDocs
+Material, published from a release tag like the playground and for the same
+reason: a page describing an API nobody can install yet is worse than a page a
+few days out of date.
+
+The README had grown to 36 KB across 23 sections, one of which was 39% of the
+file on its own. It is now 6 KB: what the library does, the before-and-after,
+how to install it, and where to read more. Everything else moved to pages, plus
+new material that was missing — a five-minute getting started, and a reference
+for the fourteen public classes written from reflection rather than from memory.
+
+**The playground moves to
+[/playground/](https://mrdlef.github.io/php-os-query-digest/playground/).** The
+root now serves the documentation, which is what people arrive looking for. The
+`composer.json` homepage is unchanged; it points at the same URL, which now
+answers with docs.
+
+The two share one identity rather than looking like a site and an app that
+happen to be neighbours — and that identity is now generated rather than written
+twice. Bone is the field, pitch black is the ink, and a lobster marks anything
+you can act on: six values, emitted into both stylesheets from
+`tools/build-palette.php`, because they were written twice and the second copy
+drifted inside a day.
+
+The lobster needed two of those six. It reads 2.87:1 on bone and 3.88:1 on the
+playground's raised pane, so it carries no text itself — light mode takes a
+deeper one, dark mode a lifted one, and the hue they are drawn from stays in the
+palette as the thing they agree on. Nothing is `#fff`: Material defaults three
+variables to white or an alpha of it, and all three name bone.
+
+Every pairing is measured, not checked once. `PaletteTest` parses the shipped
+stylesheets rather than the tool's own values — which would prove only that the
+tool agrees with itself — resolves each `var()` chain, and reports all 34
+documented pairs. The 30 text pairs clear AA with the tightest at 4.73:1 and
+fourteen of them at AAA; the four form borders clear the 3:1 that identifies a
+control. A colour nudged to taste turns CI red instead of shipping 3.9:1.
+
+**The site fetches no fonts.** It linked a stylesheet on `fonts.googleapis.com`
+and preconnected to `fonts.gstatic.com`; it now references neither, naming the
+system stacks the playground already used. The playground's corners follow
+Material's three radii — 2px for controls, 4px for panes, a pill for the chips
+that were already one. Its links to the source and to Packagist carry inline
+marks, still fetching nothing from anywhere.
+
+MkDocs lives only in the Pages workflow — not in `composer.json`, not in the
+package. `make docs` serves the site locally through the same pinned image CI
+uses, so a local build and the published one cannot disagree.
+
+### Use cases, with every query executed
+
+Four [Use cases](https://mrdlef.github.io/php-os-query-digest/use-cases/) pages,
+placed before the guides because a reader who has just installed this wants to
+know what it answers, not what its options are.
+
+The home page already claimed the log index could tell you "which kind of query
+got slow this afternoon, which shape runs a thousand times an hour, which one
+appeared the day the incident started". Nothing behind it showed how. These pages
+do, and the answers are less obvious than the claim:
+
+- **Ranking by p95 finds the wrong query.** It surfaces the report that takes a
+  second and a half and took a second and a half yesterday. Ranking each shape
+  against *its own history* finds the one that went from 50 ms to 1074 ms.
+- **The query you run most is not the query that costs you most.** The workhorse
+  ran 7200 times for 57.6 s; a dashboard aggregation ran 360 times for 118.6 s.
+- **A deploy marker and a latency bump are not the same event.** In the scenario
+  the slowdown lands at 14:00 and the release at 15:00, so the obvious story —
+  the release broke search — is wrong and hard to disprove without the hash.
+- **The hash is not a cache key.** Three tenants share one fingerprint, because
+  erasing literals is the whole point. Cache on it and tenant 42 is served
+  tenant 41's invoices.
+
+**Every aggregation on those pages is executed by `UseCaseTest` against
+OpenSearch 2.19.6 and 3.8.0**, including the one shown as a counter-example,
+which has to keep being wrong. The queries are *extracted from the markdown* by a
+`<!-- verified: -->` marker rather than copied into the test, so there is one copy
+and it is the one a reader sees. The test also fails if a page prints a hash this
+library no longer produces, and if a marked block has no test behind it.
+
+That caught two things worth admitting: a page that quoted an invented hash, and
+a page that showed `status:?` inside the `q` field while explaining that `q` keeps
+its values.
+
+`make integration` was broken against the 3.x node on any machine with less than
+about 100 GB free, and had been. 3.x adds a headroom to the flood-stage watermark,
+so the block trips under ~100 GB regardless of the percentage, and the node
+answers index creation with a bare 403 `index_create_block_exception` that
+mentions no disk. `os2` already disabled the threshold; `os3` now does too.
+
+### The playground answers to nobody
+
+It used to `import()` its PHP-in-WebAssembly runtime from a public CDN, which
+cost two things. Every visitor was disclosed to a third party the page never
+named, and a dynamic `import()` takes no `integrity` attribute — so nothing
+checked that what arrived was what had been published.
+
+**The runtime is now served from this site.** `tools/fetch-runtime.php` downloads
+it at build time and verifies all nine files against the SHA-256 hashes in
+`playground/runtime.lock.json`; a substituted artefact fails the deploy rather
+than reaching a browser. That verification is the point of the arrangement, and
+it was not available before: the usual workaround for an unverifiable dynamic
+import — fetching the module and importing a hash-checked blob URL — cannot work
+here, because this runtime resolves its wasm with `new URL(…, import.meta.url)`
+and a blob URL breaks that.
+
+The runtime is **not committed**. 12.5 MB does not belong in the history of a
+library whose own package is measured in kilobytes, and the repository's largest
+file is 146 KB. It is fetched by `make playground-runtime`, gitignored, and
+downloaded in the Pages workflow beside MkDocs, for the same reason MkDocs lives
+only there.
+
+What it costs a visitor: **about 3.1 MB instead of 2.8 MB**, once — GitHub Pages
+gzips wasm where the CDN served brotli. What it buys: the page's claim is now
+literally true. Nothing it loads comes from anywhere but the site serving it, and
+`PlaygroundTest` fails if that stops being so.
+
+That guard is worth a note. The first version matched the *shape* of a loader
+call, looking for `import('https://…')` — and passed the very line it existed to
+forbid, because the URL reached `import()` through a constant. It matches on
+hosts now: two are allowed, both anchors, and a link the reader may click is not
+a request the page makes.
+
+Also fixed while verifying this in a real browser:
+`tools/playground-browser-check.mjs` had pinned `q2:5b2210eb5318` as the hash the
+CLI produces. The prefix moved to `q3:` in v0.6.0 and nothing noticed, because
+that script is deliberately not in CI. It asks the CLI now, which is what its
+comment always claimed it did.
+
+### How to report something, and how to change it
 
 [`SECURITY.md`](SECURITY.md) — how to report a vulnerability (privately, through
 GitHub), which versions are supported, and a threat model grounded in what the
@@ -115,135 +246,6 @@ record your handler drops really does parse nothing.
 
 No timing gate in CI: wall-clock on a shared runner is noise, and a threshold
 tight enough to catch a regression would fail on a busy afternoon.
-
-### The playground answers to nobody
-
-It used to `import()` its PHP-in-WebAssembly runtime from a public CDN, which
-cost two things. Every visitor was disclosed to a third party the page never
-named, and a dynamic `import()` takes no `integrity` attribute — so nothing
-checked that what arrived was what had been published.
-
-**The runtime is now served from this site.** `tools/fetch-runtime.php` downloads
-it at build time and verifies all nine files against the SHA-256 hashes in
-`playground/runtime.lock.json`; a substituted artefact fails the deploy rather
-than reaching a browser. That verification is the point of the arrangement, and
-it was not available before: the usual workaround for an unverifiable dynamic
-import — fetching the module and importing a hash-checked blob URL — cannot work
-here, because this runtime resolves its wasm with `new URL(…, import.meta.url)`
-and a blob URL breaks that.
-
-The runtime is **not committed**. 12.5 MB does not belong in the history of a
-library whose own package is measured in kilobytes, and the repository's largest
-file is 146 KB. It is fetched by `make playground-runtime`, gitignored, and
-downloaded in the Pages workflow beside MkDocs, for the same reason MkDocs lives
-only there.
-
-What it costs a visitor: **about 3.1 MB instead of 2.8 MB**, once — GitHub Pages
-gzips wasm where the CDN served brotli. What it buys: the page's claim is now
-literally true. Nothing it loads comes from anywhere but the site serving it, and
-`PlaygroundTest` fails if that stops being so.
-
-That guard is worth a note. The first version matched the *shape* of a loader
-call, looking for `import('https://…')` — and passed the very line it existed to
-forbid, because the URL reached `import()` through a constant. It matches on
-hosts now: two are allowed, both anchors, and a link the reader may click is not
-a request the page makes.
-
-Also fixed while verifying this in a real browser:
-`tools/playground-browser-check.mjs` had pinned `q2:5b2210eb5318` as the hash the
-CLI produces. The prefix moved to `q3:` in v0.6.0 and nothing noticed, because
-that script is deliberately not in CI. It asks the CLI now, which is what its
-comment always claimed it did.
-
-### Use cases, with every query executed
-
-Four [Use cases](https://mrdlef.github.io/php-os-query-digest/use-cases/) pages,
-placed before the guides because a reader who has just installed this wants to
-know what it answers, not what its options are.
-
-The home page already claimed the log index could tell you "which kind of query
-got slow this afternoon, which shape runs a thousand times an hour, which one
-appeared the day the incident started". Nothing behind it showed how. These pages
-do, and the answers are less obvious than the claim:
-
-- **Ranking by p95 finds the wrong query.** It surfaces the report that takes a
-  second and a half and took a second and a half yesterday. Ranking each shape
-  against *its own history* finds the one that went from 50 ms to 1074 ms.
-- **The query you run most is not the query that costs you most.** The workhorse
-  ran 7200 times for 57.6 s; a dashboard aggregation ran 360 times for 118.6 s.
-- **A deploy marker and a latency bump are not the same event.** In the scenario
-  the slowdown lands at 14:00 and the release at 15:00, so the obvious story —
-  the release broke search — is wrong and hard to disprove without the hash.
-- **The hash is not a cache key.** Three tenants share one fingerprint, because
-  erasing literals is the whole point. Cache on it and tenant 42 is served
-  tenant 41's invoices.
-
-**Every aggregation on those pages is executed by `UseCaseTest` against
-OpenSearch 2.19.6 and 3.8.0**, including the one shown as a counter-example,
-which has to keep being wrong. The queries are *extracted from the markdown* by a
-`<!-- verified: -->` marker rather than copied into the test, so there is one copy
-and it is the one a reader sees. The test also fails if a page prints a hash this
-library no longer produces, and if a marked block has no test behind it.
-
-That caught two things worth admitting: a page that quoted an invented hash, and
-a page that showed `status:?` inside the `q` field while explaining that `q` keeps
-its values.
-
-`make integration` was broken against the 3.x node on any machine with less than
-about 100 GB free, and had been. 3.x adds a headroom to the flood-stage watermark,
-so the block trips under ~100 GB regardless of the percentage, and the node
-answers index creation with a bare 403 `index_create_block_exception` that
-mentions no disk. `os2` already disabled the threshold; `os3` now does too.
-
-### A documentation site
-
-**<https://mrdlef.github.io/php-os-query-digest/>** — built with MkDocs
-Material, published from a release tag like the playground and for the same
-reason: a page describing an API nobody can install yet is worse than a page a
-few days out of date.
-
-The README had grown to 36 KB across 23 sections, one of which was 39% of the
-file on its own. It is now 6 KB: what the library does, the before-and-after,
-how to install it, and where to read more. Everything else moved to pages, plus
-new material that was missing — a five-minute getting started, and a reference
-for the fourteen public classes written from reflection rather than from memory.
-
-**The playground moves to
-[/playground/](https://mrdlef.github.io/php-os-query-digest/playground/).** The
-root now serves the documentation, which is what people arrive looking for. The
-`composer.json` homepage is unchanged; it points at the same URL, which now
-answers with docs.
-
-The two share one identity rather than looking like a site and an app that
-happen to be neighbours — and that identity is now generated rather than written
-twice. Bone is the field, pitch black is the ink, and a lobster marks anything
-you can act on: six values, emitted into both stylesheets from
-`tools/build-palette.php`, because they were written twice and the second copy
-drifted inside a day.
-
-The lobster needed two of those six. It reads 2.87:1 on bone and 3.88:1 on the
-playground's raised pane, so it carries no text itself — light mode takes a
-deeper one, dark mode a lifted one, and the hue they are drawn from stays in the
-palette as the thing they agree on. Nothing is `#fff`: Material defaults three
-variables to white or an alpha of it, and all three name bone.
-
-Every pairing is measured, not checked once. `PaletteTest` parses the shipped
-stylesheets rather than the tool's own values — which would prove only that the
-tool agrees with itself — resolves each `var()` chain, and reports all 34
-documented pairs. The 30 text pairs clear AA with the tightest at 4.73:1 and
-fourteen of them at AAA; the four form borders clear the 3:1 that identifies a
-control. A colour nudged to taste turns CI red instead of shipping 3.9:1.
-
-**The site fetches no fonts.** It linked a stylesheet on `fonts.googleapis.com`
-and preconnected to `fonts.gstatic.com`; it now references neither, naming the
-system stacks the playground already used. The playground's corners follow
-Material's three radii — 2px for controls, 4px for panes, a pill for the chips
-that were already one. Its links to the source and to Packagist carry inline
-marks, still fetching nothing from anywhere.
-
-MkDocs lives only in the Pages workflow — not in `composer.json`, not in the
-package. `make docs` serves the site locally through the same pinned image CI
-uses, so a local build and the published one cannot disagree.
 
 ### This file
 
