@@ -23,6 +23,82 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 | `q3:` | v0.6.0 | eight more promoted |
 | `q3x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
+## v0.10.0 — unreleased
+
+_the report you can run before you integrate anything_
+
+**Fingerprints:** `q3:` unchanged.
+
+### `os-query-digest slowlog`
+
+Everything else here asks you to log digests before you can find out whether
+they tell you anything. This does not: `index.search.slowlog` is already on in
+most clusters, so the CLI reads what is already on disk and ranks it.
+
+```
+$ os-query-digest slowlog /var/log/opensearch/*_index_search_slowlog.log
+60 lines, 59 records, 3 shapes, 13,515 ms total
+
+  count  total ms*  mean    p95    max  shape
+     41      6,807   166    246    258  q3:fe168406e702
+                                        logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
+      6      5,978   996  1,325  1,325  q3:6b6fb17c6640
+                                        orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)
+```
+
+No application change, no index to create, nothing to deploy.
+
+**Ranked by total time rather than by the slowest record**, because that is the
+number a slow log cannot give you: it lists the 166 ms query forty-one times
+without ever adding them up, and reading it top-down puts the one bad afternoon
+above the shape that *is* the afternoon. `--sort` takes `count`, `mean`, `p95`
+or `max` for the other readings — on the file above, `--sort=p95` promotes that
+`date_histogram`, which is a different and equally real answer.
+
+**The table prints the signature of each group, never one record's values.**
+Under a count of forty-one, a single sample's `service` and timestamps read as
+the group's, and they are not. `--json` carries the slowest sample labelled as a
+sample, beside the timestamps the group spans — which is how a shape that has
+always been there is told from one that arrived with this morning's deploy.
+
+Both appenders are read: the plain one and the JSON one beside it, OpenSearch
+and Elasticsearch, including Elasticsearch 8's `elasticsearch.slowlog.` field
+prefix. Input is consumed a line at a time rather than slurped, because rotated
+slow logs run to gigabytes and the whole premise is that you can point this at
+the file you already have.
+
+### Two things a slow log does that a query file does not
+
+**A `]` inside the query does not end the record.** The plain appender writes
+`source[{…}]` with nothing escaped, so a `terms` value of `a[1]`, a regexp or a
+field named `a[0]` all put brackets inside the body. Counting brackets is not
+enough; the scan tracks where strings begin and end and stops at the first `]`
+outside one.
+
+**Noise and an unreadable record are told apart.** Allocation notices, stack
+traces and startup messages are skipped in silence — a tool that refused the
+file over them would be useless exactly where it is pointed. A line that opened
+`source[` and never closed it, which is what rotation does to a record, is
+reported instead: staying quiet about it would understate the shape it belonged
+to. And a file with no records at all is an error rather than an empty table,
+since pointing this at the wrong file should not look like a healthy cluster.
+
+### The fingerprint flags now live in one place
+
+Every sub-command has to accept all of them — a report grouped under different
+rules than the application logging them is a report about nothing — so
+`FingerprintFlags` holds the mapping *and* the help text both commands print.
+Two copies of `--max-values=none` are two chances for one of them to quietly
+mean something else.
+
+### The mutation job had a ceiling nobody had reached yet
+
+Infection deletes its temporary directory by materialising every file in it into
+a single array, so the image's 128 MB limit was a limit on how many mutants may
+exist rather than on anything this library does. It was reached at the *end* of a
+green run: the score printed, then a fatal error, then exit 255. The run is given
+no memory ceiling now. Covered MSI is unchanged at 79%, with nothing uncovered.
+
 ## v0.9.0 — 2026-08-20
 
 _the playground is a page of the documentation_
