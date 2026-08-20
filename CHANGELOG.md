@@ -23,7 +23,7 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 | `q3:` | v0.6.0 | eight more promoted |
 | `q3x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
-## v0.9.0 — unreleased
+## v0.9.0 — 2026-08-20
 
 _the playground is a page of the documentation_
 
