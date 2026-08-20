@@ -94,7 +94,7 @@ you can paste straight into Dashboards.
 It runs this same library, compiled to WebAssembly, in your browser. Paste a
 real request from your slow log: nothing leaves the page.
 
-[Open the playground :material-arrow-right-bold:](playground/index.html){ .md-button .md-button--primary }
+[Open the playground :material-arrow-right-bold:](playground.md){ .md-button .md-button--primary }
 
 [How it manages that](explanation/playground.md) is worth a read on its own.
 

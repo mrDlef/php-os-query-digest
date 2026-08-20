@@ -141,12 +141,23 @@ final class PaletteTest extends TestCase
         return $tokens;
     }
 
+    /**
+     * Anchored to the start of a line, because a stylesheet is allowed to name
+     * its own selector in a comment — playground.css does, explaining why the
+     * scheme is Material's attribute and not a media query. Matched anywhere,
+     * that sentence would be read as the start of the dark block and every light
+     * value would resolve to nothing.
+     */
     private static function darkStartsAt(string $css): int
     {
-        foreach (['@media (prefers-color-scheme: dark)', '[data-md-color-scheme="slate"]'] as $marker) {
-            $at = strpos($css, $marker);
-            if ($at !== false) {
-                return $at;
+        $markers = [
+            '/^\s*@media \(prefers-color-scheme: dark\)/m',
+            '/^\s*\[data-md-color-scheme="slate"\]/m',
+        ];
+
+        foreach ($markers as $marker) {
+            if (preg_match($marker, $css, $found, PREG_OFFSET_CAPTURE) === 1) {
+                return $found[0][1];
             }
         }
 

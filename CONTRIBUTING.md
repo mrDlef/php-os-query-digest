@@ -28,16 +28,26 @@ Other things you may need:
 ```bash
 make mutation               # would the tests notice? ~35s
 make bench                  # what a digest costs
-make playground             # serve the browser playground on :8080
 make docs                   # serve the documentation site on :8000
+make playground             # the same server: the playground is a page of it
 make palette                # write the palette into both stylesheets
 make playground-runtime     # fetch the wasm PHP the playground runs
+make playground-check       # drive the built page in a real Chromium
 ```
+
+The playground is a page of the documentation site — `docs/playground.md`, whose
+markup is `overrides/playground.html`. Two things about it are load-bearing and
+easy to undo by accident. Its stylesheet and its module are declared for the
+whole site in `mkdocs.yml`, not by the page, because instant navigation swaps
+neither the `<head>` nor the scripts at the end of the body: an asset the page
+declared alone is absent for every reader who arrives by a link rather than a
+reload. And every id in that markup is prefixed `pg-`, because the page shares a
+document with headings whose anchors are slugs. `PlaygroundTest` guards both.
 
 The playground serves its own PHP-in-WebAssembly runtime rather than importing
 one from a CDN. It is gitignored — 12.5 MB does not belong in this history — so
 `tools/fetch-runtime.php` downloads it and verifies every file against
-`playground/runtime.lock.json`. `make playground` does that for you.
+`playground/runtime.lock.json`. `make docs` does that for you.
 
 The colours of the documentation and the playground come from
 `tools/build-palette.php` and are generated into both stylesheets. Edit the tool,

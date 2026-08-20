@@ -1,6 +1,18 @@
 /*
- * One stylesheet, no framework. The page has to be readable before 2.8 MB of
- * PHP has finished downloading, so nothing here waits on anything.
+ * The playground's own layer, on top of Material's.
+ *
+ * Everything here is scoped to `.playground`, and everything Material already
+ * provides is gone: no `body`, no `h1`, no bare `a` or `code`, no box-sizing
+ * reset, no font stack. What is left is the compact instrument the page is —
+ * panes, chips, a field grid — and the three places Material has to be talked
+ * out of a decision it makes for prose.
+ *
+ * Two things a reader of the old standalone file should know. The root font size
+ * is Material's 125%, so a rem is 20px here and was 16px there; sizes are in em
+ * against the container, spacing in rem against Material's scale. And the dark
+ * scheme is the reader's choice on the palette switch, not the operating
+ * system's — `[data-md-color-scheme="slate"]`, never a media query, or the
+ * playground would fight the page it sits in.
  *
  * The palette is the documentation's, to the value, and generated from
  * tools/build-palette.php. Every pair clears 4.5:1 — which the lobster itself
@@ -16,7 +28,11 @@
     --lobster-light: #cd8777;         /* dark mode: 4.99:1 on the raised pane, the tighter dark surface */
     --dark-blue:     #272a35;         /* the raised pane, dark mode — the playground and the docs code blocks */
     /* <<< generated palette */
+}
 
+/* What the playground calls the palette. Its own layer, because these names are
+   what PaletteTest measures, pair by pair. */
+.playground {
     --accent: var(--lobster-deep);
     --accent-bg: #eaddcb;
     --bg: var(--bone);
@@ -27,136 +43,170 @@
        form fields, where 1.4.11 asks 3:1. */
     --line: #c4baa8;
     --line-strong: #837b67;
-    --mono: SFMono-Regular, Consolas, Menlo, monospace;
-    /* Material's three radii, at its 125% root: .1rem = 2px for controls, code
-       and inline labels; .2rem = 4px for admonitions, which is what a pane is.
-       The third is .md-tag's pill, literal below on the chips. */
-    --radius: 2px;
-    --radius-block: 4px;
     --muted: #675f4b;
     /* Bone lifted, not white. The lift is 1.15:1, so the border separates. */
     --pane: #f6f2ea;
-}
+    /* Material's three radii: 2px for controls, code and inline labels; 4px for
+       admonitions, which is what a pane is. The third is .md-tag's pill, literal
+       below on the chips. */
+    --radius: 2px;
+    --radius-block: 4px;
+    --mono: var(--md-code-font-family, SFMono-Regular, Consolas, Menlo, monospace);
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --accent: var(--lobster-light);
-        --accent-bg: #332410;
-        --bg: var(--pitch-black);
-        --error: #f08f8f;
-        --error-bg: #2c1a1a;
-        --fg: var(--bone);
-        --line: #574f3b;
-        --line-strong: #8d8574;
-        --muted: #b0a794;
-        --pane: var(--dark-blue);
-    }
-}
-
-* { box-sizing: border-box; }
-
-body {
-    margin: 0 auto;
-    padding: 1.5rem 1.25rem 5rem;
-    max-width: 1200px;
-    background: var(--bg);
+    font-size: .8rem;
+    line-height: 1.55;
     color: var(--fg);
-    font: 15px/1.55 -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
-    /* Material sets both on body; without them the shared stack renders
-       differently on the two pages. */
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
 }
 
-h1 { font-size: 1.4rem; margin: 0 0 .3rem; letter-spacing: -.01em; }
-h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 .8rem; }
-h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 1.2rem 0 .4rem; }
+[data-md-color-scheme="slate"] .playground {
+    --accent: var(--lobster-light);
+    --accent-bg: #332410;
+    --bg: var(--pitch-black);
+    --error: #f08f8f;
+    --error-bg: #2c1a1a;
+    --fg: var(--bone);
+    --line: #574f3b;
+    --line-strong: #8d8574;
+    --muted: #b0a794;
+    --pane: var(--dark-blue);
+}
 
-.masthead p { margin: .2rem 0; max-width: 64ch; color: var(--muted); }
-.masthead .baseline { color: var(--fg); font-size: 1.08rem; font-weight: 600; margin-top: .35rem; }
-.masthead .lede { color: var(--muted); }
-.small { font-size: .84rem; }
-.hint { margin: -.4rem 0 .9rem; font-size: .78rem; }
-.hint code { color: var(--accent); }
-.masthead .links { margin-top: .6rem; display: flex; gap: 1rem; }
-.masthead .links a { display: inline-flex; align-items: center; gap: .35rem; }
+/* ------------------------------------------------------------------ Material */
 
-/* em so the marks track their label, currentColor so they follow the accent.
-   Inlined in the markup: this page fetches nothing, which it claims above. */
-.icon { width: 1em; height: 1em; flex: none; }
+/* Material treats every <details> in typeset as an admonition — blue rule, note
+   icon, its own type size. The options box is a control, not a callout.
+   `.md-typeset` is named here on purpose: these rules exist only to outrank
+   Material's, several of which are written `[dir=ltr] .md-typeset summary` and
+   outrank a class on their own. */
+.md-typeset .playground details {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    display: block;
+    font-size: inherit;
+    margin: 0;
+    padding: 0;
+}
+.md-typeset .playground details > summary {
+    background: none;
+    border: 0;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: .8em;
+    font-weight: inherit;
+    letter-spacing: .06em;
+    margin: 0;
+    padding: 0;
+    text-transform: uppercase;
+}
+.md-typeset .playground details > summary::before,
+.md-typeset .playground details > summary::after { content: none; display: none; }
 
-a { color: var(--accent); }
+/* Typeset spaces prose. Inside the instrument, each block sets its own. */
+.md-typeset .playground h2,
+.md-typeset .playground h3,
+.md-typeset .playground p,
+.md-typeset .playground dl,
+.md-typeset .playground dd,
+.md-typeset .playground ul { margin: 0; }
+.md-typeset .playground dd { margin-left: 0; }
+.md-typeset .playground ul { padding-left: 0; list-style: none; }
 
-.presets { margin: 1.4rem 0 1rem; display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; }
-.presets-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.preset-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+/* --------------------------------------------------------------------- shell */
 
-.preset-chips button {
-    font: inherit;
-    font-size: .82rem;
-    padding: .18rem .55rem;
-    border: 1px solid var(--line-strong);
+.playground { margin-top: 1.2rem; }
+
+.playground h2 {
+    font-size: .8em;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin: 0 0 .8em;
+    font-weight: 700;
+}
+.playground h3 {
+    font-size: .78em;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    margin: 1.2em 0 .4em;
+    font-weight: 700;
+}
+
+.playground .muted { color: var(--muted); }
+.playground .hint { margin: -.3em 0 .9em; font-size: .78em; }
+.playground .hint code { color: var(--accent); background: none; padding: 0; }
+
+.playground .presets { display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; margin-bottom: .8rem; }
+.playground .presets-label { font-size: .72em; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.playground .preset-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+
+.playground .preset-chips button {
+    font-size: .82em;
+    padding: .18em .55em;
     border-radius: 999px; /* .md-tag's pill, the one shape Material rounds fully */
     background: var(--pane);
-    color: var(--fg);
-    cursor: pointer;
 }
-.preset-chips button:hover { border-color: var(--accent); }
-.preset-chips button[aria-pressed="true"] {
+.playground .preset-chips button[aria-pressed="true"] {
     background: var(--accent-bg);
     border-color: var(--accent);
     color: var(--accent);
 }
 
-main { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
-@media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+.playground .panes { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; align-items: start; }
+@media screen and (max-width: 76.1875em) { .playground .panes { grid-template-columns: 1fr; } }
 
-.pane {
+.playground .pane {
     background: var(--pane);
     border: 1px solid var(--line);
     border-radius: var(--radius-block);
-    padding: 1rem 1.1rem 1.2rem;
+    padding: .8rem .9rem 1rem;
 }
 
-.field { display: block; margin-bottom: .8rem; }
-.field > span { display: block; font-size: .74rem; color: var(--muted); margin-bottom: .25rem; }
+/* --------------------------------------------------------------------- form */
 
-input[type="text"], textarea {
+.playground .field { display: block; margin-bottom: .8rem; }
+.playground .field > span { display: block; font-size: .74em; color: var(--muted); margin-bottom: .25rem; }
+
+.playground input[type="text"],
+.playground textarea {
     width: 100%;
+    box-sizing: border-box;
     font-family: var(--mono);
     font-size: 13px;
     color: var(--fg);
     background: var(--bg);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius);
-    padding: .45rem .55rem;
+    padding: .3rem .35rem;
 }
-textarea { resize: vertical; line-height: 1.5; tab-size: 2; }
-input[type="text"]:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.playground textarea { resize: vertical; line-height: 1.5; tab-size: 2; }
+.playground input[type="text"]:focus,
+.playground textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 
-summary { cursor: pointer; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-.options { padding: .8rem 0 0; display: flex; flex-wrap: wrap; gap: .8rem 1.4rem; align-items: center; }
-fieldset { border: none; padding: 0; margin: 0; }
-legend { font-size: .74rem; color: var(--muted); padding: 0 0 .25rem; }
-.radios { display: flex; gap: .7rem; }
-.radios label { font-size: .85rem; display: inline-flex; gap: .25rem; align-items: center; }
-.option { font-size: .85rem; display: inline-flex; gap: .4rem; align-items: center; }
-.option > span { color: var(--muted); font-size: .78rem; }
-.option.checkbox { gap: .35rem; }
-.note { flex-basis: 100%; margin: 0; font-size: .78rem; }
+.playground .options { padding: .6rem 0 0; display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; align-items: center; }
+.playground fieldset { border: none; padding: 0; margin: 0; }
+.playground legend { font-size: .74em; color: var(--muted); padding: 0 0 .25rem; }
+.playground .radios { display: flex; gap: .7rem; }
+.playground .radios label { font-size: .85em; display: inline-flex; gap: .25rem; align-items: center; }
+.playground .option { font-size: .85em; display: inline-flex; gap: .4rem; align-items: center; }
+.playground .option > span { color: var(--muted); font-size: .78em; }
+.playground .option.checkbox { gap: .35rem; }
+.playground .note { flex-basis: 100%; font-size: .78em; }
+.playground .note code { background: none; padding: 0; }
 
-.digest { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: .35rem .7rem; }
-.digest dt { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-.digest dd { margin: 0; min-width: 0; }
-.mono { font-family: var(--mono); font-size: 13px; }
-.wrap { overflow-wrap: anywhere; }
+/* ------------------------------------------------------------------- digest */
+
+.playground .digest { display: grid; grid-template-columns: max-content 1fr; gap: .35rem .7rem; }
+.playground .digest dt { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.playground .digest dd { min-width: 0; }
+.playground .mono { font-family: var(--mono); font-size: 13px; }
+.playground .wrap { overflow-wrap: anywhere; }
 /* The payoff of the whole library, so it is not the smallest thing on the page. */
-.hash { color: var(--accent); font-weight: 600; font-size: 15.5px; letter-spacing: .01em; }
+.playground .hash { color: var(--accent); font-weight: 600; font-size: 15.5px; letter-spacing: .01em; }
 
-.muted { color: var(--muted); }
-code { font-family: var(--mono); font-size: .92em; }
-
-.error {
+.playground .error {
     font-family: var(--mono);
     font-size: 13px;
     color: var(--error);
@@ -167,42 +217,67 @@ code { font-family: var(--mono); font-size: .92em; }
     margin-bottom: .8rem;
 }
 
-.rules ul, .notes ul, .compare ul { margin: 0; padding-left: 0; list-style: none; }
-.rules li, .compare li { margin-bottom: .45rem; }
-.rules .id, .compare .id { font-family: var(--mono); font-size: 12.5px; color: var(--accent); }
-.rules .why { display: block; font-size: .82rem; color: var(--muted); }
-.notes li { font-family: var(--mono); font-size: 12.5px; }
+.playground .rules ul,
+.playground .notes ul,
+.playground .compare ul { padding-left: 0; list-style: none; }
+.playground .rules li,
+.playground .compare li { margin-bottom: .45rem; }
+.playground .rules li:last-child,
+.playground .compare li:last-child { margin-bottom: 0; }
+.playground .rules .id,
+.playground .compare .id { font-family: var(--mono); font-size: 12.5px; color: var(--accent); }
+.playground .rules .why { display: block; font-size: .82em; color: var(--muted); }
+.playground .notes li { font-family: var(--mono); font-size: 12.5px; }
 
-.actions { display: flex; gap: .5rem; margin-top: 1.1rem; }
-button {
+.playground .actions { display: flex; gap: .5rem; margin-top: 1rem; }
+
+.playground button {
     font: inherit;
-    font-size: .82rem;
-    padding: .3rem .7rem;
+    font-size: .82em;
+    padding: .25em .7em;
     border: 1px solid var(--line-strong);
     border-radius: var(--radius);
     background: var(--bg);
     color: var(--fg);
     cursor: pointer;
 }
-button:hover { border-color: var(--accent); }
-button.link { border: none; background: none; color: var(--accent); padding: 0; font-size: .74rem; text-decoration: underline; }
+.playground button:hover { border-color: var(--accent); }
+.playground button.link {
+    border: none;
+    background: none;
+    color: var(--accent);
+    padding: 0;
+    font-size: .74em;
+    text-decoration: underline;
+}
 
-.compare { border-top: 1px solid var(--line); margin-top: 1.1rem; }
-.compare p { margin: .3rem 0 .6rem; font-size: .9rem; }
-.compare .same { color: var(--accent); font-weight: 600; }
+.playground .compare { border-top: 1px solid var(--line); margin-top: 1rem; }
+.playground .compare p { margin: .3em 0 .6em; font-size: .9em; }
+.playground .compare .same { color: var(--accent); font-weight: 600; }
 
-.status {
-    position: fixed;
-    left: 0; right: 0; bottom: 0;
+/* Sticky, not fixed: this bar belongs to the playground, and a bar pinned to the
+   viewport would sit on top of the site's own footer on every scroll. */
+.playground .status {
+    position: sticky;
+    bottom: 0;
     display: flex;
     gap: .7rem;
     align-items: center;
-    padding: .5rem 1.25rem;
+    margin-top: .8rem;
+    padding: .5rem .6rem;
     background: var(--pane);
-    border-top: 1px solid var(--line);
-    font-size: .8rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-block);
+    font-size: .8em;
 }
-.engine { font-family: var(--mono); font-size: 12px; padding: .1rem .45rem; border-radius: var(--radius); background: var(--accent-bg); color: var(--accent); }
-.status button { margin-left: auto; }
-.status[data-state="loading"] .engine { animation: pulse 1.2s ease-in-out infinite; }
-@keyframes pulse { 50% { opacity: .45; } }
+.playground .engine {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: .1rem .45rem;
+    border-radius: var(--radius);
+    background: var(--accent-bg);
+    color: var(--accent);
+}
+.playground .status button { margin-left: auto; }
+.playground .status[data-state="loading"] .engine { animation: pg-pulse 1.2s ease-in-out infinite; }
+@keyframes pg-pulse { 50% { opacity: .45; } }

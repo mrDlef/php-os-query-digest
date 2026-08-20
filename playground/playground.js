@@ -1,6 +1,14 @@
 /*
  * The playground, in one module and no dependencies.
  *
+ * It is a page of the documentation site, which has two consequences the code
+ * has to carry. navigation.instant swaps the document without reloading, and a
+ * module URL is only ever evaluated once per document — so arriving here by an
+ * internal link would leave an inert form if this booted at import time. It
+ * subscribes to Material's document$ instead, and boots idempotently. And every
+ * asset is resolved against import.meta.url rather than the document, whose base
+ * changes under it on every client-side navigation.
+ *
  * Two engines render the same thing:
  *
  *   precomputed  the presets, digested at build time by tools/build-playground.php
@@ -14,7 +22,12 @@
 // Served from this site, next to this file. Fetched at build time by
 // tools/fetch-runtime.php and checked against playground/runtime.lock.json, so
 // the page contacts nothing but the origin it was loaded from.
-const RUNTIME_URL = './runtime/PhpWeb.mjs';
+//
+// Against import.meta.url, not the document: instant navigation rewrites the
+// document's base, and './data/…' would then resolve against whatever page the
+// reader happened to arrive from.
+const RUNTIME_URL = new URL('./runtime/PhpWeb.mjs', import.meta.url).href;
+const DATA = new URL('./data/', import.meta.url);
 const PHP_VERSION = '8.3';
 const LIBRARY_PATH = '/library.php';
 const REQUEST_PATH = '/request.json';
@@ -53,8 +66,13 @@ try {
 }
 `;
 
-const el = (id) => document.getElementById(id);
-const ui = {
+// Every id is prefixed in the markup: this page shares a document with headings
+// whose anchors are slugs, and `body`, `text`, `notes` and `status` are slugs
+// waiting to happen.
+const el = (id) => document.getElementById('pg-' + id);
+
+/** Re-read on every boot: instant navigation hands us a new document. */
+const elements = () => ({
     presets: el('presets'),
     index: el('index'),
     body: el('body'),
@@ -86,18 +104,17 @@ const ui = {
     engine: el('engine'),
     engineDetail: el('engine-detail'),
     boot: el('boot'),
-};
+});
 
-const state = {
-    meta: null,
-    presets: [],
-    selected: 0,
-    pinned: null,
+/** The interpreter outlives the page: navigating away must not cost 3.1 MB. */
+const runtime = {
     php: null,
     booting: null,
     bootMs: null,
-    lastMs: null,
 };
+
+let ui;
+let state;
 
 /* ---------------------------------------------------------------- base64url */
 
@@ -310,22 +327,22 @@ function setEngine(name, detail, loading = false) {
     ui.engine.textContent = name;
     ui.engineDetail.textContent = detail;
     ui.status.dataset.state = loading ? 'loading' : 'idle';
-    ui.boot.hidden = state.php !== null || loading;
+    ui.boot.hidden = runtime.php !== null || loading;
 }
 
 /* --------------------------------------------------------------------- php */
 
 async function ensurePhp() {
-    if (state.php) {
-        return state.php;
+    if (runtime.php) {
+        return runtime.php;
     }
-    if (state.booting) {
-        return state.booting;
+    if (runtime.booting) {
+        return runtime.booting;
     }
 
     setEngine('loading php', 'about 3.1 MB, once', true);
 
-    state.booting = (async () => {
+    runtime.booting = (async () => {
         const started = performance.now();
         const { PhpWeb } = await import(RUNTIME_URL);
         const php = new PhpWeb({ version: PHP_VERSION });
@@ -345,19 +362,19 @@ async function ensurePhp() {
         // a prologue, so declare(strict_types=1) could never be the first
         // statement there. A required file keeps its own, and the library must
         // run in strict mode — it is the library that way.
-        const library = await (await fetch('./data/library.php.txt')).text();
+        const library = await (await fetch(new URL('library.php.txt', DATA))).text();
         await php.writeFile(LIBRARY_PATH, library);
 
-        state.bootMs = Math.round(performance.now() - started);
-        state.php = php;
+        runtime.bootMs = Math.round(performance.now() - started);
+        runtime.php = php;
 
         return php;
     })();
 
     try {
-        return await state.booting;
+        return await runtime.booting;
     } finally {
-        state.booting = null;
+        runtime.booting = null;
     }
 }
 
@@ -398,7 +415,7 @@ async function runInPhp() {
     render(result);
     setEngine(
         'php ' + (result.php ?? PHP_VERSION),
-        'boot ' + state.bootMs + ' ms · this query ' + state.lastMs + ' ms',
+        'boot ' + runtime.bootMs + ' ms · this query ' + state.lastMs + ' ms',
     );
 }
 
@@ -410,7 +427,7 @@ function schedule() {
     ui.optionsSummary.textContent = describeOptions(optionsSpec());
 
     const preset = state.presets[state.selected];
-    if (matchesPreset(preset) && !state.php) {
+    if (matchesPreset(preset) && !runtime.php) {
         render({ ok: true, digest: preset.digest, rules: preset.rules });
         setEngine('precomputed', 'digested at build time — no PHP loaded yet');
 
@@ -476,7 +493,7 @@ function readFragment() {
 /* ------------------------------------------------------------------- boot */
 
 async function start() {
-    const data = await (await fetch('./data/presets.json')).json();
+    const data = await (await fetch(new URL('presets.json', DATA))).json();
     state.meta = data.meta;
     state.presets = data.presets;
 
@@ -553,7 +570,36 @@ async function start() {
     selectPreset(0);
 }
 
-start().catch((error) => {
-    ui.error.hidden = false;
-    ui.error.textContent = 'The playground could not start: ' + (error?.message ?? error);
-});
+/*
+ * Idempotent by a flag on the root element rather than a module-level one. The
+ * flag lives in the document, so a document instant navigation has just replaced
+ * boots again while the one it replaced cannot boot twice.
+ */
+function boot() {
+    const root = document.getElementById('pg-app');
+    if (root === null || root.dataset.ready === 'true') {
+        return;
+    }
+    root.dataset.ready = 'true';
+
+    window.clearTimeout(pending);
+    ui = elements();
+    state = {
+        meta: null,
+        presets: [],
+        selected: 0,
+        pinned: null,
+        lastMs: null,
+    };
+
+    start().catch((error) => {
+        ui.error.hidden = false;
+        ui.error.textContent = 'The playground could not start: ' + (error?.message ?? error);
+    });
+}
+
+// Boot now, because this module is imported by a loader that already found the
+// page — and subscribe, because the next arrival will not import anything: a
+// module URL is evaluated once, and document$ is then the only signal left.
+boot();
+window.document$?.subscribe(boot);
