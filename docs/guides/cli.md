@@ -120,6 +120,12 @@ field while losing its bounds — so `@timestamp >= now-15m` reaches the log as
 older `from`/`to` spelling every rewritten range uses is read as of v0.10.0;
 before that the whole clause came out as `range(?)`.
 
+**So a time window is not part of the shape here.** `now-15m` and `now-7d` over
+the same field reach the log identically and share one hash — the bounds were
+resolved away before the record was written, and no reading of it brings them
+back. Every other kind of value survives; this one does not, and it is worth
+knowing before you conclude that two dashboards are running the same search.
+
 !!! warning "Slow log fingerprints are not your application's fingerprints"
     The same request digests differently from the two sides, because the shard
     rewrote it. The hash still tells you *which shape*, and it does that on both
