@@ -439,7 +439,7 @@ final class Command
 
         return <<<TXT
 {$this->name} — a readable line, a signature and a stable hash for an
-OpenSearch / Elasticsearch DSL query.
+OpenSearch DSL query.
 
 Usage:
   {$this->name} [options] [FILE]

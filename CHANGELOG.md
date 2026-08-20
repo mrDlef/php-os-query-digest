@@ -65,6 +65,8 @@ Both appenders are read, the plain one and the JSON one beside it. A layout
 that namespaces its keys — `…slowlog.source` rather than `source` — is read too,
 which is tolerance rather than a promise: OpenSearch remains the only thing
 certified here, as it has been since v0.7.0 dropped the `elasticsearch` keyword.
+The root `--help` was still offering "an OpenSearch / Elasticsearch DSL query",
+which that release had already stopped meaning; it says OpenSearch now.
 Input is consumed a line at a time rather than slurped, because rotated slow
 logs run to gigabytes and the whole premise is that you can point this at the
 file you already have.
