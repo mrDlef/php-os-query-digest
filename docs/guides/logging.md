@@ -60,6 +60,13 @@ an exception. **You lose the digest, never the log line.**
 Monolog is a *suggested* dependency, never a required one — the library itself
 still has none. Both major versions work: `^2.0` on PHP 7.4, `^3.0` from 8.1.
 
+## If it does not log its bodies
+
+This one still asks something of the application: that the request already
+reaches a log call. If it does not, there is a way in that asks nothing at all —
+wrap the HTTP client instead, and no call site changes. See
+[Capture at the transport](transport.md).
+
 ## Reading the line
 
 ```

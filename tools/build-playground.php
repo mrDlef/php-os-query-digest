@@ -53,13 +53,16 @@ const FIRST = [
 ];
 
 /**
- * Left out of the bundle: neither is reachable from a browser — one wants stream
- * resources, the other a logger that is not there — and the page pays for every
- * kilobyte.
+ * Left out of the bundle: none of it is reachable from a browser — the CLI wants
+ * stream resources, the Monolog processor a logger that is not there, and the
+ * transport integrations an HTTP client the page has no use for. Two of them
+ * would not even parse: `implements` is resolved at compile time, so declaring
+ * a class against a PSR interface the bundle does not carry stops the page dead.
+ * And the page pays for every kilobyte.
  *
  * @var array<int,string>
  */
-const SKIP = ['Cli/', 'Monolog/'];
+const SKIP = ['Capture/', 'Cli/', 'Http/', 'Monolog/'];
 
 /**
  * `--check` writes nothing and fails if the committed files are not what this
