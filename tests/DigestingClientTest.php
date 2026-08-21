@@ -60,10 +60,15 @@ final class DigestingClientTest extends TestCase
         self::assertSame(7, $seen->tookMillis());
         self::assertSame(200, $seen->statusCode());
         self::assertNull($seen->position());
-        // Bounded, not merely positive: the arithmetic that turns two
-        // microtime() readings into milliseconds has several ways to be wrong
-        // that all still produce a number above zero.
-        self::assertGreaterThan(0.0, $seen->elapsedMillis());
+        // Bounded rather than merely non-negative: the arithmetic that turns
+        // two microtime() readings into milliseconds has several ways to be
+        // wrong that all still produce a plausible-looking number.
+        //
+        // And non-negative rather than positive. A client that answers from
+        // memory can return inside one microtime() tick, so a strict `> 0`
+        // here fails a few runs in a hundred — which is worse than the
+        // assertion is worth.
+        self::assertGreaterThanOrEqual(0.0, $seen->elapsedMillis());
         self::assertLessThan(60000.0, $seen->elapsedMillis());
     }
 
