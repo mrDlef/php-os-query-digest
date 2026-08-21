@@ -7,6 +7,11 @@ namespace MrDlef\OsQueryDigest\Tests\Integration;
 use MrDlef\OsQueryDigest\Formatter;
 use PHPUnit\Framework\TestCase;
 
+// The scenario these pages are measured on, shared with the tool that fills a
+// cluster for the dashboard screenshot. Plain functions, so a tool with no
+// autoloader of its own can require the same file.
+require_once __DIR__ . '/../../tools/scenario.php';
+
 /**
  * Runs the aggregations printed on the Use cases pages against a live cluster.
  *
@@ -25,23 +30,6 @@ final class UseCaseTest extends TestCase
     private const INDEX = 'os-query-digest-use-cases';
 
     private const PAGES = __DIR__ . '/../../docs/use-cases';
-
-    /** Fixed: a documentation example that moves cannot be reproduced. */
-    private const BASE = '2026-08-19T10:00:00Z';
-
-    private const HOURS = 6;
-
-    /**
-     * fixture => [index, per-hour rate, ms before 14:00, ms from 14:00, first hour]
-     *
-     * @var array<string,array{0:string,1:int,2:int,3:int,4:int}>
-     */
-    private const SHAPES = [
-        'workhorse' => ['01-error-rate-filter', 1200, 8, 8, 0],
-        'regressed' => ['02-dashboard-aggs', 60, 42, 910, 0],
-        'deployed' => ['12-vector-search', 90, 25, 25, 5],
-        'alwaysSlow' => ['04-terms-overflow', 5, 1400, 1400, 0],
-    ];
 
     private string $url = '';
 
@@ -267,7 +255,7 @@ final class UseCaseTest extends TestCase
         $body = $url['body'] ?? null;
         self::assertIsArray($body, $panel . ' has no aggregation.');
 
-        $day = substr(self::BASE, 0, 10) . 'T';
+        $day = substr(SCENARIO_BASE, 0, 10) . 'T';
         $encoded = (string) json_encode($body);
 
         $selected = ['gte' => $day . $from . ':00Z', 'lt' => $day . $to . ':00Z'];
@@ -278,7 +266,7 @@ final class UseCaseTest extends TestCase
 
         $encoded = str_replace(
             [
-                (string) json_encode(['%timefilter%' => true, 'shift' => 1, 'unit' => 'hour']),
+                (string) json_encode(['%timefilter%' => true, 'shift' => -1, 'unit' => 'hour']),
                 (string) json_encode(['%timefilter%' => true]),
             ],
             [(string) json_encode($shifted), (string) json_encode($selected)],
@@ -288,7 +276,43 @@ final class UseCaseTest extends TestCase
         $resolved = json_decode($encoded, true);
         self::assertIsArray($resolved, 'The substituted body is not valid JSON.');
 
-        return $resolved;
+        return self::withoutDashboardClauses($resolved);
+    }
+
+    /**
+     * The `%dashboard_context-*%` clauses stand for the dashboard's own query
+     * and filters, which Dashboards substitutes and a cluster has never heard
+     * of. With no dashboard there are none, so they come out.
+     *
+     * @param array<mixed> $body
+     *
+     * @return array<mixed>
+     */
+    private static function withoutDashboardClauses(array $body): array
+    {
+        $query = $body['query'] ?? null;
+        $bool = is_array($query) ? ($query['bool'] ?? null) : null;
+
+        if (!is_array($query) || !is_array($bool)) {
+            return $body;
+        }
+
+        foreach (['must', 'filter', 'must_not'] as $clause) {
+            $clauses = $bool[$clause] ?? null;
+            if (!is_array($clauses)) {
+                continue;
+            }
+
+            $bool[$clause] = array_values(array_filter(
+                $clauses,
+                static fn($one): bool => !is_string($one),
+            ));
+        }
+
+        $query['bool'] = $bool;
+        $body['query'] = $query;
+
+        return $body;
     }
 
     private static function hourBefore(string $time): string
@@ -439,34 +463,16 @@ final class UseCaseTest extends TestCase
         self::fail('No <!-- verified: ' . $name . ' --> block in ' . self::PAGES);
     }
 
-    /** Every digest comes from the library, so a hash here is one a user gets. */
+    /**
+     * The scenario comes from `tools/scenario.php`, which `tools/demo-index.php`
+     * also fills a cluster from — so the dashboard screenshot in the
+     * documentation shows the same afternoon these pages measure.
+     */
     private function index(): void
     {
-        $formatter = Formatter::create();
-        $base = strtotime(self::BASE);
-        $lines = [];
-
-        foreach (self::SHAPES as $role => [$fixture, $rate, $before, $after, $from]) {
-            $digest = self::digest($formatter, $fixture);
-            $this->hashes[$role] = $digest['hash'];
-
-            for ($hour = $from; $hour < self::HOURS; $hour++) {
-                $took = $hour >= 4 ? $after : $before;
-
-                for ($i = 0; $i < $rate; $i++) {
-                    // Deterministic spread, so a percentile is not one value.
-                    $jitter = 1 + (($i % 7) - 3) * 0.06;
-
-                    $lines[] = (string) json_encode(['index' => ['_index' => self::INDEX]]);
-                    $lines[] = (string) json_encode([
-                        '@timestamp' => gmdate('c', $base + $hour * 3600 + intdiv($i * 3600, $rate)),
-                        'release' => $hour >= 5 ? 'v2.31.0' : 'v2.30.1',
-                        'took' => (int) round($took * $jitter),
-                        'os' => $digest,
-                    ]);
-                }
-            }
-        }
+        $scenario = osQueryDigestScenario(self::INDEX);
+        $this->hashes = $scenario['hashes'];
+        $lines = $scenario['lines'];
 
         $this->request('DELETE', '/' . self::INDEX);
 
@@ -478,31 +484,6 @@ final class UseCaseTest extends TestCase
         self::assertFalse(self::dig($bulk['body'], ['errors']), 'Bulk indexing reported errors.');
     }
 
-    /**
-     * @return array<string,string>
-     */
-    private static function digest(Formatter $formatter, string $fixture): array
-    {
-        $path = __DIR__ . '/../fixtures/' . $fixture . '/input.json';
-        $input = json_decode((string) file_get_contents($path), true);
-        self::assertIsArray($input, $fixture . ' is not readable.');
-
-        $request = $input['request'] ?? null;
-        $index = $input['index'] ?? null;
-
-        if (!is_array($request) || !is_string($index)) {
-            self::fail($fixture . ' is not an {index, request} envelope.');
-        }
-
-        $digest = $formatter->describe($request, $index);
-
-        return [
-            'idx' => $digest->index(),
-            'q' => $digest->text(),
-            'sig' => $digest->signature(),
-            'hash' => $digest->hash(),
-        ];
-    }
 
     /**
      * Every hash the fixtures produce — wider than the scenario's four, so a

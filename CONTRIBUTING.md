@@ -32,6 +32,8 @@ make docs                   # serve the documentation site on :8000
 make playground             # the same server: the playground is a page of it
 make palette                # write the palette into both stylesheets
 make dashboards             # rebuild the importable dashboard pack
+make dashboards-up          # a Dashboards of each major, to look by hand
+make dashboards-check       # import it into both, open it, assert it draws
 make playground-runtime     # fetch the wasm PHP the playground runs
 make playground-check       # drive the built page in a real Chromium
 ```

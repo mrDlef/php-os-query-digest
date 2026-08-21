@@ -10,7 +10,7 @@ export DOCKER_GID := $(shell id -g)
 
 .PHONY: test test-all stan cs cs-check rector rector-check check hooks fixtures spec \
         playground playground-data playground-runtime playground-check mutation \
-        dashboards \
+        dashboards dashboards-check dashboards-up \
         release-check release-notes bench docs docs-build docs-playground \
         certify integration clusters clusters-down clean
 
@@ -77,6 +77,24 @@ playground-data:
 dashboards:
 	php tools/build-dashboards.php
 
+## Import the pack into a real Dashboards of each major, then open it in a
+## browser and assert it draws. Slow — two 1.3 GB images, two boots — and
+## deliberately not in CI, like playground-check. Also writes docs/assets.
+dashboards-check: dashboards-up
+	php tools/demo-index.php http://localhost:9202
+	php tools/demo-index.php http://localhost:9203
+	DASHBOARDS_URL=http://localhost:5602 vendor/bin/phpunit --testsuite=integration --filter=DashboardImportTest
+	DASHBOARDS_URL=http://localhost:5603 vendor/bin/phpunit --testsuite=integration --filter=DashboardImportTest
+	NODE_PATH="$${NODE_PATH:-$$(npm root -g)}" node tools/dashboards-browser-check.mjs http://localhost:5602
+	NODE_PATH="$${NODE_PATH:-$$(npm root -g)}" node tools/dashboards-browser-check.mjs http://localhost:5603 \
+		--shot docs/assets/dashboard.png
+	@$(MAKE) clusters-down
+
+## Clusters and Dashboards, one of each major, for looking at the pack by hand:
+## http://localhost:5602 (2.x) and http://localhost:5603 (3.x).
+dashboards-up:
+	docker compose --profile certify --profile dashboards up -d --wait os2 os3 osd2 osd3
+
 ## Write the palette into both stylesheets from one source. PaletteTest fails
 ## until they match, and fails again if any pair drops under its ratio.
 palette:
@@ -117,7 +135,7 @@ clusters:
 	docker compose --profile certify up -d --wait os2 os3
 
 clusters-down:
-	docker compose --profile certify down -v
+	docker compose --profile certify --profile dashboards down -v
 
 ## Re-certify which OpenSearch versions accept the queries we render, and
 ## rewrite resources/versions.json. Review the diff before committing.

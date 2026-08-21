@@ -39,6 +39,16 @@ const TEMPLATE = __DIR__ . '/../resources/dashboards/index-template.json';
 const PATTERN = 'app-logs-*';
 
 const INDEX_PATTERN_ID = 'os-query-digest-logs';
+
+/**
+ * The saved-object shape each panel declares. Both majors descend from the same
+ * 7.10 fork and read it the same way, so it is a lineage marker rather than the
+ * version of anything installed.
+ */
+const PANEL_VERSION = '7.10.0';
+
+/** How Dashboards names the field types this mapping uses. */
+const TYPES = ['date' => 'date', 'integer' => 'number', 'keyword' => 'string', 'text' => 'string'];
 const DASHBOARD_ID = 'os-query-digest-query-shapes';
 
 /** Which vega-lite each Dashboards major bundles. Checked, not assumed. */
@@ -108,18 +118,20 @@ function savedObjects(string $schema): string
                 . 'ranked, which is what keeps bucket_sort from throwing.',
             $schema,
             timeMacros(aggregation('what-regressed')),
-            'slowdown.value',
-            'x',
+            'datum.slowdown.value',
+            '× vs the hour before',
+            true,
         ),
         vegaPanel(
             'os-query-digest-new-shapes',
             'Shapes the release added',
             'Shapes present in the selected window and absent from the same window an hour '
-                . 'earlier. One bar per shape, by how many times it ran.',
+                . 'earlier — with what each one ran, and what it is.',
             $schema,
             timeMacros(aggregation('new-shapes')),
-            'doc_count',
+            'datum.doc_count',
             'runs',
+            false,
         ),
         dashboard(),
     ];
@@ -144,12 +156,87 @@ function indexPattern(): array
         'attributes' => [
             'title' => PATTERN,
             'timeFieldName' => '@timestamp',
-            // Left empty on purpose: Dashboards fills the field list from the
-            // mapping on first use, and a stale copy of it here would describe
-            // an index the reader does not have.
-            'fields' => '[]',
+            // Dashboards 3.x resolves a classic panel's field against this
+            // cached list and fails the panel outright — "Could not locate that
+            // index-pattern-field (id: took)" — when it is absent; 2.x fetches
+            // it instead. So it is written out, derived from the template so
+            // the two cannot describe different indices, and it is only the
+            // fields the pack maps: refreshing the pattern in Dashboards picks
+            // up whatever else a reader's index holds.
+            'fields' => json_encode(fields(), JSON_UNESCAPED_SLASHES),
         ],
     ];
+}
+
+/**
+ * The index pattern's field list, from the mapping the pack ships.
+ *
+ * @return array<int,array<string,mixed>>
+ */
+function fields(): array
+{
+    $decoded = json_decode((string) file_get_contents(TEMPLATE), true);
+    $template = is_array($decoded) ? ($decoded['template'] ?? null) : null;
+    $mappings = is_array($template) ? ($template['mappings'] ?? null) : null;
+    $properties = is_array($mappings) ? ($mappings['properties'] ?? null) : null;
+
+    if (!is_array($properties)) {
+        fwrite(STDERR, "The index template maps nothing.\n");
+        exit(1);
+    }
+
+    $fields = [];
+    foreach (flatten($properties) as $name => $type) {
+        // A text field is searched, never aggregated — which is the whole
+        // reason `os.sig` is a keyword and `os.q` is not.
+        $aggregatable = $type !== 'text';
+
+        $fields[] = [
+            'name' => $name,
+            'type' => TYPES[$type] ?? 'string',
+            'esTypes' => [$type],
+            'count' => 0,
+            'scripted' => false,
+            'searchable' => true,
+            'aggregatable' => $aggregatable,
+            'readFromDocValues' => $aggregatable,
+        ];
+    }
+
+    return $fields;
+}
+
+/**
+ * Mapped paths and their type, dotted, one level of objects deep — which is as
+ * deep as this mapping goes.
+ *
+ * @param array<mixed> $properties
+ *
+ * @return array<string,string>
+ */
+function flatten(array $properties, string $prefix = ''): array
+{
+    $flat = [];
+
+    foreach ($properties as $name => $definition) {
+        if (!is_array($definition)) {
+            continue;
+        }
+
+        $path = $prefix . $name;
+
+        if (isset($definition['properties']) && is_array($definition['properties'])) {
+            $flat += flatten($definition['properties'], $path . '.');
+            continue;
+        }
+
+        $type = $definition['type'] ?? null;
+        if (is_string($type)) {
+            $flat[$path] = $type;
+        }
+    }
+
+    return $flat;
 }
 
 /**
@@ -277,11 +364,29 @@ function percentileOverTime(): array
 /**
  * A Vega panel over one of the page aggregations.
  *
- * The spec stays deliberately plain — a bar chart, one encoding per axis — so it
- * reads the same under vega-lite 4 and 6. Everything interesting is in the
- * aggregation, which is the page's.
+ * The specification stays deliberately plain — one mark, one encoding per axis —
+ * so it reads the same under vega-lite 4 and 6. Everything interesting is in the
+ * aggregation, which is the page's. Four things in here are not decoration, and
+ * each was found by opening the panel in a real Dashboards:
+ *
+ * - **the window is in the body**, not in `%timefield%`, because these two
+ *   panels compare the selected range with an earlier one and `%timefield%`
+ *   restricts the search to the selected range — leaving the before-window
+ *   matching nothing and every bucket dropped. A body query and `%context%` are
+ *   mutually exclusive, so the dashboard's own query and filters come back in
+ *   through the `%dashboard_context-*%` clauses.
+ * - **the value is computed, not addressed.** `slowdown.value` as a field name
+ *   resolves to nothing, and the panel draws an axis of `[Infinity, -Infinity]`
+ *   rather than complaining. A `calculate` reads the nested value.
+ * - **no stacking.** A quantitative encoding stacks by default, which on one bar
+ *   per shape is meaningless and normalises every bar to the same length.
+ * - **a mark that survives no data**, where an empty result is the common case:
+ *   a quantitative extent over nothing is what prints `[Infinity, -Infinity]` in
+ *   the panel, and a discrete text mark has no extent to compute.
  *
  * @param array<mixed> $body
+ * @param string       $value a vega expression over one bucket
+ * @param bool         $bars  false for the panel whose result is usually empty
  *
  * @return array<string,mixed>
  */
@@ -291,42 +396,61 @@ function vegaPanel(
     string $description,
     string $schema,
     array $body,
-    string $valueField,
-    string $valueTitle
+    string $value,
+    string $valueTitle,
+    bool $bars
 ): array {
+    $signature = 'datum.shape && datum.shape.buckets && datum.shape.buckets.length'
+        . " ? datum.shape.buckets[0].key : ''";
+
     $spec = [
         '$schema' => $schema,
         'title' => $title,
         'data' => [
             'url' => [
-                '%context%' => true,
-                '%timefield%' => '@timestamp',
                 'index' => PATTERN,
                 'body' => $body,
             ],
             'format' => ['property' => 'aggregations.shapes.buckets'],
         ],
-        'mark' => ['type' => 'bar', 'tooltip' => true],
+        'transform' => [
+            ['calculate' => $value, 'as' => 'value'],
+            ['calculate' => $signature, 'as' => 'signature'],
+            ['calculate' => "datum.doc_count + '  ·  ' + (" . $signature . ')', 'as' => 'label'],
+        ],
+        'mark' => $bars
+            ? ['type' => 'bar', 'tooltip' => true]
+            : ['type' => 'text', 'align' => 'left', 'dx' => 6, 'limit' => 900, 'tooltip' => true],
         'encoding' => [
             'y' => [
                 'field' => 'key',
                 'type' => 'nominal',
                 'title' => 'shape',
-                'sort' => ['field' => $valueField, 'order' => 'descending'],
-            ],
-            'x' => [
-                'field' => $valueField,
-                'type' => 'quantitative',
-                'title' => $valueTitle,
+                'axis' => ['labelLimit' => 200],
+                'sort' => ['field' => 'value', 'order' => 'descending'],
             ],
             'tooltip' => [
                 ['field' => 'key', 'type' => 'nominal', 'title' => 'hash'],
-                ['field' => 'shape.buckets[0].key', 'type' => 'nominal', 'title' => 'signature'],
-                ['field' => $valueField, 'type' => 'quantitative', 'title' => $valueTitle],
+                ['field' => 'signature', 'type' => 'nominal', 'title' => 'signature'],
+                ['field' => 'value', 'type' => 'quantitative', 'title' => $valueTitle],
                 ['field' => 'doc_count', 'type' => 'quantitative', 'title' => 'records'],
             ],
         ],
     ];
+
+    if ($bars) {
+        $spec['encoding']['x'] = [
+            'field' => 'value',
+            'type' => 'quantitative',
+            'title' => $valueTitle,
+            'stack' => null,
+        ];
+    } else {
+        // Pinned to the left edge: with no quantitative encoding the mark would
+        // otherwise be centred in the panel, half a screen from its label.
+        $spec['encoding']['x'] = ['value' => 8];
+        $spec['encoding']['text'] = ['field' => 'label', 'type' => 'nominal'];
+    }
 
     return visualization($id, $title, [
         'title' => $title,
@@ -361,18 +485,37 @@ function timeMacros(array $body): array
         exit(1);
     }
 
-    $before['filter'] = ['range' => ['@timestamp' => [
-        '%timefilter%' => true,
-        'shift' => 1,
-        'unit' => 'hour',
-    ]]];
-    $after['filter'] = ['range' => ['@timestamp' => ['%timefilter%' => true]]];
+    // Negative: the macro shifts the window the way it is signed, and a
+    // positive one lands an hour *after* the selection — which reads as "every
+    // shape is unchanged", because it compares the slow hour with itself.
+    $earlier = ['range' => ['@timestamp' => ['%timefilter%' => true, 'shift' => -1, 'unit' => 'hour']]];
+    $selected = ['range' => ['@timestamp' => ['%timefilter%' => true]]];
+
+    $before['filter'] = $earlier;
+    $after['filter'] = $selected;
 
     $inner['before'] = $before;
     $inner['after'] = $after;
     $shapes['aggs'] = $inner;
     $aggs['shapes'] = $shapes;
     $body['aggs'] = $aggs;
+
+    // The search has to span both windows, so the time scope is written here
+    // rather than left to `%timefield%`, which would have restricted it to the
+    // selected one — leaving the before-window matching nothing and every
+    // bucket dropped. A body query rules out `%context%`, so the dashboard's
+    // own query and filters are re-injected clause by clause instead; without
+    // that, these two panels would quietly ignore the filter bar.
+    // Bare strings, not objects: that is how the plugin recognises them, and an
+    // object goes to the cluster verbatim and comes back a Bad Request.
+    $body['query'] = ['bool' => [
+        'must' => ['%dashboard_context-must_clause%'],
+        'filter' => [
+            '%dashboard_context-filter_clause%',
+            ['bool' => ['should' => [$earlier, $selected], 'minimum_should_match' => 1]],
+        ],
+        'must_not' => ['%dashboard_context-must_not_clause%'],
+    ]];
 
     return $body;
 }
@@ -428,6 +571,11 @@ function visualization(string $id, string $title, array $visState, string $descr
                 'searchSourceJSON' => json_encode([
                     'query' => ['query' => '', 'language' => 'kuery'],
                     'filter' => [],
+                    // The reference is resolved by name on read. Without this
+                    // the object still imports, and every classic panel then
+                    // fails with "Trying to initialize aggs without index
+                    // pattern".
+                    'indexRefName' => 'kibanaSavedObjectMeta.searchSourceJSON.index',
                 ], JSON_UNESCAPED_SLASHES),
             ],
         ],
@@ -482,6 +630,10 @@ function dashboard(): array
             'gridData' => $grid + ['i' => (string) ($position + 1)],
             'embeddableConfig' => new stdClass(),
             'panelRefName' => $name,
+            // Not optional, whatever an empty dashboard export suggests: the
+            // dashboard plugin reads it to decide whether a panel predates 7.3,
+            // and without it the whole app throws before drawing anything.
+            'version' => PANEL_VERSION,
         ];
         $position++;
     }

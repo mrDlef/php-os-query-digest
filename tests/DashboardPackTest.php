@@ -197,7 +197,17 @@ final class DashboardPackTest extends TestCase
                 $body = (string) json_encode($url['body'] ?? []);
 
                 self::assertStringContainsString('%timefilter%', $body, $id . ' ignores the time picker.');
-                self::assertStringContainsString('%context%', (string) json_encode($url), $id);
+
+                // `%context%` cannot be used beside a body query, so the
+                // dashboard's own query and filters come back in clause by
+                // clause. Without them a panel silently ignores the filter bar.
+                foreach (['must', 'filter', 'must_not'] as $clause) {
+                    self::assertStringContainsString(
+                        '%dashboard_context-' . $clause . '_clause%',
+                        $body,
+                        $id . ' drops the dashboard\'s ' . $clause . ' clauses.',
+                    );
+                }
             }
         }
     }

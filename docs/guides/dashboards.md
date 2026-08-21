@@ -16,6 +16,8 @@ curl -XPOST localhost:5601/api/saved_objects/_import?overwrite=true \
      --form file=@resources/dashboards/os-query-digest-opensearch-2.x.ndjson
 ```
 
+![The pack on the afternoon the Use cases pages describe](../assets/dashboard.png)
+
 Both files live in
 [`resources/dashboards/`](https://github.com/mrDlef/php-os-query-digest/tree/main/resources/dashboards)
 in the package you already installed, so `vendor/mr-dlef/os-query-digest/resources/dashboards/`
@@ -59,7 +61,7 @@ same range **one hour earlier** — the incident question. That is the `shift` a
 `unit` pair in each Vega specification; a deploy you want to judge against
 yesterday wants `"shift": 1, "unit": "day"`.
 
-## What is verified, and what is not
+## What is verified
 
 The pack is generated from the Use cases pages by `make dashboards`, and the
 suite fails if what is committed is not what the generator writes today. On top
@@ -73,9 +75,25 @@ of that:
 - every field the pack names is checked against that template *and* against
   what the digest actually emits, so a panel cannot aggregate on a field this
   library stopped producing;
-- no panel carries a fixed date: they follow the time picker.
+- no panel carries a fixed date: they follow the time picker;
+- **the pack is imported into a real Dashboards of each major and opened in a
+  browser** — `make dashboards-check` — where all four panels have to render,
+  with data in them and no message in any of them. The screenshot above is the
+  output of that run, not a picture taken once and left to rot.
 
-**Whether a panel draws correctly is not machine-checked.** Rendering needs a
-running Dashboards, which is not in this repository's test matrix — so the
-charts are the one part you should look at with your own eyes before trusting
-them in front of somebody else.
+That last one is the check that earned its keep. Every one of these was in the
+pack and invisible until a browser opened it:
+
+| What was wrong | What it looked like |
+|---|---|
+| a panel with no `version` | the whole dashboard app throws before drawing |
+| a search source with no `indexRefName` | *Trying to initialize aggs without index pattern* |
+| no field list on the index pattern | fine on 2.x, *Could not locate that index-pattern-field* on 3.x |
+| `%context%` beside a body query | *must not be used when url.body.query is set* |
+| `%dashboard_context-*%` written as objects | `Bad Request` from the cluster |
+| `%timefilter%` with `shift: 1` | compares the window with the hour **after** it, so nothing ever regressed |
+| a nested value addressed as `slowdown.value` | an axis of `[Infinity, -Infinity]`, or bars normalised to 1 |
+
+**Not everything is machine-checked even so.** The check asserts that panels
+render, carry data and report nothing; whether a chart is *readable* — labels
+not clipped, colours legible — is still a thing to look at yourself.

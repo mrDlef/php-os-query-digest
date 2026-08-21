@@ -78,8 +78,33 @@ What is checked, beyond the pack being what the generator writes today:
   producing;
 - no panel carries a fixed date.
 
-**Whether a panel draws is not machine-checked** and the guide says so: that
-needs a running Dashboards, which is not in this matrix.
+### And then a real Dashboards was pointed at it
+
+`make dashboards-check` boots one Dashboards of each major, imports the pack
+through the saved-objects API, opens the dashboard in a browser and asserts that
+all four panels render, carry data and report nothing. It also writes the
+screenshot the guide shows, so that picture is the output of a run rather than
+something taken once.
+
+It was worth the two images. Every one of these was in the pack, and none of
+them is visible without a browser — an import reports success on all of them:
+
+| What was wrong | What it looked like |
+|---|---|
+| a panel with no `version` | the whole dashboard app throws before drawing |
+| a search source with no `indexRefName` | *Trying to initialize aggs without index pattern* |
+| no field list on the index pattern | fine on 2.x, *Could not locate that index-pattern-field* on 3.x |
+| `%context%` beside a body query | *must not be used when url.body.query is set* |
+| `%dashboard_context-*%` written as objects | `Bad Request` from the cluster |
+| `%timefilter%` with `shift: 1` | compares the window with the hour **after** it, so nothing ever regressed |
+| a nested value addressed as `slowdown.value` | an axis of `[Infinity, -Infinity]`, or bars normalised to 1 |
+
+The last two are the ones worth remembering: both drew a chart. A panel that
+answers the wrong question confidently is worse than one that fails, and neither
+an import nor a test of the aggregation would have caught either.
+
+Whether a chart is *readable* is still yours to judge; the check only proves it
+drew, with data, and said nothing.
 
 ### One mapping instead of three
 
