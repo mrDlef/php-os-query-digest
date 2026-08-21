@@ -1,6 +1,6 @@
 # Public API
 
-Fourteen classes. Everything else in `src/` is `@internal` and may move in a
+Nineteen classes. Everything else in `src/` is `@internal` and may move in a
 patch release — see [what counts as public](../explanation/public-api.md) for
 why the line is drawn there.
 
@@ -200,6 +200,71 @@ array nor decodable JSON. Extends `InvalidArgumentException`.
 Thrown by `Options::fromArray()` on an unknown key or a wrong type, by
 `Normalization::fromLevel()` and `IndexNormalizer::fromMode()` on an unknown
 name, and by `RenderedClause::withParam()` on a numeric name.
+
+---
+
+## Transport
+
+See [Capture at the transport](../guides/transport.md) for which of the two to
+use and why.
+
+### `Http\DigestingClient`
+
+```php
+__construct(ClientInterface $inner, SearchObserver $observer, ?Formatter $formatter = null, string $basePath = '')
+sendRequest(RequestInterface $request): ResponseInterface
+```
+
+A PSR-18 client that digests every `_search` and `_msearch` passing through it.
+Anything else passes straight through. `$basePath` is the path prefix the cluster
+is mounted under, if it is behind a proxy — without it that prefix is read as the
+index name.
+
+### `Http\Guzzle\DigestMiddleware`
+
+```php
+__construct(SearchObserver $observer, ?Formatter $formatter = null, string $basePath = '')
+__invoke(callable $handler): callable
+```
+
+The same capture as a Guzzle middleware — `$stack->push(new
+DigestMiddleware($observer))`. Needed for the requests a PSR-18 decorator cannot
+see: asynchronous and pooled ones, which is most of what `opensearch-php` sends.
+
+### `Http\SearchObserver`
+
+```php
+observe(ObservedSearch $search): void
+```
+
+What to do with a search once it has been seen. It may throw: both integrations
+catch everything an observer does, because a digest is never worth a failed
+request.
+
+### `Http\ObservedSearch`
+
+```php
+digest(): LazyDigest
+tookMillis(): ?int
+elapsedMillis(): float
+statusCode(): ?int
+position(): ?int
+```
+
+One search seen going out, and what came back. The digest is still lazy, so an
+observer that drops this search has not paid to parse it. `tookMillis()` is null
+for every line of an `_msearch`, whose response reports one `took` for the whole
+batch, and when the response body could not be read without disturbing it.
+`statusCode()` is null when the request never got a response.
+
+### `Http\LoggingObserver`
+
+```php
+__construct(LoggerInterface $logger, string $level = LogLevel::INFO, string $message = 'opensearch.search')
+```
+
+Writes one PSR-3 record per search, with `os` and `took` in the shape the
+[dashboard pack](../guides/dashboards.md) maps.
 
 ---
 

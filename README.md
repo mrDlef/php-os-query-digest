@@ -90,14 +90,17 @@ $logger->info('opensearch.search', [
 ]);
 ```
 
-PHP 7.4 → 8.5, `ext-json`, nothing else. Ships a CLI, a Monolog processor, and a
-browser playground.
+PHP 7.4 → 8.5, `ext-json`, nothing else. Ships a CLI, a Monolog processor, a
+PSR-18 and Guzzle transport capture, and a browser playground.
 
 ## What you get
 
 - **You can try it before integrating.** `os-query-digest slowlog` reads the
   slow log your cluster already writes and ranks the query *shapes* in it by
   what they cost — no code change, nothing to deploy, no index to create.
+- **You do not have to touch a call site.** Wrap the HTTP client your
+  OpenSearch library already uses — PSR-18 or Guzzle — and every search is
+  digested on its way out, already joined to what it cost.
 - **Logs you can read.** One line replaces the body — and it is DQL, so you
   select it, paste it into the Dashboards search bar, and you are looking at the
   same query.
@@ -124,12 +127,13 @@ browser playground.
 |---|---|
 | [Getting started](https://mrdlef.github.io/php-os-query-digest/getting-started/) | install to a readable log line, in five minutes |
 | [Log your queries](https://mrdlef.github.io/php-os-query-digest/guides/logging/) | the Monolog processor, and how to read the line |
+| [Capture at the transport](https://mrdlef.github.io/php-os-query-digest/guides/transport/) | wrap your HTTP client, change no call site |
 | [Options](https://mrdlef.github.io/php-os-query-digest/guides/options/) | normalisation levels, redaction, display limits |
 | [Command line](https://mrdlef.github.io/php-os-query-digest/guides/cli/) | `slowlog`, `--ndjson`, `--explain`, `--hash` |
 | [The dashboard pack](https://mrdlef.github.io/php-os-query-digest/guides/dashboards/) | the index template and four panels, imported once |
 | [How the fingerprint works](https://mrdlef.github.io/php-os-query-digest/explanation/how-it-works/) | why two different-looking queries share a hash |
 | [Hash stability](https://mrdlef.github.io/php-os-query-digest/explanation/hash-stability/) | read this before storing a fingerprint |
-| [Public API](https://mrdlef.github.io/php-os-query-digest/reference/api/) | the fourteen classes you may depend on |
+| [Public API](https://mrdlef.github.io/php-os-query-digest/reference/api/) | the nineteen classes you may depend on |
 
 The site is published from a release tag, never from `main`: a page describing
 an API nobody can install yet is worse than a page a few days out of date.

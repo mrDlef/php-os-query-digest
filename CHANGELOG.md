@@ -24,6 +24,112 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 | `q4:` | v0.10.0 | the older `from`/`to` spelling of a range is read, and a range left without bounds became an `exists` |
 | `q4x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
+## v0.12.0 — unreleased
+
+_wrap the client, change no call site_
+
+**Fingerprints:** `q4:` unchanged.
+
+### The integration that needs no integration
+
+Every way in until now asked the application to hand the library a request. The
+Monolog processor is the cheapest of them and it still needs an application that
+*already logs its search bodies*; `describe()` needs a call site. So the two ends
+of the adoption path did not meet: `slowlog` lets you try the tool before writing
+any code, and then writing the code was the next thing you had to do.
+
+Wrap the HTTP client your OpenSearch library already uses instead:
+
+```php
+use MrDlef\OsQueryDigest\Http\{DigestingClient, LoggingObserver};
+
+$client = new DigestingClient($client, new LoggingObserver($logger));
+```
+
+Every `_search` and `_msearch` it sends is now digested, and the record it writes
+carries `os` and `took` in exactly the shape
+[the dashboard pack](https://mrdlef.github.io/php-os-query-digest/guides/dashboards/)
+maps. Anything that is not a search passes straight through.
+
+### Two of them, because a Guzzle client hides half its traffic
+
+`Http\DigestingClient` is a PSR-18 decorator and `Http\Guzzle\DigestMiddleware`
+is a handler-stack middleware. A Guzzle client *is* a PSR-18 client, so the
+decorator works on one — for the requests it sends synchronously. Libraries that
+send asynchronously never call `sendRequest()` at all, and `opensearch-php` is
+one of them, so the middleware is not a convenience wrapper over the decorator.
+
+Both are still zero runtime dependencies: `psr/http-client` and
+`guzzlehttp/guzzle` are *suggested*, the way `monolog/monolog` is.
+
+### Nothing it does can fail your search
+
+This sits in the path of every query the application makes, so the interesting
+part is the list of things it declines to do.
+
+- **A body that cannot be put back is not read.** An unseekable stream is one the
+  client has not sent yet; consuming it for a digest would send the request
+  without its query. And a stream is returned to the position it was found at,
+  not to the start — the position is the client's, not ours.
+- **A failed request is still counted**, with a null status. The shape that times
+  out is the shape worth finding. The exception reaches your error handling
+  unchanged, including the case where a promise was rejected with something that
+  is not a `Throwable`.
+- **An observer that throws costs one digest**, per search rather than per
+  request: one bad line of a batch does not take the rest of the batch with it.
+
+### What the URL is allowed to mean
+
+The index is in the signature, so reading it wrongly is a wrong fingerprint
+rather than a cosmetic slip — and four things about an OpenSearch URL make that
+easy to get wrong.
+
+- **The endpoint has to be the last segment.** `_search` is a prefix of three
+  endpoints that carry no query: `_search/scroll` sends a scroll id,
+  `_search/template` an id and its params, `_search/point_in_time` nothing at
+  all.
+- **An index expression can start with an underscore.** `_all` is one, which is
+  why the endpoint is found from the right — a rule that took the *first*
+  underscored segment for the endpoint would read `/_all/_search` as an endpoint
+  named `_all` and digest none of it. That one was found by a mutant, not by a
+  test.
+- **An index name can contain a slash.** Date-math names arrive percent-encoded
+  — `%3Clogs-%7Bnow%2Fd%7D%3E` for `<logs-{now/d}>` — so the path is split on `/`
+  first and each segment decoded after.
+- **`/proxy/_search` and `/logs/_search` are the same URL.** A cluster behind a
+  path prefix has to say so, hence the `$basePath` argument; without it the
+  prefix lands in every fingerprint as the index name.
+
+The removed mapping-type form, `/logs/type/_search`, is declined rather than
+guessed at: no supported version accepts it, and picking one of the two segments
+to call the index would put a name of our choosing in someone's dashboard.
+
+### Two things a mock cannot show, so a node was asked
+
+- **`took` is read off the front of the response.** A search response opens with
+  it, so a fixed peek at the first bytes finds it without decoding a body that
+  may hold a megabyte of hits. That is an observation about OpenSearch's
+  serialiser and not a rule anybody published, so
+  `tests/Integration/TransportCaptureTest.php` asserts it against real 2.19.6 and
+  3.8.0 nodes. A version that stopped doing it fails that test instead of
+  quietly reporting null for every search.
+- **A body read for its digest still arrives.** No mock can show this — it never
+  sends anything. The same test runs a real filtered search and fails if the node
+  answers with the hit count of a `match_all`, which is what an emptied body
+  would have become.
+
+Both nodes also confirmed what a batch reports: an `_msearch` response opens with
+the `took` of the whole batch and carries one per line further in, past the hits
+of the line before it. So each line reports **null** rather than the batch's
+figure repeated — that number in a `took` aggregation would count once per line
+of every batch — and `position()` says which line it was.
+
+### The public surface is nineteen classes
+
+Five more: the two integrations, the `SearchObserver` interface, the
+`ObservedSearch` it is handed, and the `LoggingObserver` that ships. Widening it
+is a line in `ApiBoundaryTest`, as ever.
+
 ## v0.11.0 — 2026-08-21
 
 _the dashboard is written already_

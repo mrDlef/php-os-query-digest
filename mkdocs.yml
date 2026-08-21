@@ -116,6 +116,7 @@ nav:
       - What the hash is not for: use-cases/what-the-hash-is-not.md
   - Guides:
       - Log your queries: guides/logging.md
+      - Capture at the transport: guides/transport.md
       - Options: guides/options.md
       - Command line: guides/cli.md
       - The dashboard pack: guides/dashboards.md

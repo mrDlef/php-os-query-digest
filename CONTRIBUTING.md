@@ -8,7 +8,7 @@ will fail your build if you meet them by surprise.
 
 ```bash
 composer install
-vendor/bin/phpunit          # 233 tests, offline, under a second
+vendor/bin/phpunit          # 271 tests, offline, under a second
 ```
 
 The full gate, which is what CI runs:
@@ -173,7 +173,7 @@ plugin the library cannot read, you do not need a fork — register a
 Every class in `src/` carries `@api` or `@internal`, and `ApiBoundaryTest` fails
 if one carries neither, both, or if a public method returns an internal type.
 
-Fourteen classes are public. The parser, the tree and the renderers are not —
+Nineteen classes are public. The parser, the tree and the renderers are not —
 they change on every promotion, and freezing them would make each rendering
 improvement a major release.
 
