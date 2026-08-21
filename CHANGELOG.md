@@ -24,7 +24,7 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 | `q4:` | v0.10.0 | the older `from`/`to` spelling of a range is read, and a range left without bounds became an `exists` |
 | `q4x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
-## v0.12.0 — unreleased
+## v0.12.0 — 2026-08-21
 
 _wrap the client, change no call site_
 
