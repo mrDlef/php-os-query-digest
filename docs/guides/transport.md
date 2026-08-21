@@ -21,9 +21,9 @@ That is the whole integration. Every search now produces one log record:
   "message": "opensearch.search",
   "os": {
     "idx": "logs-*",
-    "q": "logs-* | q=(service:api and not status:200) | size=5",
-    "sig": "logs-* | q=(service:? and not status:?) | size=5",
-    "hash": "q4:b7cc218cda09"
+    "q": "logs-* | q=(not status:200 and service:api) | size=5",
+    "sig": "logs-* | q=(not status:? and service:?) | size=5",
+    "hash": "q4:b87b162b2b4e"
   },
   "took": 6,
   "elapsed_ms": 9,
