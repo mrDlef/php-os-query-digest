@@ -1,0 +1,38 @@
+{
+    "index_patterns": [
+        "app-logs-*"
+    ],
+    "priority": 100,
+    "template": {
+        "mappings": {
+            "properties": {
+                "@timestamp": {
+                    "type": "date"
+                },
+                "took": {
+                    "type": "integer"
+                },
+                "release": {
+                    "type": "keyword"
+                },
+                "os": {
+                    "properties": {
+                        "hash": {
+                            "type": "keyword"
+                        },
+                        "sig": {
+                            "type": "keyword",
+                            "ignore_above": 1024
+                        },
+                        "q": {
+                            "type": "text"
+                        },
+                        "idx": {
+                            "type": "keyword"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

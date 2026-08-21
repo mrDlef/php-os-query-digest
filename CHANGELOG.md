@@ -24,6 +24,96 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 | `q4:` | v0.10.0 | the older `from`/`to` spelling of a range is read, and a range left without bounds became an `exists` |
 | `q4x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
+## v0.11.0 — unreleased
+
+_the dashboard is written already_
+
+**Fingerprints:** `q4:` unchanged.
+
+### An importable pack, in `resources/dashboards/`
+
+The Use cases pages answer four questions and ask you to paste four
+aggregations into a console to see them. The same four questions now ship as an
+index template and a dashboard:
+
+```bash
+curl -XPUT localhost:9200/_index_template/os-query-digest \
+     --data-binary @resources/dashboards/index-template.json -H 'Content-Type: application/json'
+curl -XPOST 'localhost:5601/api/saved_objects/_import?overwrite=true' -H 'osd-xsrf: true' \
+     --form file=@resources/dashboards/os-query-digest-opensearch-2.x.ndjson
+```
+
+Where the time goes, p95 by shape over time, what regressed, and what the last
+release added. The first two are ordinary visualisations, so they can be edited
+with a mouse. **The last two have to be Vega**: they ask their question with
+`bucket_script`, `bucket_selector` and `bucket_sort`, and no classic
+visualisation can express a pipeline aggregation.
+
+### Why there are two files
+
+**Dashboards 2.x bundles vega-lite 4 and 3.x bundles vega-lite 6**, and the
+plugin refuses a specification whose `$schema` names the other. Neither version
+can read one file, so both are written — generated from the same source, and a
+test asserts they differ in that URL and in nothing else, which is what stops
+one of them becoming a fork nobody maintains.
+
+### Generated from the pages, and executed
+
+`make dashboards` builds the pack from the `<!-- verified: … -->` blocks the Use
+cases pages already carry, so a panel cannot drift from the aggregation those
+pages prove against a live cluster. What a page pins the pack cannot: 14:00 is
+one afternoon, while a panel follows the time picker, so the two fixed windows
+become `%timefilter%` and the same window shifted back an hour — the one
+substitution, in one place.
+
+What is checked, beyond the pack being what the generator writes today:
+
+- **each Vega panel's aggregation is executed** against 2.19.6 and 3.8.0 on the
+  scenario the pages describe, and has to answer with the shape they say;
+- **the shipped index template is applied by a real cluster**, and `os.hash`
+  has to come out a `keyword` — the difference between an aggregation and a pile
+  of word fragments;
+- every field the pack names exists in that template *and* among the fields the
+  digest emits, so a panel cannot aggregate on something the library stopped
+  producing;
+- no panel carries a fixed date.
+
+### And then a real Dashboards was pointed at it
+
+`make dashboards-check` boots one Dashboards of each major, imports the pack
+through the saved-objects API, opens the dashboard in a browser and asserts that
+all four panels render, carry data and report nothing. It also writes the
+screenshot the guide shows, so that picture is the output of a run rather than
+something taken once.
+
+It was worth the two images. Every one of these was in the pack, and none of
+them is visible without a browser — an import reports success on all of them:
+
+| What was wrong | What it looked like |
+|---|---|
+| a panel with no `version` | the whole dashboard app throws before drawing |
+| a search source with no `indexRefName` | *Trying to initialize aggs without index pattern* |
+| no field list on the index pattern | fine on 2.x, *Could not locate that index-pattern-field* on 3.x |
+| `%context%` beside a body query | *must not be used when url.body.query is set* |
+| `%dashboard_context-*%` written as objects | `Bad Request` from the cluster |
+| `%timefilter%` with `shift: 1` | compares the window with the hour **after** it, so nothing ever regressed |
+| a nested value addressed as `slowdown.value` | an axis of `[Infinity, -Infinity]`, or bars normalised to 1 |
+
+The last two are the ones worth remembering: both drew a chart. A panel that
+answers the wrong question confidently is worse than one that fails, and neither
+an import nor a test of the aggregation would have caught either.
+
+Whether a chart is *readable* is still yours to judge; the check only proves it
+drew, with data, and said nothing.
+
+### One mapping instead of three
+
+The mapping existed three times: in the Use cases prose, in the integration
+test, and now in the pack. The template file is the only copy left — the page
+includes it, and the scenario index the pages are measured on is created from
+it. The numbers on those pages are therefore produced under the mapping a reader
+installs.
+
 ## v0.10.0 — 2026-08-21
 
 _the report you can run before you integrate anything_

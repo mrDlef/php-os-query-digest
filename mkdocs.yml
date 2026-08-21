@@ -71,7 +71,12 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  # Files outside docs/ can be included, which is how a page shows a shipped
+  # artefact rather than a copy of it. check_paths turns a typo into a failed
+  # build instead of an empty code block.
+  - pymdownx.snippets:
+      base_path: ['.']
+      check_paths: true
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.emoji:
@@ -113,6 +118,7 @@ nav:
       - Log your queries: guides/logging.md
       - Options: guides/options.md
       - Command line: guides/cli.md
+      - The dashboard pack: guides/dashboards.md
       - Teach it a query type: guides/extending.md
   - Reference:
       - Public API: reference/api.md
