@@ -24,7 +24,7 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 | `q4:` | v0.10.0 | the older `from`/`to` spelling of a range is read, and a range left without bounds became an `exists` |
 | `q4x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
-## v0.11.0 — unreleased
+## v0.11.0 — 2026-08-21
 
 _the dashboard is written already_
 
@@ -105,6 +105,16 @@ an import nor a test of the aggregation would have caught either.
 
 Whether a chart is *readable* is still yours to judge; the check only proves it
 drew, with data, and said nothing.
+
+### A sentence the slow log guide was missing
+
+A rewritten range reaches a slow log without its bounds, which v0.10.0 described
+and then stopped short of. The consequence is the one real loss of information in
+that whole feature: **`now-15m` and `now-7d` over the same field share a hash
+there**, because the shard resolved the bounds away before writing the record.
+Every other kind of value survives; this one does not. It was misread the other
+way by the person who wrote the code, which is about as good a reason to write a
+sentence as there is.
 
 ### One mapping instead of three
 
