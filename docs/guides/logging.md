@@ -19,6 +19,7 @@ so a debug-level log filtered out by your handler costs nothing.
 
 The digest serialises to a compact object:
 
+<!-- verified: logging-record -->
 ```json
 {
   "idx": "logs-*",
@@ -69,6 +70,7 @@ wrap the HTTP client instead, and no call site changes. See
 
 ## Reading the line
 
+<!-- verified: logging-line -->
 ```
 logs-* | q=(service:api and status:(500 or 502)) | post=(host:web-1) | aggs=terms(host,10)>p95(rt) | size=0 sort=@timestamp:desc | +highlight
 └ index  └ DQL query                              └ post_filter       └ aggregation pipeline        └ options                    └ notes

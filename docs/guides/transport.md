@@ -16,6 +16,7 @@ $client = new DigestingClient($client, new LoggingObserver($logger));
 
 That is the whole integration. Every search now produces one log record:
 
+<!-- verified: transport-record -->
 ```json
 {
   "message": "opensearch.search",
