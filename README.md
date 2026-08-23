@@ -94,6 +94,14 @@ $logger->info('opensearch.search', [
 PHP 7.4 → 8.5, `ext-json`, nothing else. Ships a CLI, a Monolog processor, a
 PSR-18 and Guzzle transport capture, and a browser playground.
 
+**No PHP on the box?** The slow log you want to read is usually not on a
+machine that has any. The CLI ships as one file and as an image:
+
+```bash
+cat *_index_search_slowlog.log \
+  | docker run -i --rm ghcr.io/mrdlef/os-query-digest slowlog
+```
+
 ## What you get
 
 - **You can try it before integrating.** `os-query-digest slowlog` reads the

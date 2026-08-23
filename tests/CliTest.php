@@ -296,6 +296,28 @@ final class CliTest extends TestCase
         self::assertStringContainsString('fingerprint version q4', $out);
     }
 
+    /**
+     * The phar is the one build that has to identify itself: a single file
+     * downloaded onto a host has no composer.lock beside it saying which
+     * release it is. An installed copy passes nothing and says nothing.
+     */
+    public function testVersionNamesTheBuildWhenThereIsOne(): void
+    {
+        $out = fopen('php://memory', 'r+');
+        $in = fopen('php://memory', 'r+');
+        self::assertIsResource($out);
+        self::assertIsResource($in);
+
+        $status = (new Command($in, $out, $out, 'os-query-digest.phar', 'v9.9.9'))->run(['x', '--version']);
+        rewind($out);
+
+        self::assertSame(Command::OK, $status);
+        self::assertSame(
+            "os-query-digest.phar, fingerprint version q4 (build v9.9.9)\n",
+            (string) stream_get_contents($out),
+        );
+    }
+
     public function testADoubleDashEndsTheOptions(): void
     {
         // A file whose name starts with a dash is the only reason this exists.

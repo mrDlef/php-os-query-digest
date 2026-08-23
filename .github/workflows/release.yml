@@ -1,0 +1,115 @@
+name: release
+
+# On the *release*, not on the tag. pages.yml deploys on a tag push, which is
+# right for a site — nothing outside the repository has to exist first. These
+# artefacts do: the phar is uploaded as an asset of a release, and the release
+# is created by hand after the tag (see CONTRIBUTING). A workflow racing that
+# would find nothing to attach to.
+on:
+  release:
+    types: [ published ]
+  # For a release whose assets need rebuilding without moving the tag.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build and attach to, e.g. v0.13.0'
+        required: true
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/os-query-digest
+
+jobs:
+  phar:
+    name: Attach the phar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: json
+          coverage: none
+
+      # The tag, not `git describe`: a checkout of a tag would describe itself
+      # correctly, but only because the history happens to be there. Passing it
+      # in means the artefact says what it was built for either way.
+      - name: Build
+        env:
+          OS_QUERY_DIGEST_VERSION: ${{ inputs.tag || github.event.release.tag_name }}
+        run: php -d phar.readonly=0 tools/build-phar.php build/os-query-digest.phar
+
+      - name: It runs, and says which build it is
+        run: |
+          php build/os-query-digest.phar --version \
+            | grep -q "(build ${{ inputs.tag || github.event.release.tag_name }})"
+
+      # A checksum beside a downloadable binary, so `curl | sha256sum -c` is
+      # possible for anyone who wants it.
+      - name: Checksum
+        working-directory: build
+        run: sha256sum os-query-digest.phar > os-query-digest.phar.sha256
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ inputs.tag || github.event.release.tag_name }}" \
+            build/os-query-digest.phar build/os-query-digest.phar.sha256 --clobber
+
+  image:
+    name: Push the image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Three tags: the release, the minor series for anyone who wants patches
+      # without reading a changelog, and latest. No major-only tag while this is
+      # pre-1.0 — `0` would promise a stability the version number denies.
+      - name: Tags
+        id: tags
+        env:
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          version="${TAG#v}"
+          minor="${version%.*}"
+          {
+            echo "version=$version"
+            echo "list=${IMAGE}:${version},${IMAGE}:${minor},${IMAGE}:latest"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/cli.Dockerfile
+          build-args: |
+            VERSION=${{ inputs.tag || github.event.release.tag_name }}
+          # amd64 and arm64: the second is not a nicety — an Apple laptop
+          # running the amd64 image under emulation is slower at reading a log
+          # file than the cluster was at running the queries in it.
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.tags.outputs.list }}
+          push: true
+          provenance: true
+
+      - name: It runs
+        run: |
+          docker run --rm "${IMAGE}:${{ steps.tags.outputs.version }}" --version \
+            | grep -q "(build ${{ inputs.tag || github.event.release.tag_name }})"

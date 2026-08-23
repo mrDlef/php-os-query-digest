@@ -36,7 +36,20 @@ make dashboards-up          # a Dashboards of each major, to look by hand
 make dashboards-check       # import it into both, open it, assert it draws
 make playground-runtime     # fetch the wasm PHP the playground runs
 make playground-check       # drive the built page in a real Chromium
+make phar                   # the CLI as one file, in build/
+make image                  # the distributable CLI image
 ```
+
+The two distributable artefacts are built from `src/` and nothing else — no
+`vendor/`, because there is none to carry. `tools/build-phar.php` finds every
+file under `src/` rather than listing them, and `PharTest` builds the phar and
+runs it on every PHP version in the matrix: the stub's autoloader is the one
+piece of code a checkout never exercises, and a namespace it maps wrongly is a
+class-not-found on somebody else's machine. `docker/cli.Dockerfile` is that
+image; `docker/Dockerfile` beside it is the development one and is not
+interchangeable with it. Publishing both is `.github/workflows/release.yml`,
+which runs when a release is *published* rather than when the tag is pushed —
+the phar is an asset of a release, so the release has to exist first.
 
 The playground is a page of the documentation site — `docs/playground.md`, whose
 markup is `overrides/playground.html`. Two things about it are load-bearing and
