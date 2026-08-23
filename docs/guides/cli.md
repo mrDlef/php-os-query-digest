@@ -36,6 +36,28 @@ A malformed line is reported on stderr and skipped, so one mangled record does
 not cost you the rest of the file. Exit codes: `0` ok, `1` an input could not be
 parsed, `2` a bad invocation. `--help` lists every flag.
 
+## Without the package
+
+The binary does not need the library installed beside it. Every release ships
+the CLI as one `.phar` and as an image — see
+[without installing PHP at all](../getting-started.md#or-without-installing-php-at-all)
+for both — which matters because the slow log the next section reads is rarely
+on a machine anyone would install a PHP toolchain on.
+
+Two things differ from `vendor/bin/os-query-digest`, and nothing else does:
+
+- **`--version` names the build.** An installed copy is identified by the
+  `composer.lock` that installed it; a file someone copied onto a host is
+  identified by nothing, so the phar carries the release it was built from and
+  says so.
+- **The image reads standard input** unless you mount something. It runs as
+  `nobody`, which cannot read a root-owned log — piping avoids the question
+  entirely.
+
+The fingerprints are the same fingerprints. That is not a hope: CI digests one
+query with the image and with the checkout it was built from, and compares the
+two.
+
 ## From the log your cluster already writes
 
 `--ndjson` still asks you for a file of query bodies, which you probably do not

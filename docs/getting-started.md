@@ -10,6 +10,48 @@ composer require mr-dlef/os-query-digest
 
 Requires PHP 7.4 or newer and `ext-json`. That is the whole dependency list.
 
+### Or without installing PHP at all
+
+The next section points the tool at a slow log, and a slow log usually lives on
+a machine with no PHP toolchain on it — nor any reason to acquire one. The CLI
+is published as a single file and as an image, both built from the same source
+by [the release workflow](https://github.com/mrDlef/php-os-query-digest/releases):
+
+=== "Docker"
+
+    ```bash
+    cat *_index_search_slowlog.log \
+      | docker run -i --rm ghcr.io/mrdlef/os-query-digest slowlog
+    ```
+
+    It reads standard input, so nothing has to be mounted. To pass a path
+    instead, mount the directory and keep your own identity — the image runs as
+    `nobody`, which cannot read a root-owned log:
+
+    ```bash
+    docker run --rm --user "$(id -u):$(id -g)" -v /var/log/opensearch:/logs:ro \
+      ghcr.io/mrdlef/os-query-digest slowlog '/logs/*_index_search_slowlog.log'
+    ```
+
+=== "One file"
+
+    ```bash
+    curl -sSLO https://github.com/mrDlef/php-os-query-digest/releases/latest/download/os-query-digest.phar
+    curl -sSL  https://github.com/mrDlef/php-os-query-digest/releases/latest/download/os-query-digest.phar.sha256 \
+      | sha256sum -c -
+    chmod +x os-query-digest.phar
+
+    ./os-query-digest.phar slowlog /var/log/opensearch/*_index_search_slowlog.log
+    ```
+
+    A phar needs PHP on the machine — 7.4 or newer, `ext-json`, no Composer and
+    no `vendor/`. `--version` names the build it came from, which a copied file
+    otherwise cannot tell you.
+
+Both carry the same rules as the library, so their fingerprints are the
+library's: CI compares the image's output with a checkout's rather than trusting
+that they agree.
+
 ## First, on the log you already have
 
 Before touching your code: the binary that ships with the package reads the slow

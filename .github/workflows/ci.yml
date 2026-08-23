@@ -68,6 +68,40 @@ jobs:
       - run: composer update --prefer-dist --no-progress
       - run: vendor/bin/rector process --dry-run
 
+  cli-image:
+    name: CLI image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json
+          coverage: none
+
+      - run: composer update --prefer-dist --no-progress
+
+      # The phar itself is covered by PharTest on every PHP version. What only
+      # this job can prove is that the image built around it runs at all: a
+      # wrong COPY path or a USER that cannot read its own binary is invisible
+      # until someone pulls it.
+      - name: Build the image
+        run: docker build -f docker/cli.Dockerfile --build-arg VERSION=ci -t os-query-digest:ci .
+
+      - name: It reports its build
+        run: docker run --rm os-query-digest:ci --version | grep -q '(build ci)'
+
+      # No hash written here: the image's answer is compared with this
+      # checkout's, which is the only claim worth making. cmp rather than diff
+      # in a pipeline — a reflowed byte is still a difference.
+      - name: It agrees with the library it was built from
+        run: |
+          echo '{"query":{"term":{"service":"api"}},"size":50}' > query.json
+          docker run -i --rm os-query-digest:ci --hash --index=logs-2026.08.13 < query.json > image.txt
+          php bin/os-query-digest --hash --index=logs-2026.08.13 < query.json > local.txt
+          cmp image.txt local.txt
+
   mutation-testing:
     name: Mutation testing
     runs-on: ubuntu-latest

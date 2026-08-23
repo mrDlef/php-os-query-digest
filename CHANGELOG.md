@@ -26,10 +26,45 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 
 ## v0.13.0 — unreleased
 
-_the examples nothing read_
+_one file to download, and the examples nothing read_
 
 **Fingerprints:** `q4:` unchanged. Two hashes printed in the command line guide
 did move, and they were never ones this library produced — see below.
+
+### The CLI without the package
+
+`slowlog` answers "which query shape is costing us" from a file every cluster
+already writes. The people holding that file are as often SREs as they are PHP
+developers, and until now the answer was behind `composer require` — a language
+toolchain to install on a log host, for one report.
+
+Two artefacts per release now, built from the same source:
+
+```bash
+cat *_index_search_slowlog.log \
+  | docker run -i --rm ghcr.io/mrdlef/os-query-digest slowlog
+```
+
+and `os-query-digest.phar`, one file with a `.sha256` beside it, attached to the
+release. Neither is a repackaging: `tools/build-phar.php` finds every file under
+`src/` rather than listing them, the stub is a nine-line PSR-4 autoloader, and
+there is no `vendor/` inside because there is nothing to put in it.
+
+- **`PharTest` builds it and runs it on every PHP version in the matrix**, 7.4
+  to 8.5. A file anyone can download has to run on the oldest interpreter this
+  library claims, not on the one a release was cut from — and the stub is the one
+  piece of code a checkout never exercises.
+- **The image is compared with the library it was built from.** CI digests a
+  query both ways and `cmp`s the answers, so "the fingerprints are the same" is
+  a check rather than a claim.
+- **`--version` names the build.** An installed copy is identified by the
+  `composer.lock` that installed it; a file copied onto a jump host is identified
+  by nothing, so the phar carries its release and says so. Nothing was added to
+  `src/` for this: the build is passed in, and `git describe` supplies it locally.
+
+`docker/Dockerfile` is unchanged and still the development image. The
+distributable one is `docker/cli.Dockerfile`, which runs as `nobody` and reads
+standard input, so the common case mounts nothing at all.
 
 ### Every fingerprint in the docs is recomputed now
 

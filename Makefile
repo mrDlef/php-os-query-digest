@@ -1,5 +1,11 @@
 PHP_VERSIONS := 7.4 8.0 8.1 8.2 8.3 8.4 8.5
 PHP_VERSION  ?= 8.3
+
+# The distributable image. Its own PHP rather than PHP_VERSION: what the matrix
+# is being tested on has nothing to do with what a published image should ship.
+IMAGE_NAME         ?= ghcr.io/mrdlef/os-query-digest
+IMAGE_PHP_VERSION  ?= 8.4
+IMAGE_VERSION      ?= $(shell git describe --tags --dirty 2>/dev/null || echo dev)
 # Pinned to what .github/workflows/pages.yml installs, so a local build and the
 # published one cannot disagree.
 MKDOCS_IMAGE := squidfunk/mkdocs-material:9.5.49
@@ -12,6 +18,7 @@ export DOCKER_GID := $(shell id -g)
         playground playground-data playground-runtime playground-check mutation \
         dashboards dashboards-check dashboards-up \
         release-check release-notes bench docs docs-build docs-playground \
+        phar image \
         certify integration clusters clusters-down clean
 
 ## Run the test suite in Docker for one PHP version: make test PHP_VERSION=7.4
@@ -99,6 +106,24 @@ dashboards-up:
 ## until they match, and fails again if any pair drops under its ratio.
 palette:
 	php tools/build-palette.php
+
+## The CLI as one downloadable file: build/os-query-digest.phar.
+## -d phar.readonly=0 is not optional — it is on by default and cannot be
+## changed at runtime. PharTest builds and runs it on every PHP version.
+phar:
+	@php -d phar.readonly=0 tools/build-phar.php
+
+## The distributable image, which builds the phar inside itself. Not
+## docker/Dockerfile: that one is the development image, with Composer and a
+## vendor tree per PHP version.
+##   make image IMAGE_PHP_VERSION=8.3 IMAGE_VERSION=v0.13.0
+image:
+	docker build -f docker/cli.Dockerfile \
+		--build-arg PHP_VERSION=$(IMAGE_PHP_VERSION) \
+		--build-arg VERSION=$(IMAGE_VERSION) \
+		-t $(IMAGE_NAME):$(IMAGE_VERSION) -t $(IMAGE_NAME):latest .
+	@echo
+	@echo "  cat slowlog | docker run -i --rm $(IMAGE_NAME):$(IMAGE_VERSION) slowlog"
 
 ## Fetch the PHP-in-wasm runtime into playground/runtime and check it against
 ## playground/runtime.lock.json. Gitignored: 12.5 MB does not belong in the

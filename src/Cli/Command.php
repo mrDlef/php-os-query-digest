@@ -46,6 +46,8 @@ final class Command
 
     private string $name;
 
+    private ?string $build;
+
     /** @var resource */
     private $stdin;
 
@@ -56,16 +58,24 @@ final class Command
     private $stderr;
 
     /**
-     * @param resource $stdin
-     * @param resource $stdout
-     * @param resource $stderr
+     * @param resource    $stdin
+     * @param resource    $stdout
+     * @param resource    $stderr
+     * @param string|null $build  which build of the tool this is, for
+     *                            `--version`. Null for an installed copy: the
+     *                            release is in the caller's `composer.lock`,
+     *                            and repeating it in `src/` would be one more
+     *                            thing every tag has to remember. A phar has no
+     *                            such file, so the one built by
+     *                            `tools/build-phar.php` passes it in.
      */
-    public function __construct($stdin, $stdout, $stderr, string $name = 'os-query-digest')
+    public function __construct($stdin, $stdout, $stderr, string $name = 'os-query-digest', ?string $build = null)
     {
         $this->stdin = $stdin;
         $this->stdout = $stdout;
         $this->stderr = $stderr;
         $this->name = $name;
+        $this->build = $build;
     }
 
     /**
@@ -181,11 +191,7 @@ final class Command
                     return self::OK;
                 case '-V':
                 case '--version':
-                    $this->write(
-                        $this->stdout,
-                        $this->name . ', fingerprint version '
-                        . Options::create()->hashVersion() . "\n",
-                    );
+                    $this->write($this->stdout, $this->version());
 
                     return self::OK;
                 default:
@@ -430,6 +436,24 @@ final class Command
         $this->write($this->stderr, 'Try `' . $this->name . " --help`.\n");
 
         return self::USAGE;
+    }
+
+    /**
+     * The fingerprint version first, because it is the one that changes what
+     * the tool produces: a dashboard grouping on `q4:` cares which rules minted
+     * a hash and not at all which release did it. The build follows when there
+     * is one — a phar copied onto a jump host has no `composer.lock` beside it
+     * to answer that with.
+     */
+    private function version(): string
+    {
+        $line = $this->name . ', fingerprint version ' . Options::create()->hashVersion();
+
+        if ($this->build !== null) {
+            $line .= ' (build ' . $this->build . ')';
+        }
+
+        return $line . "\n";
     }
 
     private function usage(): string
