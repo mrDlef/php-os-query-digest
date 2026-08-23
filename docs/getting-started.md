@@ -12,10 +12,10 @@ Requires PHP 7.4 or newer and `ext-json`. That is the whole dependency list.
 
 ### Or without installing PHP at all
 
-The next section points the tool at a slow log, and a slow log usually lives on
-a machine with no PHP toolchain on it — nor any reason to acquire one. The CLI
-is published as a single file and as an image, both built from the same source
-by [the release workflow](https://github.com/mrDlef/php-os-query-digest/releases):
+A slow log usually lives on a machine with no PHP toolchain on it, nor any
+reason to acquire one. The CLI is published as a single file and as an image,
+both built from the same source by
+[the release workflow](https://github.com/mrDlef/php-os-query-digest/releases):
 
 === "Docker"
 
@@ -49,8 +49,8 @@ by [the release workflow](https://github.com/mrDlef/php-os-query-digest/releases
     otherwise cannot tell you.
 
 Both carry the same rules as the library, so their fingerprints are the
-library's: CI compares the image's output with a checkout's rather than trusting
-that they agree.
+library's: CI digests one query with the image and with a checkout, and compares
+the two.
 
 ## First, on the log you already have
 

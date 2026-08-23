@@ -5,15 +5,15 @@
 ![no runtime dependencies](https://img.shields.io/badge/runtime%20dependencies-none-2e7d32)
 ![LGPL-3.0-or-later](https://img.shields.io/badge/licence-LGPL--3.0--or--later-555)
 
-### Read your OpenSearch queries. Group them. Find the slow ones.
+**Human-readable, loggable digests and stable fingerprints for OpenSearch DSL
+queries.**
 
 A DSL query in a log line is a wall of nested braces: nobody greps it, nobody
 groups by it, and it costs a fortune in log volume. So the question you actually
 have during an incident — *which **kind** of query is hurting us?* — has no
 answer anywhere in your stack.
 
-This library gives that question three answers: **one line you can log**, **one
-shape you can read**, and **one hash you can `terms`-aggregate on**.
+This gives it one!
 
 ### 📖 [Documentation](https://mrdlef.github.io/php-os-query-digest/) · ▶ [Try it on your own query](https://mrdlef.github.io/php-os-query-digest/playground/)
 
@@ -49,15 +49,6 @@ sig   logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and servic
 hash  q4:fe168406e702
 ```
 
-```php
-$digest = MrDlef\OsQueryDigest\Formatter::create()
-    ->describe($request, 'logs-2026.08.13');
-
-$digest->text();       // the line above — select it, paste it into Dashboards
-$digest->signature();  // the same query with its literals erased: the shape
-$digest->hash();       // q4:fe168406e702 — stable, versioned, groupable
-```
-
 |             | what it is                             | what it is for                          |
 |-------------|----------------------------------------|-----------------------------------------|
 | `text`      | the query in DQL, with real values     | paste it into the Dashboards search bar |
@@ -75,9 +66,49 @@ That query and that fingerprint are not illustrations: they are
 
 ## Install
 
+### Download the CLI
+
+It digests a query you paste, a file of them a line at a time, or the slow log
+your cluster is already writing —
+[every flag is in the guide](https://mrdlef.github.io/php-os-query-digest/guides/cli/):
+
+```bash
+curl -sSLO https://github.com/mrDlef/php-os-query-digest/releases/latest/download/os-query-digest.phar
+chmod +x os-query-digest.phar
+./os-query-digest.phar slowlog /var/log/opensearch/*_index_search_slowlog.log
+```
+
+That last one ranks the shapes in the file by what they cost you: no code to
+change, nothing to deploy, no index to create. Needs PHP 7.4 → 8.5 on the
+machine, and every release carries a `.sha256` beside the file.
+
+### Or run it in Docker
+
+```bash
+cat *_index_search_slowlog.log \
+  | docker run -i --rm ghcr.io/mrdlef/os-query-digest slowlog
+```
+
+It reads standard input, so nothing has to be mounted.
+[Mounting a log instead](https://mrdlef.github.io/php-os-query-digest/getting-started/#or-without-installing-php-at-all)
+is one flag. Both artefacts are built from the same source as the package and
+mint the same fingerprints — CI digests one query each way and compares the two.
+
+### Then put it in your application
+
 ```bash
 composer require mr-dlef/os-query-digest
 ```
+
+Three ways in, and they mix:
+
+- **[The Monolog processor](https://mrdlef.github.io/php-os-query-digest/guides/logging/#with-monolog)**
+  replaces the request body with its digest wherever your application already
+  logs one. One processor, no call sites.
+- **[A PSR-18 decorator or a Guzzle middleware](https://mrdlef.github.io/php-os-query-digest/guides/transport/)**
+  digests every search on its way out of the HTTP client, already joined to what
+  it cost.
+- **The formatter**, when you want the digest in your own hands:
 
 ```php
 use MrDlef\OsQueryDigest\Formatter;
@@ -91,31 +122,14 @@ $logger->info('opensearch.search', [
 ]);
 ```
 
-PHP 7.4 → 8.5, `ext-json`, nothing else. Ships a CLI, a Monolog processor, a
-PSR-18 and Guzzle transport capture, and a browser playground.
-
-**No PHP on the box?** The slow log you want to read is usually not on a
-machine that has any. The CLI ships as one file and as an image:
-
-```bash
-cat *_index_search_slowlog.log \
-  | docker run -i --rm ghcr.io/mrdlef/os-query-digest slowlog
-```
+`ext-json`, and no runtime dependencies: Monolog, PSR-18 and Guzzle are
+suggested, never required.
 
 ## What you get
 
-- **You can try it before integrating.** `os-query-digest slowlog` reads the
-  slow log your cluster already writes and ranks the query *shapes* in it by
-  what they cost — no code change, nothing to deploy, no index to create.
-- **You do not have to touch a call site.** Wrap the HTTP client your
-  OpenSearch library already uses — PSR-18 or Guzzle — and every search is
-  digested on its way out, already joined to what it cost.
-- **Logs you can read.** One line replaces the body — and it is DQL, so you
-  select it, paste it into the Dashboards search bar, and you are looking at the
-  same query.
-- **Your log volume drops.** A 40-line body becomes one line, capped.
-- **Slow queries become countable.** `terms` on the hash and the top of the list
-  is the shape to fix.
+- **Logs you can read, and fewer bytes of them.** A 40-line body becomes one
+  capped line — and it is DQL, so you select it, paste it into the Dashboards
+  search bar, and you are looking at the same query.
 - **The dashboard is written already.** An index template and four panels ship
   in the package — import them and you are looking at which shape costs you,
   which one regressed, and which one the last release added.
@@ -130,22 +144,17 @@ cat *_index_search_slowlog.log \
 
 ## Documentation
 
-**[mrdlef.github.io/php-os-query-digest](https://mrdlef.github.io/php-os-query-digest/)**
+**[mrdlef.github.io/php-os-query-digest](https://mrdlef.github.io/php-os-query-digest/)** —
+a guide for each way in, the reference, and the reasoning behind the
+normalisation rules.
 
-| | |
-|---|---|
-| [Getting started](https://mrdlef.github.io/php-os-query-digest/getting-started/) | install to a readable log line, in five minutes |
-| [Log your queries](https://mrdlef.github.io/php-os-query-digest/guides/logging/) | the Monolog processor, and how to read the line |
-| [Capture at the transport](https://mrdlef.github.io/php-os-query-digest/guides/transport/) | wrap your HTTP client, change no call site |
-| [Options](https://mrdlef.github.io/php-os-query-digest/guides/options/) | normalisation levels, redaction, display limits |
-| [Command line](https://mrdlef.github.io/php-os-query-digest/guides/cli/) | `slowlog`, `--ndjson`, `--explain`, `--hash` |
-| [The dashboard pack](https://mrdlef.github.io/php-os-query-digest/guides/dashboards/) | the index template and four panels, imported once |
-| [How the fingerprint works](https://mrdlef.github.io/php-os-query-digest/explanation/how-it-works/) | why two different-looking queries share a hash |
-| [Hash stability](https://mrdlef.github.io/php-os-query-digest/explanation/hash-stability/) | read this before storing a fingerprint |
-| [Public API](https://mrdlef.github.io/php-os-query-digest/reference/api/) | the nineteen classes you may depend on |
+- **[Getting started](https://mrdlef.github.io/php-os-query-digest/getting-started/)**
+  goes from nothing to a log line you can read.
+- **[Hash stability](https://mrdlef.github.io/php-os-query-digest/explanation/hash-stability/)**
+  comes before storing a fingerprint anywhere permanent: the prefix moves when
+  the rules do, so a stored hash is never silently reinterpreted.
 
-The site is published from a release tag, never from `main`: a page describing
-an API nobody can install yet is worse than a page a few days out of date.
+The site tracks the latest release, not `main`.
 
 ## Contributing and security
 

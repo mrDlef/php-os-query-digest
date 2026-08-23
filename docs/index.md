@@ -1,6 +1,7 @@
 # os-query-digest
 
-## Read your OpenSearch queries. Group them. Find the slow ones.
+**Human-readable, loggable digests and stable fingerprints for OpenSearch DSL
+queries.**
 
 A search request in a log file is a wall of nested braces nobody reads. This
 turns it into one line you can paste into Dashboards, plus a stable fingerprint

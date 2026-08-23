@@ -38,13 +38,13 @@ parsed, `2` a bad invocation. `--help` lists every flag.
 
 ## Without the package
 
-The binary does not need the library installed beside it. Every release ships
-the CLI as one `.phar` and as an image — see
+The binary does not need the library installed beside it: every release ships
+the CLI as one `.phar` and as an image, and
 [without installing PHP at all](../getting-started.md#or-without-installing-php-at-all)
-for both — which matters because the slow log the next section reads is rarely
-on a machine anyone would install a PHP toolchain on.
+has both commands. A slow log is rarely on a machine anyone would install a PHP
+toolchain on.
 
-Two things differ from `vendor/bin/os-query-digest`, and nothing else does:
+Only two things differ from `vendor/bin/os-query-digest`:
 
 - **`--version` names the build.** An installed copy is identified by the
   `composer.lock` that installed it; a file someone copied onto a host is
@@ -54,9 +54,8 @@ Two things differ from `vendor/bin/os-query-digest`, and nothing else does:
   `nobody`, which cannot read a root-owned log — piping avoids the question
   entirely.
 
-The fingerprints are the same fingerprints. That is not a hope: CI digests one
-query with the image and with the checkout it was built from, and compares the
-two.
+The fingerprints are the same: CI digests one query with the image and with the
+checkout it was built from, and compares the two.
 
 ## From the log your cluster already writes
 
