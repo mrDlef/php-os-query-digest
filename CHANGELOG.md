@@ -24,6 +24,46 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 | `q4:` | v0.10.0 | the older `from`/`to` spelling of a range is read, and a range left without bounds became an `exists` |
 | `q4x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
+## v0.13.0 — unreleased
+
+_the examples nothing read_
+
+**Fingerprints:** `q4:` unchanged. Two hashes printed in the command line guide
+did move, and they were never ones this library produced — see below.
+
+### Every fingerprint in the docs is recomputed now
+
+The Use cases pages run their aggregations against a live node, the playground
+presets are generated and the fixtures pin every hash. The examples in the
+guides were the ones nothing read: written by hand, and read only by people.
+
+That cost something in v0.12.0. A digest block copied from the logging guide into
+the transport guide and edited by hand had its hash *and* its clause order wrong
+— the canonicaliser reorders, so `not status:200` sorts ahead of `service:api`
+and the hand-edited line described a query nobody could send. It was caught by
+recomputing it by hand before the tag, which is not a check.
+
+`DocExampleTest` recomputes them instead. Each block carries the
+`<!-- verified: name -->` marker the Use cases pages already use, and:
+
+- the two landing pages print a request *and* its digest, so the digest is
+  checked against a run of the request beside it — neither is copied into the
+  test;
+- the slowlog table and the `--json` block are compared, byte for byte, against
+  a real run of a real 60-line log the test builds;
+- the CLI transcript pipes the request out of its own `echo`;
+- the `explain` block is checked line by line, including which rules fired.
+
+A stray fingerprint in a sentence fails too: every `q4:`-prefixed hash on the
+pages has to be one these examples mint, with a single documented exception —
+the page about hash stability prints the *shape* of a hash rather than one.
+
+**Two hashes in the `--ndjson` example were not real.** Nothing in this
+repository produced `q4:2e2169e22798` or `q4:33a434d95576`, and nothing ever
+had. That block now counts fingerprints from a file the test digests, and one of
+them is the hash the same page prints thirty lines above — which is the point the
+paragraph under it was already making.
+
 ## v0.12.0 — 2026-08-21
 
 _wrap the client, change no call site_

@@ -23,6 +23,7 @@ shape you can read**, and **one hash you can `terms`-aggregate on**.
 **Before.** One search request, as it lands in your logs — and there are
 thousands of these a day:
 
+<!-- verified: readme-digest -->
 ```json
 {
   "query": {

@@ -3,6 +3,7 @@
 The package ships a binary, so a query pasted out of a slow log does not need a
 scratch PHP file:
 
+<!-- verified: cli-describe -->
 ```bash
 $ echo '{"query":{"term":{"service":"api"}},"size":50}' \
     | vendor/bin/os-query-digest --index logs-2026.08.13
@@ -21,10 +22,11 @@ The reason it exists is `--ndjson`: one query per input line, one line of output
 each. Point it at a log of search bodies and "which *kind* of query is slow" is
 a `uniq -c` away:
 
+<!-- verified: cli-ndjson -->
 ```bash
 $ os-query-digest --ndjson --hash < slow.ndjson | sort | uniq -c | sort -rn
-      3 q4:2e2169e22798
-      1 q4:33a434d95576
+      3 q4:5b2210eb5318
+      1 q4:f70c7bc21a0f
 ```
 
 Those three are not three slow queries to read: they are one shape, hit on two
@@ -40,6 +42,7 @@ parsed, `2` a bad invocation. `--help` lists every flag.
 have yet. Your cluster does: `index.search.slowlog` is on in most of them, and
 `os-query-digest slowlog` reads it as it is.
 
+<!-- verified: cli-slowlog -->
 ```bash
 $ vendor/bin/os-query-digest slowlog /var/log/opensearch/*_index_search_slowlog.log
 60 lines, 59 records, 3 shapes, 13,515 ms total
@@ -69,6 +72,7 @@ the group's. `--json` carries both, and labels the sample as one — plus the
 timestamps the group spans, which is how you tell a shape that has always been
 there from one that arrived with this morning's deploy.
 
+<!-- verified: cli-slowlog-json -->
 ```bash
 $ os-query-digest slowlog --json --top=1 slowlog.log | jq '.[0] | {count, p95_ms, first, last}'
 {

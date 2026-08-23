@@ -8,6 +8,7 @@ you can `terms` aggregate on.
 
 **Before.**
 
+<!-- verified: index-digest -->
 ```json
 {
   "query": {

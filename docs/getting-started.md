@@ -15,6 +15,7 @@ Requires PHP 7.4 or newer and `ext-json`. That is the whole dependency list.
 Before touching your code: the binary that ships with the package reads the slow
 log your cluster is already writing, and ranks what is in it by what it costs.
 
+<!-- verified: getting-started-slowlog -->
 ```bash
 $ vendor/bin/os-query-digest slowlog /var/log/opensearch/*_index_search_slowlog.log
 60 lines, 59 records, 3 shapes, 13,515 ms total
@@ -36,6 +37,7 @@ is one page.
 Take a request you already send to OpenSearch — the array you hand to
 `opensearch-php`, or the JSON string from a slow log.
 
+<!-- verified: getting-started-digest -->
 ```php
 use MrDlef\OsQueryDigest\Formatter;
 

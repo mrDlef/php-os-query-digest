@@ -57,6 +57,16 @@ The colours of the documentation and the playground come from
 not the CSS: `PaletteTest` fails if either file has drifted, and fails again if
 any pair drops under the contrast ratio it is documented at.
 
+**Never write a fingerprint into a page by hand.** Every digest example in the
+docs is recomputed by `DocExampleTest`, which finds it by the
+`<!-- verified: name -->` marker above its block — the same marker `UseCaseTest`
+uses on the Use cases pages. A new example needs the marker and a case in that
+test; a hash dropped into a sentence needs to be one the test already mints, or
+it fails there. That guard exists because a block copied between two guides and
+edited by hand shipped with a wrong hash *and* a wrong clause order: the
+canonicaliser reorders clauses, so editing a rendered line is not editing a
+query.
+
 ### The Docker matrix
 
 Tests run in Docker across the whole supported matrix:

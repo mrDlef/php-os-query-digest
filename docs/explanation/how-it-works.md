@@ -42,6 +42,7 @@ $explanation = $formatter->explain($request, 'logs-2026.08.13');
 echo $explanation;
 ```
 
+<!-- verified: explain-output -->
 ```
 text: logs-* | q=(env:prod and msg:timeout and service:api) | size=0 | should=1
 sig:  logs-* | q=(env:? and msg:~? and service:?) | size=0 | should=1
