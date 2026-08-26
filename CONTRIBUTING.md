@@ -171,7 +171,7 @@ change shows up as a reviewable diff rather than a surprise.
 code now does, which turns a broken test into a green one and a contract
 violation into a commit nobody noticed.
 
-When hashes do move, the prefix moves with them — `q3:` → `q4:` — so the break
+When hashes do move, the prefix moves with them — `q4:` → `q5:` — so the break
 is visible in the data instead of invisible.
 
 ### 2. Promotions must be batched

@@ -12,9 +12,9 @@ trusted. `tools/changelog.php check` compares the hashes pinned in
 disagrees with what actually happened — a release cannot claim your dashboards
 survived when they did not, or forget to mention that they did not.
 
-The prefix has moved twice, and both times only the prefix: a signature that did
-not change kept its twelve hex characters, so `q2:abc…` and `q3:abc…` describe
-the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-digest/explanation/hash-stability/).
+The prefix has moved four times, and every time only the prefix: a signature that
+did not change kept its twelve hex characters, so `q4:abc…` and `q5:abc…`
+describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-digest/explanation/hash-stability/).
 
 | prefix | from | why |
 |---|---|---|
@@ -22,14 +22,54 @@ the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-diges
 | `q2:` | v0.2.0 | three query types promoted out of `type(?)` |
 | `q3:` | v0.6.0 | eight more promoted |
 | `q4:` | v0.10.0 | the older `from`/`to` spelling of a range is read, and a range left without bounds became an `exists` |
-| `q4x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
+| `q5:` | v0.13.0 | the search parameters an `['index' => …, 'body' => …]` envelope carries beside `body` are read instead of dropped |
+| `q5x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
 ## v0.13.0 — unreleased
 
-_one file to download, and the examples nothing read_
+_the parameters beside `body`, one file to download, and the examples
+nothing read_
 
-**Fingerprints:** `q4:` unchanged. Two hashes printed in the command line guide
-did move, and they were never ones this library produced — see below.
+**Fingerprints:** `q4:` → `q5:` — a search whose `size`, `from` or `sort` sits
+beside `body` rather than inside it now says so. Only the prefix moved: all
+eighteen fixtures kept their twelve hex characters.
+
+### The search parameters an envelope carries beside `body`
+
+`['index' => …, 'body' => …]` is how both clients take a search, and `size`,
+`from` and `sort` are as legitimate beside `body` as inside it: they are three of
+the fifty-three parameters the search endpoint whitelists, where they travel as
+query string rather than as JSON. The parser descended into `body` and dropped
+everything next to it, so these two produced the same fingerprint:
+
+```php
+$f->describe(['index' => 'members', 'body' => $body, 'size' => 20, 'from' => 40]);
+$f->describe(['index' => 'members', 'body' => $body]);
+```
+
+They are not two spellings of one search. One pages forty documents deep, the
+other takes the default ten — and sharing a hash meant "which shape is hurting
+us" answered with a shape that has no `size` in it, while the deep-paging one,
+usually the expensive one, was invisible.
+
+Both are read now, and the conflict rules are the cluster's rather than the
+plausible ones:
+
+- **`size` and `from`: the envelope wins.** The cluster parses the body and
+  *then* applies the query string, so the outer value overrides the inner one —
+  the opposite of what the nesting suggests.
+- **`sort`: the envelope is appended.** The query string sorts are added after
+  the body's rather than replacing them, so the body keeps the primary key.
+
+Neither rule came from the clients' documentation. Both were read off a live
+node — a thirty-document index, `size` and `from` and `sort` set to different
+values in the two places, and the hits counted — and
+`tests/fixtures/19-envelope-search-params` pins the answer.
+
+One consequence worth naming: an envelope `sort` is a query string parameter, so
+it carries the URI syntax — `last_name:desc`, comma-joined — not the body's
+structural form. Read as a body sort it would have minted a field called
+`last_name:desc` and claimed ascending.
 
 ### The CLI without the package
 
@@ -89,7 +129,7 @@ recomputing it by hand before the tag, which is not a check.
 - the CLI transcript pipes the request out of its own `echo`;
 - the `explain` block is checked line by line, including which rules fired.
 
-A stray fingerprint in a sentence fails too: every `q4:`-prefixed hash on the
+A stray fingerprint in a sentence fails too: every `q5:`-prefixed hash on the
 pages has to be one these examples mint, with a single documented exception —
 the page about hash stability prints the *shape* of a hash rather than one.
 

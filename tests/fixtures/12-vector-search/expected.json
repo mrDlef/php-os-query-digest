@@ -2,5 +2,5 @@
     "idx": "products-v3",
     "q": "products-v3 | q=(image_embedding:knn(k=20) and in_stock:true or text_embedding:neural(query=\"waterproof hiking boots\",k=20)) | size=20",
     "sig": "products-v3 | q=(image_embedding:knn(k=?) and in_stock:? or text_embedding:neural(query=?,k=?)) | size=20",
-    "hash": "q4:4dde138a2ad7"
+    "hash": "q5:4dde138a2ad7"
 }

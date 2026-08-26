@@ -2,5 +2,5 @@
     "idx": "shop-catalog",
     "q": "shop-catalog | q=(name:\"running shoes\" and price >= 20 and price < 200) | post=(brand:acme and in_stock:true) | aggs=terms(brand,20) | size=24",
     "sig": "shop-catalog | q=(name:~? and price >= ? and price < ?) | post=(brand:? and in_stock:?) | aggs=terms(brand,20) | size=24",
-    "hash": "q4:ce0146715c07"
+    "hash": "q5:ce0146715c07"
 }

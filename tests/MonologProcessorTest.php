@@ -50,7 +50,7 @@ final class MonologProcessorTest extends TestCase
         self::assertSame('logs-*', $digest['idx']);
         self::assertSame('logs-* | q=(env:prod) | size=10', $digest['q']);
         self::assertSame('logs-* | q=(env:?) | size=10', $digest['sig']);
-        self::assertMatchesRegularExpression('/^q4:[0-9a-f]{12}$/', self::text($digest, 'hash'));
+        self::assertMatchesRegularExpression('/^q5:[0-9a-f]{12}$/', self::text($digest, 'hash'));
     }
 
     /**

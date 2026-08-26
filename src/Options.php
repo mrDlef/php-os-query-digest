@@ -57,7 +57,7 @@ final class Options
      * Bumped whenever the normalisation rules change, so an algorithm change is
      * visible in the data instead of silently rewriting every dashboard.
      */
-    private string $hashVersion = 'q4';
+    private string $hashVersion = 'q5';
 
     private function __construct()
     {

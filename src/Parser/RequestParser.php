@@ -30,6 +30,17 @@ final class RequestParser
 
     private const RENDERED = ['query', 'post_filter', 'aggs', 'aggregations', 'size', 'from', 'sort'];
 
+    /**
+     * Rendered keys the search endpoint also accepts beside `body`, where they
+     * travel as query-string parameters — both `elasticsearch-php` 7.x and
+     * `opensearch-php` whitelist them. Reading only `body` handed the same
+     * fingerprint to a paging request and an unpaged one.
+     *
+     * `sort` belongs here too and is missing on purpose: it is merged rather
+     * than overridden, and in a different syntax. See {@see self::uriSort()}.
+     */
+    private const ENVELOPE_PARAMS = ['size', 'from'];
+
     private QueryParser $queryParser;
 
     private AggParser $aggParser;
@@ -53,6 +64,7 @@ final class RequestParser
     {
         $trace ??= new Trace();
         $body = $request;
+        $envelopeSort = null;
 
         if (array_key_exists('body', $request) && is_array($request['body'])) {
             $envelopeIndex = Arr::get($request, 'index');
@@ -62,6 +74,18 @@ final class RequestParser
                     : Arr::str($envelopeIndex);
             }
             $body = $request['body'];
+
+            // The cluster applies the query string *after* the body, so an
+            // envelope `size` or `from` overrides the one inside. `sort` is the
+            // exception: the URL sorts are appended to the body's rather than
+            // replacing them, so the body keeps the primary key. Both rules were
+            // read off a live node, not off the clients' documentation.
+            foreach (self::ENVELOPE_PARAMS as $param) {
+                if (array_key_exists($param, $request)) {
+                    $body[$param] = $request[$param];
+                }
+            }
+            $envelopeSort = Arr::get($request, 'sort');
         }
 
         $notes = [];
@@ -111,7 +135,7 @@ final class RequestParser
             $aggs,
             $this->intOrNull(Arr::get($body, 'size')),
             $this->intOrNull(Arr::get($body, 'from')),
-            $this->sort(Arr::get($body, 'sort')),
+            array_merge($this->sort(Arr::get($body, 'sort')), $this->uriSort($envelopeSort)),
             array_values(array_unique($notes)),
         );
     }
@@ -126,6 +150,55 @@ final class RequestParser
         }
 
         return is_string($value) && ctype_digit($value) ? (int) $value : null;
+    }
+
+    /**
+     * Envelope `sort` is a query-string parameter, so it carries the URI
+     * syntax — `field:direction`, comma-joined — not the body's structural
+     * form. Left to {@see self::sort()} it would mint a field called
+     * `timestamp:desc` and claim ascending.
+     *
+     * A suffix that is neither `asc` nor `desc` is part of the field name: the
+     * cluster only reads those two, and a field is likelier than a direction
+     * nobody supports.
+     *
+     * @param mixed $sort
+     *
+     * @return array<int,array{0:string,1:string}>
+     */
+    private function uriSort($sort): array
+    {
+        if ($sort === null) {
+            return [];
+        }
+
+        $entries = is_array($sort) && Arr::isList($sort) ? $sort : [$sort];
+        $structural = [];
+
+        foreach ($entries as $entry) {
+            if (!is_string($entry)) {
+                $structural[] = $entry;
+                continue;
+            }
+
+            foreach (explode(',', $entry) as $part) {
+                $part = trim($part);
+                if ($part === '') {
+                    continue;
+                }
+
+                $colon = strrpos($part, ':');
+                $direction = $colon === false ? '' : substr($part, $colon + 1);
+
+                $field = $colon === false ? '' : substr($part, 0, $colon);
+
+                $structural[] = $field !== '' && ($direction === 'asc' || $direction === 'desc')
+                    ? [$field => $direction]
+                    : $part;
+            }
+        }
+
+        return $this->sort($structural);
     }
 
     /**

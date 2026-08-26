@@ -2,5 +2,5 @@
     "idx": "catalog-v2",
     "q": "catalog-v2 | q=(variants:{ variants.color:red and variants.price <= 100 })",
     "sig": "catalog-v2 | q=(variants:{ variants.color:? and variants.price <= ? })",
-    "hash": "q4:24d5e6929ac3"
+    "hash": "q5:24d5e6929ac3"
 }

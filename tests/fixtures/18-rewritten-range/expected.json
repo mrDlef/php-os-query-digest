@@ -2,5 +2,5 @@
     "idx": "logs-*",
     "q": "logs-* | q=(@timestamp:* and not status:200 and service:api) | size=50 sort=@timestamp:desc",
     "sig": "logs-* | q=(@timestamp:* and not status:? and service:?) | size=50 sort=@timestamp:desc",
-    "hash": "q4:a3cd3114b946"
+    "hash": "q5:a3cd3114b946"
 }

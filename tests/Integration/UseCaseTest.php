@@ -159,7 +159,7 @@ final class UseCaseTest extends TestCase
             $prose .= (string) file_get_contents($page);
         }
 
-        preg_match_all('/\bq4x?:[0-9a-f]{12}\b/', $prose, $found);
+        preg_match_all('/\bq5x?:[0-9a-f]{12}\b/', $prose, $found);
         $printed = array_values(array_unique($found[0]));
 
         self::assertNotSame([], $printed, 'The pages should print hashes at all.');

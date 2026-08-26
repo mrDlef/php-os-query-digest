@@ -105,7 +105,7 @@ namespace MrDlef\OsQueryDigest {
             return $this->signature;
         }
 
-        /** Versioned fingerprint of the signature, e.g. `q4:8f3ac1d2b901`. */
+        /** Versioned fingerprint of the signature, e.g. `q5:8f3ac1d2b901`. */
         public function hash(): string
         {
             return $this->hash;
@@ -725,7 +725,7 @@ namespace MrDlef\OsQueryDigest\Fingerprint {
      * sha256, truncated, and prefixed with the algorithm version.
      *
      * The prefix is not decoration: when the normalisation rules change, every
-     * hash changes. Carrying `q1:` / `q2:` / `q3:` / `q4:` in the value makes that break visible in
+     * hash changes. Carrying `q1:` / `q2:` / `q3:` / `q4:` / `q5:` in the value makes that break visible in
      * the data rather than silently invalidating existing dashboards.
      *
      * xxh3 would be faster but only exists from PHP 8.1, and this library targets
@@ -812,8 +812,9 @@ namespace MrDlef\OsQueryDigest {
          *
          * A registered {@see ClauseRenderer} is a local normalisation rule: it
          * changes the fingerprint of every query using its type. That is exactly
-         * what a prefix bump exists to make visible — `q1:` → `q2:` → `q3:` → `q4:`
-         * says "an older set of rules minted this", and `q4x:` says "someone's
+         * what a prefix bump exists to make visible — `q1:` → `q2:` → `q3:` →
+         * `q4:` → `q5:`
+         * says "an older set of rules minted this", and `q5x:` says "someone's
          * plugin code took part in minting this, so do not expect it to match a
          * stock digest of the same query".
          *
@@ -1512,7 +1513,7 @@ namespace MrDlef\OsQueryDigest {
          * Bumped whenever the normalisation rules change, so an algorithm change is
          * visible in the data instead of silently rewriting every dashboard.
          */
-        private string $hashVersion = 'q4';
+        private string $hashVersion = 'q5';
 
         private function __construct()
         {
@@ -2964,6 +2965,17 @@ namespace MrDlef\OsQueryDigest\Parser {
 
         private const RENDERED = ['query', 'post_filter', 'aggs', 'aggregations', 'size', 'from', 'sort'];
 
+        /**
+         * Rendered keys the search endpoint also accepts beside `body`, where they
+         * travel as query-string parameters — both `elasticsearch-php` 7.x and
+         * `opensearch-php` whitelist them. Reading only `body` handed the same
+         * fingerprint to a paging request and an unpaged one.
+         *
+         * `sort` belongs here too and is missing on purpose: it is merged rather
+         * than overridden, and in a different syntax. See {@see self::uriSort()}.
+         */
+        private const ENVELOPE_PARAMS = ['size', 'from'];
+
         private QueryParser $queryParser;
 
         private AggParser $aggParser;
@@ -2987,6 +2999,7 @@ namespace MrDlef\OsQueryDigest\Parser {
         {
             $trace ??= new Trace();
             $body = $request;
+            $envelopeSort = null;
 
             if (array_key_exists('body', $request) && is_array($request['body'])) {
                 $envelopeIndex = Arr::get($request, 'index');
@@ -2996,6 +3009,18 @@ namespace MrDlef\OsQueryDigest\Parser {
                         : Arr::str($envelopeIndex);
                 }
                 $body = $request['body'];
+
+                // The cluster applies the query string *after* the body, so an
+                // envelope `size` or `from` overrides the one inside. `sort` is the
+                // exception: the URL sorts are appended to the body's rather than
+                // replacing them, so the body keeps the primary key. Both rules were
+                // read off a live node, not off the clients' documentation.
+                foreach (self::ENVELOPE_PARAMS as $param) {
+                    if (array_key_exists($param, $request)) {
+                        $body[$param] = $request[$param];
+                    }
+                }
+                $envelopeSort = Arr::get($request, 'sort');
             }
 
             $notes = [];
@@ -3045,7 +3070,7 @@ namespace MrDlef\OsQueryDigest\Parser {
                 $aggs,
                 $this->intOrNull(Arr::get($body, 'size')),
                 $this->intOrNull(Arr::get($body, 'from')),
-                $this->sort(Arr::get($body, 'sort')),
+                array_merge($this->sort(Arr::get($body, 'sort')), $this->uriSort($envelopeSort)),
                 array_values(array_unique($notes)),
             );
         }
@@ -3060,6 +3085,55 @@ namespace MrDlef\OsQueryDigest\Parser {
             }
 
             return is_string($value) && ctype_digit($value) ? (int) $value : null;
+        }
+
+        /**
+         * Envelope `sort` is a query-string parameter, so it carries the URI
+         * syntax — `field:direction`, comma-joined — not the body's structural
+         * form. Left to {@see self::sort()} it would mint a field called
+         * `timestamp:desc` and claim ascending.
+         *
+         * A suffix that is neither `asc` nor `desc` is part of the field name: the
+         * cluster only reads those two, and a field is likelier than a direction
+         * nobody supports.
+         *
+         * @param mixed $sort
+         *
+         * @return array<int,array{0:string,1:string}>
+         */
+        private function uriSort($sort): array
+        {
+            if ($sort === null) {
+                return [];
+            }
+
+            $entries = is_array($sort) && Arr::isList($sort) ? $sort : [$sort];
+            $structural = [];
+
+            foreach ($entries as $entry) {
+                if (!is_string($entry)) {
+                    $structural[] = $entry;
+                    continue;
+                }
+
+                foreach (explode(',', $entry) as $part) {
+                    $part = trim($part);
+                    if ($part === '') {
+                        continue;
+                    }
+
+                    $colon = strrpos($part, ':');
+                    $direction = $colon === false ? '' : substr($part, $colon + 1);
+
+                    $field = $colon === false ? '' : substr($part, 0, $colon);
+
+                    $structural[] = $field !== '' && ($direction === 'asc' || $direction === 'desc')
+                        ? [$field => $direction]
+                        : $part;
+                }
+            }
+
+            return $this->sort($structural);
         }
 
         /**

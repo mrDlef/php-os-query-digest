@@ -25,12 +25,12 @@ Rank the shapes by p95 and take the worst:
 ```
 
 ```
-q4:e9794c1be608   p95=1484ms   n=30    orders | q=(country:? and status:(? or ? or ? or ? or ? or +3))
-q4:63a1ca5c80b9   p95=1019ms   n=360   logs-* | q=(@timestamp >= ? and env:?) | aggs=terms(host,10)>…
-q4:4dde138a2ad7   p95=  30ms   n=90    products-v3 | q=(image_embedding:knn(k=?) and in_stock:? …)
+q5:e9794c1be608   p95=1484ms   n=30    orders | q=(country:? and status:(? or ? or ? or ? or ? or +3))
+q5:63a1ca5c80b9   p95=1019ms   n=360   logs-* | q=(@timestamp >= ? and env:?) | aggs=terms(host,10)>…
+q5:4dde138a2ad7   p95=  30ms   n=90    products-v3 | q=(image_embedding:knn(k=?) and in_stock:? …)
 ```
 
-The top answer is wrong. `q4:e9794c1be608` is a report over `orders` that takes
+The top answer is wrong. `q5:e9794c1be608` is a report over `orders` that takes
 a second and a half — and took a second and a half yesterday, and will tomorrow.
 It is the slowest shape you run, and it is not what changed. Ranking by p95
 finds what is slow, and "slow" is a property, not an event.
@@ -82,13 +82,13 @@ Split each shape's own history into two windows and compare it to itself:
 ```
 
 ```
-q4:63a1ca5c80b9   x21.5    50 →  1074ms   n=360
+q5:63a1ca5c80b9   x21.5    50 →  1074ms   n=360
     logs-* | q=(@timestamp >= ? and env:?) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0
 
-q4:fe168406e702   x1.0      9 →     9ms   n=7200
+q5:fe168406e702   x1.0      9 →     9ms   n=7200
     logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
 
-q4:e9794c1be608   x1.0   1484 →  1484ms   n=30
+q5:e9794c1be608   x1.0   1484 →  1484ms   n=30
     orders | q=(country:? and status:(? or ? or ? or ? or ? or +3))
 ```
 
@@ -140,10 +140,10 @@ a more surprising answer. Rank by the total time each shape spent:
 ```
 
 ```
-q4:63a1ca5c80b9   n=360     median=  47ms   total=118.6s
-q4:fe168406e702   n=7200    median=   8ms   total= 57.6s
-q4:e9794c1be608   n=30      median=1316ms   total= 39.5s
-q4:4dde138a2ad7   n=90      median=  25ms   total=  2.3s
+q5:63a1ca5c80b9   n=360     median=  47ms   total=118.6s
+q5:fe168406e702   n=7200    median=   8ms   total= 57.6s
+q5:e9794c1be608   n=30      median=1316ms   total= 39.5s
+q5:4dde138a2ad7   n=90      median=  25ms   total=  2.3s
 ```
 
 **The query you run most is not the query that costs you most.** The workhorse

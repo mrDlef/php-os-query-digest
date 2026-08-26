@@ -38,8 +38,8 @@ final class ChangelogTest extends TestCase
             [],
             $missing,
             "Every release says what it did to your fingerprints, in exactly one line:\n"
-            . "  **Fingerprints:** `q4:` unchanged.\n"
-            . "  **Fingerprints:** `q4:` → `q5:` — why.\n"
+            . "  **Fingerprints:** `q5:` unchanged.\n"
+            . "  **Fingerprints:** `q5:` → `q6:` — why.\n"
             . 'Without one: ' . implode(', ', $missing),
         );
     }
