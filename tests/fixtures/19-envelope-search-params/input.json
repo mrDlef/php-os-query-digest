@@ -1,0 +1,16 @@
+{
+    "request": {
+        "index": "members",
+        "body": {
+            "query": {
+                "bool": {
+                    "filter": [ { "term": { "status": "active" } } ]
+                }
+            },
+            "sort": [ { "joined_at": "asc" } ]
+        },
+        "size": 20,
+        "from": 40,
+        "sort": "last_name:desc"
+    }
+}

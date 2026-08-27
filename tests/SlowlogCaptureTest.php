@@ -36,10 +36,10 @@ final class SlowlogCaptureTest extends TestCase
 {
     /** Every version and appender must agree on these, or the reader is guessing. */
     private const SHAPES = [
-        'q4:3d2f59f81444' => 'logs-* | q=(none) | size=50 sort=@timestamp:desc',
-        'q4:6b6fb17c6640' => 'orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)',
-        'q4:a3cd3114b946' => 'logs-* | q=(@timestamp:* and not status:? and service:?) | size=50 sort=@timestamp:desc',
-        'q4:c2c79d39a171' => 'logs-* | q=(note:~?) | size=10',
+        'q5:3d2f59f81444' => 'logs-* | q=(none) | size=50 sort=@timestamp:desc',
+        'q5:6b6fb17c6640' => 'orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)',
+        'q5:a3cd3114b946' => 'logs-* | q=(@timestamp:* and not status:? and service:?) | size=50 sort=@timestamp:desc',
+        'q5:c2c79d39a171' => 'logs-* | q=(note:~?) | size=10',
     ];
 
     /**
@@ -99,12 +99,12 @@ final class SlowlogCaptureTest extends TestCase
         $both = $this->ranking([$file], ['--phase=both']);
         $fetch = $this->ranking([$file], ['--phase=fetch']);
 
-        self::assertSame(1, $query['q4:3d2f59f81444']['count'] ?? null);
-        self::assertSame(2, $both['q4:3d2f59f81444']['count'] ?? null);
-        self::assertSame(1, $fetch['q4:3d2f59f81444']['count'] ?? null);
+        self::assertSame(1, $query['q5:3d2f59f81444']['count'] ?? null);
+        self::assertSame(2, $both['q5:3d2f59f81444']['count'] ?? null);
+        self::assertSame(1, $fetch['q5:3d2f59f81444']['count'] ?? null);
 
         // Only two of the four searches were slow enough to log a fetch record.
-        self::assertSame(['q4:3d2f59f81444', 'q4:a3cd3114b946'], array_keys($fetch));
+        self::assertSame(['q5:3d2f59f81444', 'q5:a3cd3114b946'], array_keys($fetch));
     }
 
     public function testTheTableSaysHowManyRecordsTheOtherPhaseHeld(): void

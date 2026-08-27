@@ -1,0 +1,6 @@
+{
+    "idx": "members",
+    "q": "members | q=(status:active) | size=20 from=40 sort=joined_at:asc,last_name:desc",
+    "sig": "members | q=(status:?) | size=20 from=40 sort=joined_at:asc,last_name:desc",
+    "hash": "q5:e46fa944258c"
+}

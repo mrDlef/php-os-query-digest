@@ -54,8 +54,9 @@ final class Formatter
      *
      * A registered {@see ClauseRenderer} is a local normalisation rule: it
      * changes the fingerprint of every query using its type. That is exactly
-     * what a prefix bump exists to make visible — `q1:` → `q2:` → `q3:` → `q4:`
-     * says "an older set of rules minted this", and `q4x:` says "someone's
+     * what a prefix bump exists to make visible — `q1:` → `q2:` → `q3:` →
+     * `q4:` → `q5:`
+     * says "an older set of rules minted this", and `q5x:` says "someone's
      * plugin code took part in minting this, so do not expect it to match a
      * stock digest of the same query".
      *

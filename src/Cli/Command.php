@@ -440,7 +440,7 @@ final class Command
 
     /**
      * The fingerprint version first, because it is the one that changes what
-     * the tool produces: a dashboard grouping on `q4:` cares which rules minted
+     * the tool produces: a dashboard grouping on `q5:` cares which rules minted
      * a hash and not at all which release did it. The build follows when there
      * is one — a phar copied onto a jump host has no `composer.lock` beside it
      * to answer that with.

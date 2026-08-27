@@ -40,6 +40,79 @@ final class FormatterTest extends TestCase
         self::assertSame('chosen', $digest->index());
     }
 
+    /**
+     * `size`, `from` and `sort` are legitimate envelope-level keys — the search
+     * endpoint's parameter whitelist carries all three — so a request built
+     * that way must not read as an unpaged one.
+     */
+    public function testEnvelopeSearchParametersReachTheDigest(): void
+    {
+        $formatter = Formatter::create();
+        $body = ['query' => ['term' => ['status' => 'active']]];
+
+        $beside = $formatter->describe(['index' => 'members', 'body' => $body, 'size' => 20, 'from' => 40]);
+        $inside = $formatter->describe(['index' => 'members', 'body' => $body + ['size' => 20, 'from' => 40]]);
+        $neither = $formatter->describe(['index' => 'members', 'body' => $body]);
+
+        self::assertSame('members | q=(status:active) | size=20 from=40', $beside->text());
+        self::assertSame($inside->hash(), $beside->hash(), 'The same search, spelled two ways.');
+        self::assertNotSame($neither->hash(), $beside->hash(), 'A paging query is not an unpaged one.');
+    }
+
+    /**
+     * Read off a live node rather than off the clients' documentation: the
+     * cluster parses the body first and then applies the query string, so the
+     * envelope overrides — the opposite of what the shape suggests.
+     */
+    public function testTheEnvelopeWinsOverTheBodyForSizeAndFrom(): void
+    {
+        $digest = Formatter::create()->describe([
+            'index' => 'members',
+            'body' => ['query' => ['match_all' => []], 'size' => 5, 'from' => 0],
+            'size' => 20,
+            'from' => 40,
+        ]);
+
+        self::assertSame('members | q=(*) | size=20 from=40', $digest->text());
+    }
+
+    /**
+     * `sort` is the exception: the query string appends to what the body
+     * already sorts on, so the body keeps the primary key.
+     */
+    public function testEnvelopeSortIsAppendedToTheBodySort(): void
+    {
+        $digest = Formatter::create()->describe([
+            'index' => 'members',
+            'body' => ['query' => ['match_all' => []], 'sort' => [['joined_at' => 'asc']]],
+            'sort' => 'last_name:desc',
+        ]);
+
+        self::assertSame('members | q=(*) | sort=joined_at:asc,last_name:desc', $digest->text());
+    }
+
+    /**
+     * Envelope `sort` travels in the URI syntax, comma-joined or as a list —
+     * not the body's structural form. A suffix the cluster does not read is
+     * part of the field name.
+     */
+    public function testEnvelopeSortIsReadInTheUriSyntax(): void
+    {
+        $formatter = Formatter::create();
+        $body = ['query' => ['match_all' => []]];
+
+        $joined = $formatter->describe(['index' => 'm', 'body' => $body, 'sort' => 'a, b:desc']);
+        $list = $formatter->describe(['index' => 'm', 'body' => $body, 'sort' => ['a', 'b:desc']]);
+
+        self::assertSame('m | q=(*) | sort=a:asc,b:desc', $joined->text());
+        self::assertSame($joined->hash(), $list->hash(), 'A comma-joined list is written with spaces as often as without.');
+
+        self::assertSame(
+            'm | q=(*) | sort=weird:field:asc',
+            $formatter->describe(['index' => 'm', 'body' => $body, 'sort' => 'weird:field'])->text(),
+        );
+    }
+
     public function testRejectsGarbage(): void
     {
         $this->expectException(InvalidQueryException::class);
@@ -52,7 +125,7 @@ final class FormatterTest extends TestCase
         $digest = Formatter::create()->describe([], 'idx');
 
         self::assertSame('idx', $digest->text());
-        self::assertMatchesRegularExpression('/^q4:[0-9a-f]{12}$/', $digest->hash());
+        self::assertMatchesRegularExpression('/^q5:[0-9a-f]{12}$/', $digest->hash());
     }
 
     public function testDigestSerialisesToASmallLogPayload(): void

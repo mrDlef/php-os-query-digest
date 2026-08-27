@@ -40,7 +40,7 @@ const FROM = '2026-08-19T14:00:00.000Z';
 const TO = '2026-08-19T15:00:00.000Z';
 
 const PANELS = ['Where the time goes', 'p95 by shape over time', 'What regressed', 'Shapes the release added'];
-const SHAPES = ['q4:63a1ca5c80b9', 'q4:fe168406e702', 'q4:e9794c1be608', 'q4:4dde138a2ad7'];
+const SHAPES = ['q5:63a1ca5c80b9', 'q5:fe168406e702', 'q5:e9794c1be608', 'q5:4dde138a2ad7'];
 
 const failures = [];
 const browser = await chromium.launch();

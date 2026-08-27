@@ -2,5 +2,5 @@
     "idx": "docs",
     "q": "docs | q=(lang:fr and (body:alpha or body:beta or body:gamma){msm=2})",
     "sig": "docs | q=(lang:? and (body:~? or body:~? or body:~?){msm=2})",
-    "hash": "q4:862a058a0f91"
+    "hash": "q5:862a058a0f91"
 }

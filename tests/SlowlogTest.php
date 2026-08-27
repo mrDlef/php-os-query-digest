@@ -26,7 +26,7 @@ final class SlowlogTest extends TestCase
         . '],"must_not":[{"term":{"status":200}}]}},"size":50,"sort":[{"@timestamp":"desc"}]}';
 
     /** The hash fixture 01 pins for that body — the same one the CLI prints. */
-    private const HASH = 'q4:fe168406e702';
+    private const HASH = 'q5:fe168406e702';
 
     private const OTHER = '{"query":{"term":{"service":"api"}},"size":50}';
 
@@ -60,7 +60,7 @@ final class SlowlogTest extends TestCase
 
         // Ranked by total time: two records at 1,345 ms outrank one at 300.
         self::assertLessThan(
-            strpos($out, 'q4:5b2210eb5318'),
+            strpos($out, 'q5:5b2210eb5318'),
             (int) strpos($out, self::HASH),
             'The default ranking is by total time, not by the slowest record.',
         );
@@ -173,9 +173,9 @@ final class SlowlogTest extends TestCase
         [, $byMax] = $this->invoke(['--sort=max'], $log);
         [, $byCount] = $this->invoke(['-s', 'count'], $log);
 
-        self::assertLessThan(strpos($byTotal, 'q4:5b2210eb5318'), (int) strpos($byTotal, self::HASH));
-        self::assertLessThan(strpos($byMax, self::HASH), (int) strpos($byMax, 'q4:5b2210eb5318'));
-        self::assertLessThan(strpos($byCount, 'q4:5b2210eb5318'), (int) strpos($byCount, self::HASH));
+        self::assertLessThan(strpos($byTotal, 'q5:5b2210eb5318'), (int) strpos($byTotal, self::HASH));
+        self::assertLessThan(strpos($byMax, self::HASH), (int) strpos($byMax, 'q5:5b2210eb5318'));
+        self::assertLessThan(strpos($byCount, 'q5:5b2210eb5318'), (int) strpos($byCount, self::HASH));
 
         // The table says which column it was ordered by.
         self::assertStringContainsString('max*', $byMax);
@@ -192,9 +192,9 @@ final class SlowlogTest extends TestCase
         [, $all] = $this->invoke(['--top=none'], $log);
 
         self::assertSame(Command::OK, $status);
-        self::assertStringNotContainsString('q4:5b2210eb5318', $limited);
+        self::assertStringNotContainsString('q5:5b2210eb5318', $limited);
         self::assertStringContainsString('1 more shape (--top none for all)', $limited);
-        self::assertStringContainsString('q4:5b2210eb5318', $all);
+        self::assertStringContainsString('q5:5b2210eb5318', $all);
         self::assertStringNotContainsString('--top none for all', $all);
     }
 
@@ -371,7 +371,7 @@ final class SlowlogTest extends TestCase
 
         self::assertSame(Command::OK, $status, $err);
         self::assertStringContainsString('1 record, 1 shape, 0 ms total', $out);
-        self::assertMatchesRegularExpression('/\s1\s+-\s+-\s+-\s+-\s+q4:/', $out);
+        self::assertMatchesRegularExpression('/\s1\s+-\s+-\s+-\s+-\s+q5:/', $out);
     }
 
     public function testTheFingerprintFlagsReachTheDigest(): void
@@ -418,7 +418,7 @@ final class SlowlogTest extends TestCase
         $row = $lines[count($lines) - 2];
         $signature = $lines[count($lines) - 1];
 
-        $column = strpos($row, 'q4:');
+        $column = strpos($row, 'q5:');
         self::assertIsInt($column);
         self::assertSame($column, strlen($signature) - strlen(ltrim($signature)));
         self::assertStringContainsString('101', $row, 'The mean is rounded, not truncated.');
@@ -452,7 +452,7 @@ final class SlowlogTest extends TestCase
         [$status, $out] = $this->invoke(['--sort=mean'], $log);
 
         self::assertSame(Command::OK, $status);
-        self::assertLessThan(strpos($out, 'q4:5b2210eb5318'), (int) strpos($out, self::HASH));
+        self::assertLessThan(strpos($out, 'q5:5b2210eb5318'), (int) strpos($out, self::HASH));
         self::assertStringContainsString('mean*', $out);
     }
 

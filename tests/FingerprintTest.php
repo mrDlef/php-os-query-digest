@@ -95,7 +95,7 @@ final class FingerprintTest extends TestCase
     {
         $digest = Formatter::create()->describe(['query' => ['match_all' => []]]);
 
-        self::assertMatchesRegularExpression('/^q4:[0-9a-f]{12}$/', $digest->hash());
+        self::assertMatchesRegularExpression('/^q5:[0-9a-f]{12}$/', $digest->hash());
     }
 
     public function testHashLengthIsConfigurable(): void

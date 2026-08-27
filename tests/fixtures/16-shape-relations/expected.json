@@ -2,7 +2,7 @@
     "idx": "deliveries",
     "q": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
     "sig": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
-    "hash": "q4:cb5e4609d066",
+    "hash": "q5:cb5e4609d066",
     "notes": [
         "indexed_shape"
     ]

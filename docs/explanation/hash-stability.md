@@ -3,16 +3,17 @@
 **The hash is a public contract.** If a normalisation rule changes, every hash
 changes — and any dashboard built on it silently breaks. So:
 
-- the hash carries its algorithm version: `q4:8f3ac1d2b901`. A rule change bumps
-  it — `q4:` → `q5:` — making the break visible in your data instead of
-  invisible. The prefix has moved three times: v0.2.0 promoted three query types
-  out of `type(?)`, v0.6.0 promoted eight more, and v0.10.0 taught the parser the
-  older spelling of a range, so anything published as `q1:`, `q2:` or `q4:` was
-  minted by an older set of rules. Promotions are deliberately batched into one
-  release for that reason — the prefix is global, so promoting a single rare type
-  would invalidate every dashboard on its own.
+- the hash carries its algorithm version: `q5:8f3ac1d2b901`. A rule change bumps
+  it — `q5:` → `q6:` — making the break visible in your data instead of
+  invisible. The prefix has moved four times: v0.2.0 promoted three query types
+  out of `type(?)`, v0.6.0 promoted eight more, v0.10.0 taught the parser the
+  older spelling of a range, and v0.13.0 stopped dropping the search parameters
+  an envelope carries beside `body` — so anything published as `q1:`, `q2:`,
+  `q3:` or `q4:` was minted by an older set of rules. Promotions are deliberately
+  batched into one release for that reason — the prefix is global, so promoting a
+  single rare type would invalidate every dashboard on its own.
 - a signature that did not change keeps its twelve hex characters. `q4:abc…`
-  and `q4:abc…` describe the same shape, which makes a prefix bump readable
+  and `q5:abc…` describe the same shape, which makes a prefix bump readable
   rather than a wall of new values.
 - every fixture pins its exact hash in `tests/fixtures/*/expected.json`. A rule
   change cannot land without a reviewable diff.

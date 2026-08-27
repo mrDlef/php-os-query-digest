@@ -123,7 +123,7 @@ final class DocExampleTest extends TestCase
      * @var array<string,string> hash => why it is not checked
      */
     private const ILLUSTRATIVE = [
-        'q4:8f3ac1d2b901' => 'docs/explanation/hash-stability.md — the shape of a hash, not one of ours',
+        'q5:8f3ac1d2b901' => 'docs/explanation/hash-stability.md — the shape of a hash, not one of ours',
     ];
 
     /**
@@ -516,7 +516,7 @@ final class DocExampleTest extends TestCase
 
         $found = false;
         foreach (self::PAGES as $page) {
-            preg_match_all('/\bq4x?:[0-9a-f]{12}\b/', self::read($page), $matches);
+            preg_match_all('/\bq5x?:[0-9a-f]{12}\b/', self::read($page), $matches);
 
             foreach (array_unique($matches[0]) as $hash) {
                 $found = true;
@@ -560,7 +560,7 @@ final class DocExampleTest extends TestCase
         [, $out] = $this->invoke(['slowlog', $this->file(self::slowlog())]);
         [, $ndjson] = $this->invoke(['--ndjson', '--hash'], implode("\n", self::NDJSON));
 
-        preg_match_all('/\bq4x?:[0-9a-f]{12}\b/', $out . "\n" . $ndjson, $found);
+        preg_match_all('/\bq5x?:[0-9a-f]{12}\b/', $out . "\n" . $ndjson, $found);
 
         return array_unique(array_merge($hashes, $found[0]));
     }

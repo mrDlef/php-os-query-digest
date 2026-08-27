@@ -10,7 +10,7 @@ $ echo '{"query":{"term":{"service":"api"}},"size":50}' \
 idx:  logs-*
 text: logs-* | q=(service:api) | size=50
 sig:  logs-* | q=(service:?) | size=50
-hash: q4:5b2210eb5318
+hash: q5:5b2210eb5318
 ```
 
 `--explain` appends the rules table, `--json` emits the digest object, `--hash`
@@ -25,8 +25,8 @@ a `uniq -c` away:
 <!-- verified: cli-ndjson -->
 ```bash
 $ os-query-digest --ndjson --hash < slow.ndjson | sort | uniq -c | sort -rn
-      3 q4:5b2210eb5318
-      1 q4:f70c7bc21a0f
+      3 q5:5b2210eb5318
+      1 q5:f70c7bc21a0f
 ```
 
 Those three are not three slow queries to read: they are one shape, hit on two
@@ -69,11 +69,11 @@ $ vendor/bin/os-query-digest slowlog /var/log/opensearch/*_index_search_slowlog.
 60 lines, 59 records, 3 shapes, 13,515 ms total
 
   count  total ms*  mean    p95    max  shape
-     41      6,807   166    246    258  q4:fe168406e702
+     41      6,807   166    246    258  q5:fe168406e702
                                         logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
-      6      5,978   996  1,325  1,325  q4:6b6fb17c6640
+      6      5,978   996  1,325  1,325  q5:6b6fb17c6640
                                         orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)
-     12        730    61     86     86  q4:810928290c12
+     12        730    61     86     86  q5:810928290c12
                                         catalog-* | q=(title:~?) | size=10
 ```
 
