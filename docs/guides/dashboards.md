@@ -39,6 +39,12 @@ is the path on a real project.
 | **What regressed** | which shape got worse, against itself | `bucket_script` over two windows |
 | **Shapes the release added** | what is new since an hour ago | `bucket_selector` on an empty before-window |
 
+No panel reads `os.q`. All four group on `os.hash` and label with `os.sig`, so
+the pack works unchanged under
+[`withText(false)`](logging.md#when-the-values-may-not-leave-the-building) — the
+field is then simply absent from the records, and it appears in the pack only in
+the index pattern's field list.
+
 The first two are ordinary visualisations: open them, change the field, add a
 metric. **The last two are Vega**, and not for decoration — they ask their
 question with `bucket_script`, `bucket_selector` and `bucket_sort`, and no

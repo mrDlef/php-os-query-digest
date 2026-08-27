@@ -27,8 +27,9 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 
 ## v0.13.0 — unreleased
 
-_the parameters beside `body`, which clients can actually be captured, one
-file to download, and the examples nothing read_
+_the parameters beside `body`, a record that may leave the building, which
+clients can actually be captured, one file to download, and the examples
+nothing read_
 
 **Fingerprints:** `q4:` → `q5:` — a search whose `size`, `from` or `sort` sits
 beside `body` rather than inside it now says so. Only the prefix moved: all
@@ -70,6 +71,55 @@ One consequence worth naming: an envelope `sort` is a query string parameter, so
 it carries the URI syntax — `last_name:desc`, comma-joined — not the body's
 structural form. Read as a body sort it would have minted a field called
 `last_name:desc` and claimed ascending.
+
+### A digest that carries no search input
+
+`Digest::toArray()` always emitted four fields, and `q` is the readable line —
+which is user-typed search input: names, addresses, e-mail addresses. The moment
+those records leave for a hosted log collector or a third-party SIEM, that is the
+difference between "we may ship these logs" and "we may not", and it is decided
+per *field*.
+
+```php
+Formatter::create(Options::create()->withText(false));
+// {"idx": "logs-*", "sig": "logs-* | q=(@timestamp >= ? and service:?) | size=0", "hash": "q5:…"}
+```
+
+Everything the library is *for* reads `sig` and `hash`, which were already
+value-free: which shape got slow, which one the deploy added, which one to group
+a dashboard by. `q` is the convenience of pasting into Dashboards, and it is the
+first thing a regulated deployment gives up. It is also the longest of the four
+fields, so this is the cheapest log-volume win on offer.
+
+Four things it was worth being careful about:
+
+- **The line is never rendered, not rendered and dropped.** A blanket redactor
+  came close before this — `withRedactor(fn ($field, $value) => '?')` — but it
+  renders the same line twice to throw one away, and a *per-field* redactor is
+  one forgotten field away from a leak. There is now no literal anywhere in the
+  digest, and `Digest::text()` returns the signature rather than an empty string
+  so that nothing reading the wrong accessor, including `__toString()`, can find
+  one either.
+- **`q` is omitted, not emptied.** A `q` that duplicated `sig` would still have
+  to be inspected before those logs could ship, which is not what "decided per
+  field" means.
+- **The hash does not move.** What is emitted beside a fingerprint does not
+  change what the shape is called, so a dashboard built before the switch keeps
+  matching after it. Asserted, not assumed.
+- **It is not on its own a promise that no literal is emitted**, and the
+  docblock, the guide and a test all say so: under `Normalization::none()` the
+  signature *is* the readable line. The pair that emits none is `withText(false)`
+  with any normalization above `none` — which is the default.
+
+One processor and one observer, unchanged: both emit `toArray()`, so both follow.
+The shipped dashboard pack needs no change either — its panels group on
+`os.hash` and read `os.sig`, and `os.q` appears only in the index pattern's field
+list.
+
+`text` is a `fromArray()` key like the rest, since this is a decision a
+deployment makes in configuration rather than in code, and the playground gained
+the toggle — where turning it on removes the `text` row from the result rather
+than blanking it, which is what the record does.
 
 ### The transport guide sent the official client to the wrong integration
 

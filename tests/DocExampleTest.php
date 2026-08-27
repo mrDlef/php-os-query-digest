@@ -6,6 +6,7 @@ namespace MrDlef\OsQueryDigest\Tests;
 
 use MrDlef\OsQueryDigest\Cli\Command;
 use MrDlef\OsQueryDigest\Formatter;
+use MrDlef\OsQueryDigest\Options;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -209,6 +210,7 @@ final class DocExampleTest extends TestCase
         'cli-slowlog',
         'cli-slowlog-json',
         'logging-record',
+        'logging-record-value-free',
         'logging-line',
         'transport-record',
         'explain-output',
@@ -275,6 +277,32 @@ final class DocExampleTest extends TestCase
                 $page . ' prints a log record whose digest this library does not produce.',
             );
         }
+    }
+
+    /**
+     * The same request under `withText(false)`, printed on the same page. Its
+     * whole claim is that a field is *absent*, which is the kind of claim a
+     * hand-written block gets wrong by adding one back.
+     */
+    public function testTheValueFreeRecordIsWhatTheOptionProduces(): void
+    {
+        [$request, $index] = self::SOURCES['logging-record'];
+
+        $digest = Formatter::create(Options::create()->withText(false))->describe($request, $index);
+        $printed = self::decode(self::oneBlock('docs/guides/logging.md', 'logging-record-value-free'));
+
+        self::assertSame(
+            $digest->toArray(),
+            $printed,
+            'The value-free record in the logging guide is not the one this option produces.',
+        );
+
+        // The page's other claim about it, one line below the block.
+        self::assertSame(
+            Formatter::create()->describe($request, $index)->hash(),
+            $digest->hash(),
+            'The page says the hash survives the switch.',
+        );
     }
 
     /**

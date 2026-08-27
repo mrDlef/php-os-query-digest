@@ -8,6 +8,7 @@ use MrDlef\OsQueryDigest\Digest;
 use MrDlef\OsQueryDigest\Exception\InvalidQueryException;
 use MrDlef\OsQueryDigest\Formatter;
 use MrDlef\OsQueryDigest\LazyDigest;
+use MrDlef\OsQueryDigest\Normalization;
 use MrDlef\OsQueryDigest\Options;
 use PHPUnit\Framework\TestCase;
 
@@ -137,6 +138,51 @@ final class FormatterTest extends TestCase
             $digest->toArray(),
         );
         self::assertSame(json_encode($digest->toArray()), json_encode($digest));
+    }
+
+    /**
+     * The record a regulated deployment may ship: no field holding what a user
+     * typed. `q` is omitted rather than emptied — the question is answered per
+     * field, and a `q` that duplicated `sig` would have to be inspected first.
+     */
+    public function testTheValuesLineCanBeLeftOutOfWhatIsEmitted(): void
+    {
+        $request = ['query' => ['term' => ['email' => 'ada@example.com']]];
+
+        $digest = Formatter::create(Options::create()->withText(false))
+            ->describe($request, 'members');
+
+        self::assertSame(['idx', 'sig', 'hash'], array_keys($digest->toArray()));
+        self::assertSame('members | q=(email:?)', $digest->toArray()['sig']);
+
+        $encoded = json_encode($digest);
+        self::assertIsString($encoded);
+        self::assertStringNotContainsString('ada@example.com', $encoded);
+
+        // Every accessor shows the shape rather than a value or an empty string,
+        // so no caller can leak one by reading the wrong one.
+        self::assertSame('members | q=(email:?)', $digest->text());
+        self::assertSame('members | q=(email:?)', (string) $digest);
+
+        // And the hash is the one the same query gets with the line on: what is
+        // emitted must not change what a shape is called.
+        self::assertSame(
+            Formatter::create()->describe($request, 'members')->hash(),
+            $digest->hash(),
+        );
+    }
+
+    /**
+     * The gap the option does not close, stated where it will be read: at
+     * `Normalization::none()` the signature *is* the readable line.
+     */
+    public function testWithoutNormalizationTheSignatureStillCarriesTheValues(): void
+    {
+        $digest = Formatter::create(
+            Options::create()->withText(false)->withNormalization(Normalization::none()),
+        )->describe(['query' => ['term' => ['email' => 'ada@example.com']]], 'members');
+
+        self::assertSame('members | q=(email:ada@example.com)', $digest->toArray()['sig']);
     }
 
     public function testLazyDigestDoesNothingUntilItIsRead(): void

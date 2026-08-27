@@ -13,6 +13,7 @@ $formatter = Formatter::create(
         ->withIndexNormalizer(IndexNormalizer::datePatterns())
         ->withRedactor(fn ($field, $value) => $field === 'email' ? '<redacted>' : $value)
         ->withAggNames(false)
+        ->withText(true)            // false: emit idx/sig/hash only
         ->withHashLength(12)
 );
 ```
@@ -25,6 +26,7 @@ $formatter = Formatter::create(Options::fromArray([
     'normalization' => 'structural',
     'maxValues'     => 5,
     'aggNames'      => true,
+    'text'          => false,
 ]));
 ```
 
@@ -34,3 +36,17 @@ in a dashboard that was never grouped the way the config claimed. Types are
 taken as JSON gives them — `"5"` is rejected, because a front end that guesses
 at `"5"` also accepts `"five"`. `redactor` has no array form; a callable cannot
 be expressed there.
+
+## `withText(false)`, and what it does not promise
+
+It removes the readable line from the digest — never rendered, so no accessor on
+the object can hand out a value, and `toArray()` emits `idx` / `sig` / `hash`.
+[When the values may not leave the
+building](logging.md#when-the-values-may-not-leave-the-building) is the case it
+exists for.
+
+It is not, on its own, a guarantee that no literal is emitted.
+`Normalization::none()` makes the signature *equal* the readable line, values
+included, so the pair that emits none is `withText(false)` with any normalization
+above `none` — which is the default, and the only combination worth calling
+value-free.

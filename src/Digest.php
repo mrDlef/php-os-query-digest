@@ -13,7 +13,8 @@ final class Digest implements \JsonSerializable
 {
     private string $index;
 
-    private string $text;
+    /** Null when the formatter was told not to render a line with values in it. */
+    private ?string $text;
 
     private string $signature;
 
@@ -23,9 +24,13 @@ final class Digest implements \JsonSerializable
     private array $notes;
 
     /**
+     * @param string|null       $text  the readable line, or null when the
+     *                                 formatter was configured not to produce
+     *                                 one — see
+     *                                 {@see Options::withText()}
      * @param array<int,string> $notes
      */
-    public function __construct(string $index, string $text, string $signature, string $hash, array $notes = [])
+    public function __construct(string $index, ?string $text, string $signature, string $hash, array $notes = [])
     {
         $this->index = $index;
         $this->text = $text;
@@ -40,10 +45,17 @@ final class Digest implements \JsonSerializable
         return $this->index;
     }
 
-    /** The readable, DQL-flavoured line with real values. */
+    /**
+     * The readable, DQL-flavoured line with real values.
+     *
+     * Under {@see Options::withText()} set to false there is no such line, and
+     * this returns the signature instead of an empty string: every caller —
+     * `__toString()`, the CLI, a log line — then shows the shape rather than
+     * nothing, and none of them can hand out a value.
+     */
     public function text(): string
     {
-        return $this->text;
+        return $this->text ?? $this->signature;
     }
 
     /** The same line with literals erased — the shape of the query. */
@@ -74,12 +86,18 @@ final class Digest implements \JsonSerializable
      */
     public function toArray(): array
     {
-        $out = [
-            'idx' => $this->index,
-            'q' => $this->text,
-            'sig' => $this->signature,
-            'hash' => $this->hash,
-        ];
+        $out = ['idx' => $this->index];
+
+        // Omitted rather than filled with the signature: a deployment that turns
+        // the line off is one deciding per *field* whether it may ship these
+        // logs, and a `q` that duplicates `sig` would answer that question with
+        // a field it has to inspect first.
+        if ($this->text !== null) {
+            $out['q'] = $this->text;
+        }
+
+        $out['sig'] = $this->signature;
+        $out['hash'] = $this->hash;
 
         if ($this->notes !== []) {
             $out['notes'] = $this->notes;
@@ -99,6 +117,6 @@ final class Digest implements \JsonSerializable
 
     public function __toString(): string
     {
-        return $this->text;
+        return $this->text();
     }
 }

@@ -161,6 +161,22 @@ await settle();
 const structural = await page.textContent('#pg-hash');
 check('structural differs from values', structural !== CLI_HASH, true);
 
+console.log('\n== omitting the values line takes the row with it');
+await page.click('#pg-levels input[value="values"]');
+await settle();
+const withValues = await page.textContent('#pg-hash');
+await page.click('#pg-omitText');
+await settle();
+// The record loses the field, so the row goes rather than showing a blank one.
+check('text row hidden', await page.isVisible('#pg-text'), false);
+check('its label too', await page.isVisible('#pg-text-label'), false);
+check('sig still shown', (await page.textContent('#pg-sig')).length > 0, true);
+// What is emitted must not change what the shape is called.
+check('hash unmoved', await page.textContent('#pg-hash'), withValues);
+await page.click('#pg-omitText');
+await settle();
+check('and it comes back', await page.isVisible('#pg-text'), true);
+
 console.log('\n== pin, then edit, reports whether it moved');
 await page.click('#pg-pin');
 await page.fill('#pg-body', JSON.stringify({ query: { term: { service: 'worker' } }, size: 50 }, null, 2));

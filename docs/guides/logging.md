@@ -61,6 +61,57 @@ an exception. **You lose the digest, never the log line.**
 Monolog is a *suggested* dependency, never a required one — the library itself
 still has none. Both major versions work: `^2.0` on PHP 7.4, `^3.0` from 8.1.
 
+## When the values may not leave the building
+
+`q` is search input. Names, addresses, e-mail addresses — whatever a user typed
+into the box. The moment those records leave for a hosted log collector or a
+third-party SIEM, that is the difference between "we may ship these logs" and
+"we may not", and it is decided per *field*.
+
+`sig` and `hash` are already value-free, and everything this library is *for*
+reads them: which shape got slow, which one the deploy added, which one to group
+a dashboard by. `q` is the convenience of pasting into Dashboards. So it can be
+turned off:
+
+```php
+$formatter = Formatter::create(Options::create()->withText(false));
+```
+
+The record is then three fields:
+
+<!-- verified: logging-record-value-free -->
+```json
+{
+  "idx": "logs-*",
+  "sig": "logs-* | q=(@timestamp >= ? and service:?) | size=0",
+  "hash": "q5:b7cc218cda09"
+}
+```
+
+The same hash as with the line on — what a shape is *called* does not depend on
+what is emitted beside it, so a dashboard built before the switch keeps matching
+after it.
+
+Three things worth knowing:
+
+- **The line is never rendered, not rendered and dropped.** So a blanket
+  redactor — `withRedactor(fn ($field, $value) => '?')` — is not the same trade:
+  it renders the same line twice to throw one away, and a *per-field* redactor is
+  one forgotten field away from a leak. Here there is no literal anywhere in the
+  digest, and `text()` returns the signature so that nothing reading the wrong
+  accessor can find one either.
+- **`q` is omitted, not emptied.** A `q` that duplicated `sig` would still have
+  to be inspected before those logs could ship. It is also the longest of the
+  four fields, so this is the cheapest log-volume win the library offers.
+- **It does not, by itself, mean no literal is emitted.** Under
+  `Normalization::none()` the signature *is* the readable line. The default —
+  `Normalization::values()` — is what makes `sig` value-free, and the two
+  together are what a regulated deployment wants.
+
+The shipped [dashboard pack](dashboards.md) needs no change: its panels group and
+aggregate on `os.hash` and read `os.sig`. `os.q` appears only in the index
+pattern's field list, so it simply has no values.
+
 ## If it does not log its bodies
 
 This one still asks something of the application: that the request already
