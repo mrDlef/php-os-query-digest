@@ -66,7 +66,8 @@ namespace MrDlef\OsQueryDigest {
     {
         private string $index;
 
-        private string $text;
+        /** Null when the formatter was told not to render a line with values in it. */
+        private ?string $text;
 
         private string $signature;
 
@@ -76,9 +77,13 @@ namespace MrDlef\OsQueryDigest {
         private array $notes;
 
         /**
+         * @param string|null       $text  the readable line, or null when the
+         *                                 formatter was configured not to produce
+         *                                 one — see
+         *                                 {@see Options::withText()}
          * @param array<int,string> $notes
          */
-        public function __construct(string $index, string $text, string $signature, string $hash, array $notes = [])
+        public function __construct(string $index, ?string $text, string $signature, string $hash, array $notes = [])
         {
             $this->index = $index;
             $this->text = $text;
@@ -93,10 +98,17 @@ namespace MrDlef\OsQueryDigest {
             return $this->index;
         }
 
-        /** The readable, DQL-flavoured line with real values. */
+        /**
+         * The readable, DQL-flavoured line with real values.
+         *
+         * Under {@see Options::withText()} set to false there is no such line, and
+         * this returns the signature instead of an empty string: every caller —
+         * `__toString()`, the CLI, a log line — then shows the shape rather than
+         * nothing, and none of them can hand out a value.
+         */
         public function text(): string
         {
-            return $this->text;
+            return $this->text ?? $this->signature;
         }
 
         /** The same line with literals erased — the shape of the query. */
@@ -127,12 +139,18 @@ namespace MrDlef\OsQueryDigest {
          */
         public function toArray(): array
         {
-            $out = [
-                'idx' => $this->index,
-                'q' => $this->text,
-                'sig' => $this->signature,
-                'hash' => $this->hash,
-            ];
+            $out = ['idx' => $this->index];
+
+            // Omitted rather than filled with the signature: a deployment that turns
+            // the line off is one deciding per *field* whether it may ship these
+            // logs, and a `q` that duplicates `sig` would answer that question with
+            // a field it has to inspect first.
+            if ($this->text !== null) {
+                $out['q'] = $this->text;
+            }
+
+            $out['sig'] = $this->signature;
+            $out['hash'] = $this->hash;
 
             if ($this->notes !== []) {
                 $out['notes'] = $this->notes;
@@ -152,7 +170,7 @@ namespace MrDlef\OsQueryDigest {
 
         public function __toString(): string
         {
-            return $this->text;
+            return $this->text();
         }
     }
 }
@@ -869,16 +887,6 @@ namespace MrDlef\OsQueryDigest {
 
         private function digest(QueryModel $model): Digest
         {
-            $textProfile = new RenderProfile(
-                new LiteralValueRenderer($this->options->redactor()),
-                false,
-                $this->options->maxClauses(),
-                $this->options->maxValues(),
-                false,
-                false,
-                $this->options->includeAggNames(),
-            );
-
             $normalization = $this->options->normalization();
             $signatureProfile = new RenderProfile(
                 $normalization->erasesValues()
@@ -892,7 +900,21 @@ namespace MrDlef\OsQueryDigest {
                 $this->options->includeAggNames(),
             );
 
-            $text = $this->renderer->render($model, $textProfile);
+            // Not rendered at all when it is not wanted, rather than rendered and
+            // dropped: it is the one of the three renders that has values in it.
+            $text = null;
+            if ($this->options->emitText()) {
+                $text = $this->renderer->render($model, new RenderProfile(
+                    new LiteralValueRenderer($this->options->redactor()),
+                    false,
+                    $this->options->maxClauses(),
+                    $this->options->maxValues(),
+                    false,
+                    false,
+                    $this->options->includeAggNames(),
+                ));
+            }
+
             $signature = $this->renderer->render($model, $signatureProfile);
 
             // The hash is computed on the uncapped signature: display limits must
@@ -902,7 +924,7 @@ namespace MrDlef\OsQueryDigest {
 
             return new Digest(
                 $model->index(),
-                Truncator::apply($text, $this->options->maxLength()),
+                $text === null ? null : Truncator::apply($text, $this->options->maxLength()),
                 Truncator::apply($signature, $this->options->maxLength()),
                 $this->hasher->hash($hashInput),
                 $model->notes(),
@@ -1485,6 +1507,7 @@ namespace MrDlef\OsQueryDigest {
             'maxLength',
             'indexNormalizer',
             'aggNames',
+            'text',
             'hashVersion',
             'hashLength',
         ];
@@ -1506,6 +1529,8 @@ namespace MrDlef\OsQueryDigest {
         private $redactor;
 
         private bool $includeAggNames = false;
+
+        private bool $emitText = true;
 
         private int $hashLength = 12;
 
@@ -1626,6 +1651,33 @@ namespace MrDlef\OsQueryDigest {
         }
 
         /**
+         * Whether the digest carries the readable line with its literal values.
+         *
+         * On by default: pasting `q` into Dashboards is most of why the line exists.
+         * Turn it off where those values may not travel — a hosted log collector, a
+         * third-party SIEM — and `toArray()` emits `idx` / `sig` / `hash` only,
+         * which is also the cheapest log-volume win available: `q` is the longest of
+         * the four fields. Nothing the library is *for* reads it; the fingerprint
+         * and the shape do not need it.
+         *
+         * The line is then never rendered rather than rendered and dropped, so
+         * {@see \MrDlef\OsQueryDigest\Digest::text()} falls back to the signature
+         * and no accessor on the digest can hand out a value.
+         *
+         * **This is not on its own a promise that no literal is emitted.** With
+         * {@see Normalization::none()} the signature *is* the readable line, values
+         * included. The pair that emits none is `withText(false)` and any
+         * normalization above `none`.
+         */
+        public function withText(bool $emitText): self
+        {
+            $clone = clone $this;
+            $clone->emitText = $emitText;
+
+            return $clone;
+        }
+
+        /**
          * Hex characters kept from the sha256 digest. 12 (48 bits) keeps collisions
          * negligible at any realistic number of distinct query shapes.
          */
@@ -1706,6 +1758,11 @@ namespace MrDlef\OsQueryDigest {
             return $this->includeAggNames;
         }
 
+        public function emitText(): bool
+        {
+            return $this->emitText;
+        }
+
         public function hashLength(): int
         {
             return $this->hashLength;
@@ -1737,6 +1794,8 @@ namespace MrDlef\OsQueryDigest {
                     return $this->withIndexNormalizer(IndexNormalizer::fromMode(self::asString($key, $value)));
                 case 'aggNames':
                     return $this->withAggNames(self::asBool($key, $value));
+                case 'text':
+                    return $this->withText(self::asBool($key, $value));
                 case 'hashVersion':
                     return $this->withHashVersion(self::asString($key, $value));
                 case 'hashLength':

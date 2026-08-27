@@ -111,16 +111,6 @@ final class Formatter
 
     private function digest(QueryModel $model): Digest
     {
-        $textProfile = new RenderProfile(
-            new LiteralValueRenderer($this->options->redactor()),
-            false,
-            $this->options->maxClauses(),
-            $this->options->maxValues(),
-            false,
-            false,
-            $this->options->includeAggNames(),
-        );
-
         $normalization = $this->options->normalization();
         $signatureProfile = new RenderProfile(
             $normalization->erasesValues()
@@ -134,7 +124,21 @@ final class Formatter
             $this->options->includeAggNames(),
         );
 
-        $text = $this->renderer->render($model, $textProfile);
+        // Not rendered at all when it is not wanted, rather than rendered and
+        // dropped: it is the one of the three renders that has values in it.
+        $text = null;
+        if ($this->options->emitText()) {
+            $text = $this->renderer->render($model, new RenderProfile(
+                new LiteralValueRenderer($this->options->redactor()),
+                false,
+                $this->options->maxClauses(),
+                $this->options->maxValues(),
+                false,
+                false,
+                $this->options->includeAggNames(),
+            ));
+        }
+
         $signature = $this->renderer->render($model, $signatureProfile);
 
         // The hash is computed on the uncapped signature: display limits must
@@ -144,7 +148,7 @@ final class Formatter
 
         return new Digest(
             $model->index(),
-            Truncator::apply($text, $this->options->maxLength()),
+            $text === null ? null : Truncator::apply($text, $this->options->maxLength()),
             Truncator::apply($signature, $this->options->maxLength()),
             $this->hasher->hash($hashInput),
             $model->notes(),

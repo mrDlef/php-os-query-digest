@@ -63,6 +63,8 @@
               <span>keep aggregation names</span></label>
             <label class="option checkbox"><input id="pg-rawIndex" type="checkbox">
               <span>keep dated index names</span></label>
+            <label class="option checkbox"><input id="pg-omitText" type="checkbox">
+              <span>omit the values line</span></label>
 
             <p class="muted note">A cap accepts a number or <code>none</code>.
             Changing anything here needs PHP, so the runtime loads.</p>
@@ -80,7 +82,7 @@
 
         <dl class="digest">
           <dt>idx</dt><dd id="pg-idx" class="mono"></dd>
-          <dt>text</dt><dd id="pg-text" class="mono wrap"></dd>
+          <dt id="pg-text-label">text</dt><dd id="pg-text" class="mono wrap"></dd>
           <dt>sig</dt><dd id="pg-sig" class="mono wrap"></dd>
           <dt>hash</dt><dd id="pg-hash" class="mono hash"></dd>
         </dl>

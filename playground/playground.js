@@ -82,11 +82,13 @@ const elements = () => ({
     maxLength: el('maxLength'),
     aggNames: el('aggNames'),
     rawIndex: el('rawIndex'),
+    omitText: el('omitText'),
     optionsBox: el('options-box'),
     optionsSummary: el('options-summary'),
     error: el('error'),
     idx: el('idx'),
     text: el('text'),
+    textLabel: el('text-label'),
     sig: el('sig'),
     hash: el('hash'),
     notesBox: el('notes-box'),
@@ -171,6 +173,9 @@ function optionsSpec() {
     if (ui.rawIndex.checked) {
         spec.indexNormalizer = state.meta.indexModes[1];
     }
+    if (ui.omitText.checked) {
+        spec.text = false;
+    }
 
     return spec;
 }
@@ -188,6 +193,7 @@ function applyOptions(spec) {
     }
     ui.aggNames.checked = (spec.aggNames ?? defaults.aggNames) === true;
     ui.rawIndex.checked = spec.indexNormalizer === state.meta.indexModes[1];
+    ui.omitText.checked = (spec.text ?? defaults.text) === false;
 }
 
 function describeOptions(spec) {
@@ -232,7 +238,12 @@ function render(result) {
 
     const digest = result.digest ?? {};
     ui.idx.textContent = digest.idx ?? '';
-    ui.text.textContent = digest.q ?? '';
+    // `q` is absent, not empty, when the values line is turned off — so the row
+    // goes with it rather than showing a blank one.
+    const hasText = digest.q !== undefined && digest.q !== null;
+    ui.text.textContent = hasText ? digest.q : '';
+    ui.text.hidden = !hasText;
+    ui.textLabel.hidden = !hasText;
     ui.sig.textContent = digest.sig ?? '';
     ui.hash.textContent = digest.hash ?? '';
 
@@ -525,7 +536,7 @@ async function start() {
     for (const input of [ui.body, ui.index, ui.maxClauses, ui.maxValues, ui.maxLength]) {
         input.addEventListener('input', () => { writeFragment(); schedule(); });
     }
-    for (const input of [ui.aggNames, ui.rawIndex]) {
+    for (const input of [ui.aggNames, ui.rawIndex, ui.omitText]) {
         input.addEventListener('change', () => { writeFragment(); schedule(); });
     }
     ui.levels.addEventListener('change', () => { writeFragment(); schedule(); });

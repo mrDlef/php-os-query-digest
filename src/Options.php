@@ -29,6 +29,7 @@ final class Options
         'maxLength',
         'indexNormalizer',
         'aggNames',
+        'text',
         'hashVersion',
         'hashLength',
     ];
@@ -50,6 +51,8 @@ final class Options
     private $redactor;
 
     private bool $includeAggNames = false;
+
+    private bool $emitText = true;
 
     private int $hashLength = 12;
 
@@ -170,6 +173,33 @@ final class Options
     }
 
     /**
+     * Whether the digest carries the readable line with its literal values.
+     *
+     * On by default: pasting `q` into Dashboards is most of why the line exists.
+     * Turn it off where those values may not travel — a hosted log collector, a
+     * third-party SIEM — and `toArray()` emits `idx` / `sig` / `hash` only,
+     * which is also the cheapest log-volume win available: `q` is the longest of
+     * the four fields. Nothing the library is *for* reads it; the fingerprint
+     * and the shape do not need it.
+     *
+     * The line is then never rendered rather than rendered and dropped, so
+     * {@see \MrDlef\OsQueryDigest\Digest::text()} falls back to the signature
+     * and no accessor on the digest can hand out a value.
+     *
+     * **This is not on its own a promise that no literal is emitted.** With
+     * {@see Normalization::none()} the signature *is* the readable line, values
+     * included. The pair that emits none is `withText(false)` and any
+     * normalization above `none`.
+     */
+    public function withText(bool $emitText): self
+    {
+        $clone = clone $this;
+        $clone->emitText = $emitText;
+
+        return $clone;
+    }
+
+    /**
      * Hex characters kept from the sha256 digest. 12 (48 bits) keeps collisions
      * negligible at any realistic number of distinct query shapes.
      */
@@ -250,6 +280,11 @@ final class Options
         return $this->includeAggNames;
     }
 
+    public function emitText(): bool
+    {
+        return $this->emitText;
+    }
+
     public function hashLength(): int
     {
         return $this->hashLength;
@@ -281,6 +316,8 @@ final class Options
                 return $this->withIndexNormalizer(IndexNormalizer::fromMode(self::asString($key, $value)));
             case 'aggNames':
                 return $this->withAggNames(self::asBool($key, $value));
+            case 'text':
+                return $this->withText(self::asBool($key, $value));
             case 'hashVersion':
                 return $this->withHashVersion(self::asString($key, $value));
             case 'hashLength':

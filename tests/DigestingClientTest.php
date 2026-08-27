@@ -308,6 +308,29 @@ final class DigestingClientTest extends TestCase
         self::assertSame('logs-*', $decoded['idx']);
     }
 
+    /**
+     * The same record under a deployment that may not ship search input: three
+     * fields, and the one the dashboards read for grouping is still there.
+     */
+    public function testTheLoggingObserverCanWriteARecordWithoutValues(): void
+    {
+        $logger = self::logger();
+        $formatter = Formatter::create(Options::create()->withText(false));
+
+        (new DigestingClient(
+            self::client(new Response(200, [], '{"took":7}')),
+            new LoggingObserver($logger),
+            $formatter,
+        ))->sendRequest(new Request('POST', '/logs-2026.08.21/_search', [], self::BODY));
+
+        $encoded = json_encode($logger->records[0][2]['os']);
+        self::assertIsString($encoded);
+        $decoded = json_decode($encoded, true);
+
+        self::assertIsArray($decoded);
+        self::assertSame(['idx', 'sig', 'hash'], array_keys($decoded));
+    }
+
     public function testTheLoggingObserverKeepsTheLineWhenTheDigestFails(): void
     {
         $logger = self::logger();

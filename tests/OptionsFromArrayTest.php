@@ -27,6 +27,7 @@ final class OptionsFromArrayTest extends TestCase
         self::assertSame($defaults->maxValues(), $built->maxValues());
         self::assertSame($defaults->maxLength(), $built->maxLength());
         self::assertSame($defaults->includeAggNames(), $built->includeAggNames());
+        self::assertSame($defaults->emitText(), $built->emitText());
         self::assertSame($defaults->hashVersion(), $built->hashVersion());
         self::assertSame($defaults->hashLength(), $built->hashLength());
     }
@@ -40,6 +41,7 @@ final class OptionsFromArrayTest extends TestCase
             'maxLength' => 80,
             'indexNormalizer' => IndexNormalizer::IDENTITY,
             'aggNames' => true,
+            'text' => false,
             'hashVersion' => 'q9',
             'hashLength' => 8,
         ]);
@@ -51,6 +53,7 @@ final class OptionsFromArrayTest extends TestCase
         self::assertSame('q9', $options->hashVersion());
         self::assertSame(8, $options->hashLength());
         self::assertTrue($options->includeAggNames());
+        self::assertFalse($options->emitText());
         // identity leaves a rolling name alone; the default would collapse it.
         self::assertSame('logs-2026.08.13', $options->indexNormalizer()->normalize('logs-2026.08.13'));
     }

@@ -308,6 +308,7 @@ final class PlaygroundTest extends TestCase
             'maxLength' => $defaults->maxLength(),
             'indexNormalizer' => IndexNormalizer::DATE_PATTERNS,
             'aggNames' => $defaults->includeAggNames(),
+            'text' => $defaults->emitText(),
             'hashVersion' => $defaults->hashVersion(),
             'hashLength' => $defaults->hashLength(),
         ], Arr::arr($meta, 'defaults'));

@@ -144,6 +144,31 @@ final class MonologProcessorTest extends TestCase
     }
 
     /**
+     * The point of the switch: one processor, no call sites, and a record that
+     * carries nothing a user typed. What reaches the collector is what the
+     * options say, because the processor emits `toArray()` and nothing else.
+     */
+    public function testTheValuesLineCanBeKeptOutOfTheRecord(): void
+    {
+        $this->logger->pushProcessor(new DigestProcessor(
+            Formatter::create(Options::create()->withText(false)),
+        ));
+        $this->logger->info('opensearch.search', [
+            'query' => ['query' => ['term' => ['email' => 'ada@example.com']]],
+            'index' => 'members',
+        ]);
+
+        $digest = $this->digested();
+
+        self::assertSame(['idx', 'sig', 'hash'], array_keys($digest));
+
+        // The whole record, not just the digest: nothing may carry the value.
+        $encoded = json_encode($this->handler->getRecords());
+        self::assertIsString($encoded);
+        self::assertStringNotContainsString('ada@example.com', $encoded);
+    }
+
+    /**
      * The parse happens when the handler serialises, which is *after* the
      * processor has returned — so a failure there would surface while Monolog is
      * formatting and take the record with it.

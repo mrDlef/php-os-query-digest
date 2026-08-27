@@ -304,6 +304,7 @@ function meta(): array
             'maxLength' => $defaults->maxLength(),
             'indexNormalizer' => IndexNormalizer::DATE_PATTERNS,
             'aggNames' => $defaults->includeAggNames(),
+            'text' => $defaults->emitText(),
             'hashVersion' => $defaults->hashVersion(),
             'hashLength' => $defaults->hashLength(),
         ],

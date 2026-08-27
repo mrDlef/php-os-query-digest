@@ -50,7 +50,9 @@ toArray(): array
 ```
 
 Implements `JsonSerializable` and `__toString()` (which returns `text()`).
-`toArray()` gives the compact `{idx, q, sig, hash, notes}` object.
+`toArray()` gives the compact `{idx, q, sig, hash, notes}` object — without `q`
+under `Options::withText(false)`, where `text()` returns the signature because
+there is no literal line to return.
 
 ### `LazyDigest`
 
@@ -107,18 +109,23 @@ withMaxLength(?int $maxLength): Options
 withIndexNormalizer(IndexNormalizer $indexNormalizer): Options
 withRedactor(?callable $redactor): Options
 withAggNames(bool $includeAggNames): Options
+withText(bool $emitText): Options
 withHashLength(int $hashLength): Options
 withHashVersion(string $hashVersion): Options
 withClauseRenderer(string $type, ClauseRenderer $renderer): Options
 ```
 
-Each has a matching getter. `fromArray()` accepts the eight keys in
+Each has a matching getter. `fromArray()` accepts the nine keys in
 `Options::KEYS` and throws `InvalidOptionException` on an unknown key or a wrong
 type — the redactor and clause renderers have no array form, being callables and
 objects.
 
 The redactor is called as `fn(string $field, mixed $value): mixed` before a
 value is rendered.
+
+`withText(false)` drops the readable line: it is never rendered, `toArray()`
+emits `idx` / `sig` / `hash`, and `text()` returns the signature. See
+[when the values may not leave the building](../guides/logging.md#when-the-values-may-not-leave-the-building).
 
 See [Options](../guides/options.md) for what each one does to the output.
 
