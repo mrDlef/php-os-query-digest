@@ -5,7 +5,9 @@ This needs one that talks to the cluster over HTTP — which is all of them.
 
 Wrap the client your OpenSearch library already uses, and every `_search` and
 `_msearch` it sends is digested on the way past, joined to what it cost, and
-handed to an observer. **No call site changes.**
+handed to an observer. **No call site changes.** ([Which one to
+use](#which-one-to-use) says what "the client" means for yours, and which
+libraries have no seam to wrap.)
 
 ```php
 use MrDlef\OsQueryDigest\Http\DigestingClient;
@@ -37,20 +39,33 @@ importing the template and the four panels is the only other thing to do.
 
 ## Which one to use
 
-There are two, and the difference is which requests they can see.
+There are two, and what picks one is not the name of your OpenSearch library. It
+is what that library puts its requests through.
 
-| | wrap | sees |
+| | attaches to | sees |
 |---|---|---|
-| `Http\DigestingClient` | any PSR-18 client | everything sent through `sendRequest()` |
+| `Http\DigestingClient` | a PSR-18 client, wherever the library takes one | everything sent through `sendRequest()` |
 | `Http\Guzzle\DigestMiddleware` | a Guzzle handler stack | that, plus every asynchronous and pooled request |
 
 A Guzzle client *is* a PSR-18 client, so the decorator works on one — for the
-requests it sends synchronously. Libraries that send asynchronously never call
-`sendRequest()` at all, and `opensearch-php` is one of them. So:
+requests it sends synchronously. The middleware sits a layer lower and sees the
+rest. So the question to ask about your client is: **is there a PSR-18 client or
+a Guzzle handler stack anywhere inside it?**
 
-- **`elasticsearch-php` 8**, HTTPlug, anything with a PSR-18 client in it →
-  the decorator.
-- **`opensearch-php`**, or your own Guzzle client → the middleware.
+| your client | its transport | attach with |
+|---|---|---|
+| `elasticsearch-php` 8 | `elastic/transport`, PSR-18 | either |
+| `opensearch-php` ≥ 2.4 built through `GuzzleClientFactory`, `SymfonyClientFactory` or `TransportFactory` | PSR-18 | either |
+| your own Guzzle client, HTTPlug, anything PSR-18 | PSR-18 | either |
+| `opensearch-php` built through the deprecated `ClientBuilder` | `ezimuel/ringphp` | **neither** — see below |
+| `opensearch-php` ≤ 2.3 | `ezimuel/ringphp` | **neither** — see below |
+| `elasticsearch-php` 7.x | `ezimuel/ringphp` | **neither** — see below |
+
+"Either" is literal in the first three rows, with one condition on the
+middleware: it needs the PSR-18 client to be Guzzle-backed *and* the handler
+stack to be yours to push onto.
+
+### On a Guzzle stack you own
 
 ```php
 use GuzzleHttp\{Client, HandlerStack};
@@ -67,8 +82,75 @@ the handler than everything pushed before it, so one pushed **after** `retry`
 runs once per *attempt* — which is how many searches the cluster actually ran,
 and usually what you want. Push it before `retry` to count one per call.
 
-Neither is a required dependency. `psr/http-client` and `guzzlehttp/guzzle` are
-*suggested*; the library itself still needs nothing but `php` and `ext-json`.
+### On `opensearch-php`
+
+The modern client takes the PSR-18 client you give it, so the decorator goes
+where you build it:
+
+```php
+use GuzzleHttp\Psr7\HttpFactory;
+use MrDlef\OsQueryDigest\Http\DigestingClient;
+use OpenSearch\{Client, EndpointFactory, RequestFactory, TransportFactory};
+use OpenSearch\Serializers\SmartSerializer;
+
+$psr18 = new DigestingClient($yourGuzzleClient, new LoggingObserver($logger));
+
+$serializer = new SmartSerializer();
+$factory = new HttpFactory();
+
+$client = new Client(
+    (new TransportFactory())
+        ->setHttpClient($psr18)
+        ->setRequestFactory(new RequestFactory($factory, $factory, $factory, $serializer))
+        ->create(),
+    new EndpointFactory($serializer),
+    [],
+);
+```
+
+If you would rather let the client build its own Guzzle, its factory takes the
+middleware instead — which is the shorter way in:
+
+```php
+$client = (new OpenSearch\GuzzleClientFactory())->create([
+    'base_uri' => 'http://localhost:9200',
+    'middleware' => [new DigestMiddleware(new LoggingObserver($logger))],
+]);
+```
+
+Both were run against a live 2.x node on `opensearch-php` 2.6.0 and produce the
+same fingerprint for the same search, `_msearch` split per line included.
+
+### A ringphp client is covered by neither
+
+`ezimuel/ringphp` predates PSR-7, and that — not asynchrony — is why the two
+integrations cannot reach it. A ring handler is a
+`callable(array $request): array|FutureArrayInterface`: no `sendRequest()` to
+decorate, no handler stack to push onto. The only seam is
+`ClientBuilder::setHandler()`, and what it hands you is an array:
+
+```php
+['http_method' => 'POST', 'uri' => '/logs-*/_search', 'body' => '{…}', 'headers' => [/* … */]]
+```
+
+which is nearly the shape the capture wants, but not a shape it takes.
+[Issue #42](https://github.com/mrDlef/php-os-query-digest/issues/42) tracks
+closing that gap.
+
+Until it does, an application on a ringphp client has two ways in that need no
+transport integration at all: log the request body and read it with the
+[Monolog processor](logging.md), or point the [command line](cli.md) at the
+search slow log the cluster already writes.
+
+On `opensearch-php` those two rows are on their way out — `ClientBuilder` is
+deprecated since 2.4.0 and gone in 3.0.0. The third is not: `elasticsearch-php`
+7.x is still a common way to reach an OpenSearch cluster.
+
+### Dependencies
+
+Neither integration is a required dependency. `psr/http-client` and
+`guzzlehttp/guzzle` are *suggested*; the library itself still needs nothing but
+`php` and `ext-json`.
 
 ## Behind a proxy
 

@@ -123,7 +123,7 @@ nav:
       - Teach it a query type: guides/extending.md
   - Reference:
       - Public API: reference/api.md
-      - Query type coverage: reference/coverage.md
+      - Coverage: reference/coverage.md
       - OpenSearch versions: reference/versions.md
   - Explanation:
       - How the fingerprint works: explanation/how-it-works.md
