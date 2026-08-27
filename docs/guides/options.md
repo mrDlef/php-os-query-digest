@@ -100,17 +100,17 @@ Three things it is worth knowing:
   would a prefix bump, not quietly on a Friday.
 
 There is no shipped mode for this, deliberately. A rule that collapsed long hex
-runs generally would have to guess where a hash ends, and the shipped date rule
-already shows what that costs: it matches eight digits with no separators,
-because `logs-20260813` is a real name — so a mapping hash that happens to open
-with a long digit run is collapsed *in part*.
+runs generally would have to decide what a hash *is* — how long, which alphabet —
+and would move the fingerprint of every index name with hex anywhere in it. So
+the shipped rules stop where the cluster's own conventions stop: the tenant
+number is a number and collapses, and the suffix is left alone whatever it
+happens to be made of.
 
 <!-- verified: options-index-partial -->
 ```
 tenant_0178_members_4f171971a955af948fae1c7a964c49b8  →  tenant_*_members_4f171971a955af948fae1c7a964c49b8
-tenant_0179_members_9999999999999999999999999999aaaa  →  tenant_*_members_*9999aaaa
+tenant_0179_members_9999999999999999999999999999aaaa  →  tenant_*_members_9999999999999999999999999999aaaa
 ```
 
-Two names of the same shape, two fingerprints, and the second *looks* collapsed.
 Only you know where your suffix begins, which is why this is a callable rather
 than a third mode.

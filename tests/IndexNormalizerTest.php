@@ -159,25 +159,86 @@ final class IndexNormalizerTest extends TestCase
     }
 
     /**
-     * Pinned because it is surprising and it is *why* the hook is needed rather
-     * than a third shipped mode: the date rule matches eight digits with no
-     * separators — `20260813` is a real index name — so a mapping hash with a
-     * long digit run is collapsed *in part*, and a name that merely looks
-     * collapsed is worse than one that does not.
+     * A content hash is left alone whatever it is made of, which is what makes
+     * {@see IndexNormalizer::custom()} the answer for one rather than a third
+     * shipped mode: the shipped rules stop where the cluster's own conventions
+     * do, and only the application knows where its suffix begins.
      */
-    public function testTheShippedRuleMangesAHashThatBeginsWithDigits(): void
+    public function testTheShippedRuleLeavesAContentHashAlone(): void
     {
         $shipped = IndexNormalizer::datePatterns();
 
+        $cases = [
+            'mostly letters' => 'tenant_0178_members_4f171971a955af948fae1c7a964c49b8',
+            // Mangled to `tenant_*_members_*9999aaaa` before the date rule was
+            // bounded by digits.
+            'mostly digits' => 'tenant_0179_members_9999999999999999999999999999aaaa',
+        ];
+
+        $expected = [];
+        $actual = [];
+
+        foreach ($cases as $label => $index) {
+            $expected[$label] = 'tenant_*_members_' . substr($index, strlen('tenant_0178_members_'));
+            $actual[$label] = $shipped->normalize($index);
+        }
+
+        self::assertSame($expected, $actual);
+    }
+
+    /**
+     * The bug the digit guards on the date rule exist for. Eight bare digits are
+     * a date — `logs-20260813` — so the rule has to accept them; without the
+     * guards it also matched the front of any longer run and left the rest
+     * behind, which put the *value* of a numeric suffix into the fingerprint.
+     */
+    public function testALongNumericSegmentCollapsesWhole(): void
+    {
+        $normalizer = IndexNormalizer::datePatterns();
+
+        $cases = [
+            // The lengths that used to leak: nine and up.
+            'eight digits' => ['logs-99999999', 'logs-*'],
+            'nine digits' => ['logs-999999999', 'logs-*'],
+            'ten digits' => ['logs-9999999999', 'logs-*'],
+            'thirteen digits' => ['logs-9999999999999', 'logs-*'],
+            'an ISM rollover past a hundred million' => ['logs-000000001', 'logs-*'],
+            // Epoch seconds, which is the common shape of the bug: the leftover
+            // was the tail, so every rollover was its own fingerprint.
+            'epoch seconds' => ['logs-1756259400', 'logs-*'],
+            'another epoch second' => ['logs-1756259412', 'logs-*'],
+            // Still a date, and still collapsed: the guards are about digits,
+            // not about segments.
+            'a compact date with a time on it' => ['logs-20260813T00', 'logs-*T00'],
+            'a separated date with a time on it' => ['orders-2026.08.13T00', 'orders-*T00'],
+        ];
+
+        $expected = [];
+        $actual = [];
+
+        foreach ($cases as $label => $case) {
+            $expected[$label] = $case[1];
+            $actual[$label] = $normalizer->normalize($case[0]);
+        }
+
+        self::assertSame($expected, $actual);
+    }
+
+    public function testEveryEpochRolloverIsOneShape(): void
+    {
+        $formatter = Formatter::create();
+        $request = ['query' => ['term' => ['service' => 'api']], 'size' => 50];
+
+        $hashes = [];
+        foreach ([1756259400, 1756259412, 1756345837, 1799999999] as $epoch) {
+            $hashes[] = $formatter->describe($request, 'logs-' . $epoch)->hash();
+        }
+
+        self::assertCount(1, array_unique($hashes), 'Four names of one shape must share a fingerprint.');
         self::assertSame(
-            'tenant_*_members_4f171971a955af948fae1c7a964c49b8',
-            $shipped->normalize('tenant_0178_members_4f171971a955af948fae1c7a964c49b8'),
-            'A hash of mostly letters survives whole.',
-        );
-        self::assertSame(
-            'tenant_*_members_*9999aaaa',
-            $shipped->normalize('tenant_0179_members_9999999999999999999999999999aaaa'),
-            'One of mostly digits does not — so the fingerprint depends on the hash.',
+            $formatter->describe($request, 'logs-2026.08.27')->hash(),
+            $hashes[0],
+            'And it is the one the dated form already had: both collapse to logs-*.',
         );
     }
 
