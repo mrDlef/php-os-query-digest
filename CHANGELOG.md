@@ -27,8 +27,8 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 
 ## v0.13.0 — unreleased
 
-_the parameters beside `body`, one file to download, and the examples
-nothing read_
+_the parameters beside `body`, which clients can actually be captured, one
+file to download, and the examples nothing read_
 
 **Fingerprints:** `q4:` → `q5:` — a search whose `size`, `from` or `sort` sits
 beside `body` rather than inside it now says so. Only the prefix moved: all
@@ -70,6 +70,48 @@ One consequence worth naming: an envelope `sort` is a query string parameter, so
 it carries the URI syntax — `last_name:desc`, comma-joined — not the body's
 structural form. Read as a body sort it would have minted a field called
 `last_name:desc` and claimed ascending.
+
+### The transport guide sent the official client to the wrong integration
+
+Under *Which one to use* it read: "**`opensearch-php`**, or your own Guzzle
+client → the middleware." The reasoning above it was that `opensearch-php` sends
+asynchronously and never calls `sendRequest()`, so the PSR-18 decorator cannot
+see it. Both halves were wrong, and the conclusion did not follow from either:
+the Guzzle middleware cannot see a ringphp handler any more than the decorator
+can — there is no stack to push onto. A reader on the official client followed
+the table, pushed the middleware, saw no digests, and had no way to tell whether
+they had wired it wrong or the library did not cover them.
+
+What is actually true, read off the packages and then run against a live node:
+
+- **`opensearch-php` ≥ 2.4 is a PSR-18 client.** `HttpTransport::sendRequest()`
+  calls `$client->sendRequest($request)` synchronously. The decorator sees it,
+  and so does the middleware — `GuzzleClientFactory` takes a `middleware` option.
+  Both were run on 2.6.0 against a 2.x node and mint the same fingerprint for the
+  same search, `_msearch` split per line included.
+- **The ringphp transport is the thing neither can reach**, and asynchrony is not
+  why. `ezimuel/ringphp` predates PSR-7: a handler is a
+  `callable(array): array|FutureArrayInterface`, so there is no request object to
+  intercept. That covers `opensearch-php` ≤ 2.3, `opensearch-php` built through
+  `ClientBuilder` — deprecated in 2.4.0, removed in 3.0.0 — and
+  `elasticsearch-php` 7.x, which is still a common way to reach an OpenSearch
+  cluster. [#42](https://github.com/mrDlef/php-os-query-digest/issues/42) tracks
+  closing it.
+
+The guide now names what each integration *attaches to* rather than which
+packages to use it with, carries a worked example for `opensearch-php` both ways,
+and says plainly that a ringphp client is covered by neither — with the two ways
+in that need no transport at all, the Monolog processor and the slow log.
+
+`docs/reference/coverage.md` gains the same table and loses the "Query type" in
+its title: "which clients can be captured" is the second question that page is
+for, and it was answered nowhere.
+
+Both runs above were done by hand, which is what let this page be wrong in one
+direction and then wrong in the other without anything failing.
+[#46](https://github.com/mrDlef/php-os-query-digest/issues/46) is the harness
+that would check them — it needs a sub-composer, because `opensearch-php`
+requires PHP 8.2 and this library's floor is 7.4.
 
 ### The CLI without the package
 

@@ -1,4 +1,9 @@
-# Query type coverage
+# Coverage
+
+Two questions, and this page answers both: which queries the library can read,
+and which clients it can read them out of.
+
+## Query types
 
 Checked against the official
 [OpenSearch API specification](https://github.com/opensearch-project/opensearch-api-specification)
@@ -44,3 +49,28 @@ span query from a log line. The remaining four cannot be read even in principle
 — `type` was removed with mapping types, `sltr` and `template` only rescore or
 live behind another endpoint, and an `agentic` query hands the whole result set
 to a model that decides outside the DSL.
+
+## Clients captured at the transport
+
+The [transport integrations](../guides/transport.md) attach to a PSR-18 client or
+to a Guzzle handler stack. Whether your OpenSearch library has either is a
+property of its transport, not of its name:
+
+| client | transport | captured |
+|---|---|---|
+| `elasticsearch-php` 8 | `elastic/transport`, PSR-18 | yes |
+| `opensearch-php` ≥ 2.4 through `GuzzleClientFactory`, `SymfonyClientFactory` or `TransportFactory` | PSR-18 | yes |
+| any Guzzle, HTTPlug or PSR-18 client of your own | PSR-18 | yes |
+| `opensearch-php` through the deprecated `ClientBuilder` | `ezimuel/ringphp` | no |
+| `opensearch-php` ≤ 2.3 | `ezimuel/ringphp` | no |
+| `elasticsearch-php` 7.x | `ezimuel/ringphp` | no |
+
+A ringphp handler is a `callable(array): array|FutureArrayInterface` — it
+predates PSR-7, so there is no request object to intercept.
+[Issue #42](https://github.com/mrDlef/php-os-query-digest/issues/42) tracks it.
+
+**Not captured is not uncovered.** The transport is one of three ways in, and the
+other two do not care what your client is: the
+[Monolog processor](../guides/logging.md) digests a body your application already
+logs, and the [command line](../guides/cli.md) reads the search slow log the
+cluster writes on its own.
