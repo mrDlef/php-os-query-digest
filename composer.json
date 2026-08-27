@@ -27,12 +27,14 @@
         "bin/os-query-digest"
     ],
     "suggest": {
+        "ezimuel/ringphp": "To digest every search on its way out of a ringphp-based client \u2014 elasticsearch-php 7.x, opensearch-php \u2264 2.3 \u2014 via MrDlef\\OsQueryDigest\\Http\\Ring\\DigestingHandler (^1.2)",
         "guzzlehttp/guzzle": "To digest every search on its way out of a Guzzle client, via MrDlef\\OsQueryDigest\\Http\\Guzzle\\DigestMiddleware (^7.0)",
         "monolog/monolog": "To replace raw search requests with their digest automatically, via MrDlef\\OsQueryDigest\\Monolog\\DigestProcessor (^2.0 || ^3.0)",
         "psr/http-client": "To digest every search on its way out of any PSR-18 client, via MrDlef\\OsQueryDigest\\Http\\DigestingClient (^1.0)",
         "psr/log": "To log what the transport integrations capture, via MrDlef\\OsQueryDigest\\Http\\LoggingObserver (^1.1 || ^2.0 || ^3.0)"
     },
     "require-dev": {
+        "ezimuel/ringphp": "^1.2",
         "friendsofphp/php-cs-fixer": "^3.95",
         "guzzlehttp/guzzle": "^7.4",
         "monolog/monolog": "^2.0 || ^3.0",

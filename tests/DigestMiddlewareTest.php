@@ -18,11 +18,10 @@ use PHPUnit\Framework\TestCase;
 /**
  * The same capture, on the path a Guzzle client actually takes.
  *
- * `DigestingClientTest` covers what the two integrations share, and there is no
+ * `DigestingClientTest` covers what the three integrations share, and there is no
  * point repeating it. What is only true here is the reason this class exists:
  * the requests a Guzzle stack carries do not all go through `sendRequest`, so a
- * PSR-18 decorator sees none of the asynchronous ones — which is most of what
- * `opensearch-php` sends.
+ * PSR-18 decorator sees none of the asynchronous ones.
  */
 final class DigestMiddlewareTest extends TestCase
 {

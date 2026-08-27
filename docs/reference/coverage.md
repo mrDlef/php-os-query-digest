@@ -52,25 +52,24 @@ to a model that decides outside the DSL.
 
 ## Clients captured at the transport
 
-The [transport integrations](../guides/transport.md) attach to a PSR-18 client or
-to a Guzzle handler stack. Whether your OpenSearch library has either is a
-property of its transport, not of its name:
+The [transport integrations](../guides/transport.md) attach to a PSR-18 client, a
+Guzzle handler stack, or a ringphp handler. Which one your OpenSearch library
+offers is a property of its transport, not of its name:
 
-| client | transport | captured |
+| client | transport | attach with |
 |---|---|---|
-| `elasticsearch-php` 8 | `elastic/transport`, PSR-18 | yes |
-| `opensearch-php` ≥ 2.4 through `GuzzleClientFactory`, `SymfonyClientFactory` or `TransportFactory` | PSR-18 | yes |
-| any Guzzle, HTTPlug or PSR-18 client of your own | PSR-18 | yes |
-| `opensearch-php` through the deprecated `ClientBuilder` | `ezimuel/ringphp` | no |
-| `opensearch-php` ≤ 2.3 | `ezimuel/ringphp` | no |
-| `elasticsearch-php` 7.x | `ezimuel/ringphp` | no |
+| `elasticsearch-php` 8 | `elastic/transport`, PSR-18 | `Http\DigestingClient` or `Http\Guzzle\DigestMiddleware` |
+| `opensearch-php` ≥ 2.4 through `GuzzleClientFactory`, `SymfonyClientFactory` or `TransportFactory` | PSR-18 | `Http\DigestingClient` or `Http\Guzzle\DigestMiddleware` |
+| any Guzzle, HTTPlug or PSR-18 client of your own | PSR-18 | `Http\DigestingClient` or `Http\Guzzle\DigestMiddleware` |
+| `opensearch-php` through the deprecated `ClientBuilder` | `ezimuel/ringphp` | `Http\Ring\DigestingHandler` |
+| `opensearch-php` ≤ 2.3 | `ezimuel/ringphp` | `Http\Ring\DigestingHandler` |
+| `elasticsearch-php` 7.x | `ezimuel/ringphp` | `Http\Ring\DigestingHandler` |
 
-A ringphp handler is a `callable(array): array|FutureArrayInterface` — it
-predates PSR-7, so there is no request object to intercept.
-[Issue #42](https://github.com/mrDlef/php-os-query-digest/issues/42) tracks it.
+A ringphp handler is a `callable(array): array|FutureArrayInterface`, which
+predates PSR-7 — so there is no request object to decorate and no stack to push
+onto, and it needs an integration of its own rather than an adapter.
 
-**Not captured is not uncovered.** The transport is one of three ways in, and the
-other two do not care what your client is: the
-[Monolog processor](../guides/logging.md) digests a body your application already
-logs, and the [command line](../guides/cli.md) reads the search slow log the
-cluster writes on its own.
+**The transport is one of three ways in**, and the other two do not care what your
+client is at all: the [Monolog processor](../guides/logging.md) digests a body your
+application already logs, and the [command line](../guides/cli.md) reads the
+search slow log the cluster writes on its own.

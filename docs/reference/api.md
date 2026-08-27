@@ -1,6 +1,6 @@
 # Public API
 
-Nineteen classes. Everything else in `src/` is `@internal` and may move in a
+Twenty classes. Everything else in `src/` is `@internal` and may move in a
 patch release — see [what counts as public](../explanation/public-api.md) for
 why the line is drawn there.
 
@@ -219,8 +219,9 @@ name, and by `RenderedClause::withParam()` on a numeric name.
 
 ## Transport
 
-See [Capture at the transport](../guides/transport.md) for which of the two to
-use and why.
+See [Capture at the transport](../guides/transport.md) for which of the three to
+use and why — the answer depends on what your client transports over, not on its
+name.
 
 ### `Http\DigestingClient`
 
@@ -243,7 +244,23 @@ __invoke(callable $handler): callable
 
 The same capture as a Guzzle middleware — `$stack->push(new
 DigestMiddleware($observer))`. Needed for the requests a PSR-18 decorator cannot
-see: asynchronous and pooled ones, which is most of what `opensearch-php` sends.
+see: asynchronous and pooled ones.
+
+### `Http\Ring\DigestingHandler`
+
+```php
+__construct(callable $next, SearchObserver $observer, ?Formatter $formatter = null, string $basePath = '')
+__invoke(array $request): mixed
+```
+
+The same capture as a `ezimuel/ringphp` handler — `$builder->setHandler(new
+DigestingHandler(ClientBuilder::defaultHandler(), $observer))`. Needed for the
+clients that transport over ringphp, which predates PSR-7 and so has neither a
+`sendRequest()` to decorate nor a handler stack to push onto:
+`elasticsearch-php` 7.x and `opensearch-php` ≤ 2.3.
+
+Whatever the wrapped handler returns is passed back — an array untouched, a
+future proxied, so an asynchronous request stays asynchronous.
 
 ### `Http\SearchObserver`
 
@@ -251,9 +268,9 @@ see: asynchronous and pooled ones, which is most of what `opensearch-php` sends.
 observe(ObservedSearch $search): void
 ```
 
-What to do with a search once it has been seen. It may throw: both integrations
-catch everything an observer does, because a digest is never worth a failed
-request.
+What to do with a search once it has been seen. It may throw: all three
+integrations catch everything an observer does, because a digest is never worth a
+failed request.
 
 ### `Http\ObservedSearch`
 
