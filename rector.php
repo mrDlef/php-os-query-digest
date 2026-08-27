@@ -49,6 +49,11 @@ return RectorConfig::configure()
         // rewrite — and it is written for 8.3, not 7.4.
         __DIR__ . '/tools/infection/vendor',
 
+        // The OpenSearch clients ClientCaptureTest drives, installed under
+        // tools/ for the same reason. Somebody else's packages, and they target
+        // PHP versions this config does not.
+        __DIR__ . '/tools/clients/vendor',
+
         // `if ($query !== null)` says what it means when the property is
         // `?Node`. Rewriting it to `instanceof Node` asks the reader to know
         // the type before they can read the condition.

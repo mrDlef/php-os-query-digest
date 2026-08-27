@@ -22,6 +22,7 @@ on:
       - 'resources/probes.json'
       - 'resources/versions.json'
       - 'tools/certify.php'
+      - 'tools/clients/composer.json'
       - 'tests/Integration/**'
       - '.github/workflows/certification.yml'
 
@@ -65,10 +66,22 @@ jobs:
 
       - run: composer update --prefer-dist --no-progress
 
+      # The OpenSearch clients ClientCaptureTest drives. Deliberately updated
+      # rather than installed from a lock: the point of that test is to notice
+      # when a client changes what it transports over, and a pinned lock would
+      # hide exactly that. Without this step the test skips itself, which is how
+      # every other job in the matrix gets away with never seeing these packages
+      # — they need PHP 8.2 and this library's floor is 7.4.
+      - name: The clients whose capture is claimed
+        run: composer --working-dir=tools/clients update --prefer-dist --no-progress
+
       # Replays every verdict resources/versions.json records for whichever
       # version the service container happens to run. A drift in either
       # direction fails: a query that stopped being accepted, or one the matrix
       # still calls unsupported after OpenSearch grew it.
+      # Two things at once: the certified matrix, and — because the clients are
+      # installed above — that the transport integrations still capture the
+      # clients docs/reference/coverage.md says they do.
       - name: Replay the certified matrix
         env:
           OPENSEARCH_URL: http://localhost:9200

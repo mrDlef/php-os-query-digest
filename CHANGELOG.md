@@ -29,7 +29,8 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 
 _the parameters beside `body`, a record that may leave the building, an index
 name only you can read and one no longer half-collapsed, a third way in at the
-transport, one file to download, and the examples nothing read_
+transport that is now checked against the clients themselves, one file to
+download, and the examples nothing read_
 
 **Fingerprints:** `q4:` → `q5:` — a search whose `size`, `from` or `sort` sits
 beside `body` rather than inside it now says so. Only the prefix moved: all
@@ -222,6 +223,55 @@ Like the redactor, it has no `fromArray()` key and no `MODES` entry — a callab
 cannot come out of a configuration file — so `fromMode('custom')` throws, and the
 playground's mode list is unchanged. Nothing moves for anyone who does not ask:
 the default is the same rule it was.
+
+### Which clients can be captured is a test now, not a paragraph
+
+Every other claim this library makes about the outside world is checked against
+it: which OpenSearch versions accept what we render is a committed matrix
+replayed on real nodes, which query types exist is a snapshot of the official
+specification, and that `took` sits at the front of a response is asserted rather
+than trusted. Which *clients* the transport integrations can capture was prose —
+and it was wrong in one direction and then wrong in the other inside this same
+release, without anything failing either time.
+
+`tests/Integration/ClientCaptureTest.php` installs the clients themselves and
+sends a search through each one against a live node:
+
+- **`opensearch-php` ≥ 2.4 through `TransportFactory`, via the decorator** — a
+  `_search` and an `_msearch`, three observations, `took` on the single one and
+  null on both batch lines.
+- **The same client through `GuzzleClientFactory`, via the middleware**, using
+  its `middleware` option.
+- **`elasticsearch-php` 7.17 over ringphp, via the ring handler** — plus an
+  `indices()->stats()` in the same run, which must not be counted.
+- **`opensearch-php`'s own deprecated `ClientBuilder`**, which skips itself with a
+  note when the class finally goes in 3.0.0 — the notice the coverage table needs.
+- **A ringphp client still offers neither seam**: `defaultHandler()` is a
+  `Closure` and the client is not a `Psr\Http\Client\ClientInterface`. If either
+  changes, the reason the ring handler exists changes with it.
+
+And the one no single integration's own tests can show: **the same search sent by
+different clients through different integrations is one fingerprint**, equal to
+the one `Formatter::describe()` gives for the same body and index. Two
+integrations disagreeing about one query would otherwise be invisible.
+
+The clients are in `tools/clients/composer.json` rather than the root
+`require-dev`, on the pattern `tools/infection` already set: `opensearch-php`
+requires PHP 8.2 and this library's floor is 7.4, so the root tree would stop
+resolving on three of the seven versions in the matrix. The test skips without
+that tree, so no ordinary job has to know it exists — the certification workflow
+installs it, and `make clients` does locally.
+
+That manifest is **unlocked** on purpose, unlike Infection's. The point of the
+harness is to notice when a client changes what it transports over, and a pinned
+lock would hide exactly that.
+
+One row cannot be checked and now says so: **`elasticsearch-php` 8 cannot talk to
+an OpenSearch cluster at all.** It sends
+`Content-Type: application/vnd.elasticsearch+json; compatible-with=8` and the
+node answers `406 Not Acceptable` — which is why `opensearch-php` was forked. The
+row describes the shape of its transport, not a combination anyone can run, and
+the page carries a footnote saying so.
 
 ### A third way in at the transport, for the clients the other two cannot reach
 
