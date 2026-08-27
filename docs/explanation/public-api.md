@@ -6,7 +6,7 @@ one is marked neither, marked both, or if a public method hands back an
 internal type — because a type you can reach from a public signature is public
 whatever its annotation claims.
 
-**The public surface is nineteen classes:**
+**The public surface is twenty classes:**
 
 |               |                                                                       |
 |---------------|-----------------------------------------------------------------------|
@@ -16,7 +16,7 @@ whatever its annotation claims.
 | extension     | `Extension\ClauseRenderer`, `Extension\RenderedClause`                |
 | failures      | `Exception\InvalidQueryException`, `Exception\InvalidOptionException` |
 | Monolog       | `Monolog\DigestProcessor`, `Monolog\SafeDigest`                       |
-| transport     | `Http\DigestingClient`, `Http\Guzzle\DigestMiddleware`, `Http\SearchObserver`, `Http\ObservedSearch`, `Http\LoggingObserver` |
+| transport     | `Http\DigestingClient`, `Http\Guzzle\DigestMiddleware`, `Http\Ring\DigestingHandler`, `Http\SearchObserver`, `Http\ObservedSearch`, `Http\LoggingObserver` |
 
 Everything else — the parser, the tree, the renderers, the canonicaliser, the
 hasher, the CLI command — is `@internal`. Not out of secrecy: those are exactly

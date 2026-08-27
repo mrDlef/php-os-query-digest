@@ -7,10 +7,14 @@ namespace MrDlef\OsQueryDigest\Tests\Integration;
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Ring\Client\CurlHandler;
+use GuzzleHttp\Ring\Client\CurlMultiHandler;
+use GuzzleHttp\Ring\Future\FutureArrayInterface;
 use MrDlef\OsQueryDigest\Formatter;
 use MrDlef\OsQueryDigest\Http\DigestingClient;
 use MrDlef\OsQueryDigest\Http\Guzzle\DigestMiddleware;
 use MrDlef\OsQueryDigest\Http\ObservedSearch;
+use MrDlef\OsQueryDigest\Http\Ring\DigestingHandler;
 use MrDlef\OsQueryDigest\Http\SearchObserver;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
@@ -182,6 +186,73 @@ final class TransportCaptureTest extends TestCase
 
         self::assertCount(1, $observer->seen);
         self::assertSame($answer['took'] ?? null, $observer->seen[0]->tookMillis());
+    }
+
+    /**
+     * The ring handler against a real curl handler, which is the only instrument
+     * for two of its claims: that the response body a curl handler leaves is a
+     * *resource* rather than a string — so reading `took` off it must put the
+     * pointer back, or the client reads nothing after us — and that the search
+     * still arrives with its body.
+     */
+    public function testTheRingHandlerCapturesWhatARealCurlHandlerSends(): void
+    {
+        $observer = self::observer();
+        // The `host` header ringphp builds its URL from, straight off the base URL.
+        $host = (string) preg_replace('#^https?://#', '', $this->url);
+
+        $handler = new DigestingHandler(new CurlHandler(), $observer);
+
+        $response = $handler([
+            'http_method' => 'POST',
+            'uri' => '/' . self::INDEX . '/_search',
+            'headers' => ['host' => [$host], 'Content-Type' => ['application/json']],
+            'body' => self::BODY,
+        ]);
+
+        self::assertInstanceOf(FutureArrayInterface::class, $response);
+        self::assertSame(200, $response['status']);
+
+        // Read after the handler did, which is the whole point.
+        $body = $response['body'];
+        self::assertIsResource($body);
+        $answer = self::decode((string) stream_get_contents($body));
+        self::assertSame(1, self::hitCount($answer), 'The search did not reach the node with its body.');
+
+        self::assertCount(1, $observer->seen);
+        self::assertSame($answer['took'] ?? null, $observer->seen[0]->tookMillis());
+        self::assertSame(
+            Formatter::create()->describe(self::BODY, self::INDEX)->hash(),
+            $observer->seen[0]->digest()->digest()->hash(),
+            'The ring path must mint what the other two mint for the same search.',
+        );
+    }
+
+    /**
+     * The asynchronous ring path: `CurlMultiHandler` hands back a future that
+     * has not run, and the digest must not be what makes it run.
+     */
+    public function testTheRingHandlerLeavesAnAsynchronousRequestAsynchronous(): void
+    {
+        $observer = self::observer();
+        // The `host` header ringphp builds its URL from, straight off the base URL.
+        $host = (string) preg_replace('#^https?://#', '', $this->url);
+
+        $handler = new DigestingHandler(new CurlMultiHandler(), $observer);
+
+        $response = $handler([
+            'http_method' => 'POST',
+            'uri' => '/' . self::INDEX . '/_search',
+            'headers' => ['host' => [$host], 'Content-Type' => ['application/json']],
+            'body' => self::BODY,
+        ]);
+
+        self::assertInstanceOf(FutureArrayInterface::class, $response);
+        self::assertCount(0, $observer->seen, 'The handler dereferenced the future.');
+
+        self::assertSame(200, $response['status']);
+        self::assertCount(1, $observer->seen);
+        self::assertIsInt($observer->seen[0]->tookMillis());
     }
 
     /**

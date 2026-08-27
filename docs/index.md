@@ -72,7 +72,7 @@ the incident started.
 
 - :material-api: **[Public API](reference/api.md)**
 
-    The nineteen classes you may depend on.
+    The twenty classes you may depend on.
 
 </div>
 

@@ -28,8 +28,8 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 ## v0.13.0 — unreleased
 
 _the parameters beside `body`, a record that may leave the building, an index
-name only you can read, which clients can actually be captured, one file to
-download, and the examples nothing read_
+name only you can read, a third way in at the transport, one file to download,
+and the examples nothing read_
 
 **Fingerprints:** `q4:` → `q5:` — a search whose `size`, `from` or `sort` sits
 beside `body` rather than inside it now says so. Only the prefix moved: all
@@ -173,6 +173,61 @@ Like the redactor, it has no `fromArray()` key and no `MODES` entry — a callab
 cannot come out of a configuration file — so `fromMode('custom')` throws, and the
 playground's mode list is unchanged. Nothing moves for anyone who does not ask:
 the default is the same rule it was.
+
+### A third way in at the transport, for the clients the other two cannot reach
+
+Both transport integrations needed a PSR-18 client or a Guzzle handler stack.
+`elasticsearch-php` 7.x and `opensearch-php` ≤ 2.3 offer neither: they transport
+over `ezimuel/ringphp`, which predates PSR-7. So "wrap the client your OpenSearch
+library already uses" meant "unless it is the version you are probably running".
+
+`Http\Ring\DigestingHandler` is a ring handler that wraps a ring handler:
+
+```php
+$client = ClientBuilder::create()
+    ->setHandler(new DigestingHandler(
+        ClientBuilder::defaultHandler(),
+        new LoggingObserver($logger),
+    ))
+    ->build();
+```
+
+The request array was already the shape the capture wanted — `http_method`,
+`uri`, and a body that is a JSON string on both of those clients — so the
+adapter is thin. What was not thin is everything the format allows *around* it,
+and four things had to be read off a running node rather than assumed:
+
+- **Every handler returns a future, the synchronous one included.**
+  `CurlHandler` hands back a `CompletedFutureArray`, not an array. So the future
+  path is the normal path, not the edge case.
+- **Reading a key off an unresolved future blocks on it.** A middleware that
+  read the status to report it would turn a pool of asynchronous searches into a
+  serial one. The response is wrapped with `Core::proxy()` and read inside the
+  callback, which is also the honest place to read `took`: after the answer has
+  landed. A test asserts that the future is *not* dereferenced, against a real
+  `CurlMultiHandler`.
+- **A ringphp failure is a fulfilled response, not an exception.** A transport
+  error comes back as an array carrying `error` and no `status`. Reported the way
+  a failed PSR-18 request is — counted, with a null status — because the shape
+  that times out is the shape worth finding.
+- **The response body is a resource.** `Core::body()` would have read it, and
+  left the pointer at the end: fine for ringphp, which rewinds afterwards, fatal
+  for a middleware, where the client reads next. So `took` is peeked with the
+  position restored, and the integration test reads the body *after* the handler
+  did and asserts the hits are still there.
+
+`Recorder` grew a ring-shaped pair of edges beside its PSR-7 ones; the pairing,
+the timing and the reporting are still written once. `SearchExtractor` stays
+`@internal` — the issue offered making it public as the smaller alternative, and
+that is no longer the trade.
+
+`ezimuel/ringphp` is a fourth *suggested* dependency, required by nothing. It
+installs on PHP 7.4, so the ring path is tested on the whole matrix rather than
+behind a version gate.
+
+The public surface is twenty classes now, and
+`docs/guides/transport.md` no longer tells a ringphp reader that nothing covers
+them — which it correctly did, for one release.
 
 ### The transport guide sent the official client to the wrong integration
 

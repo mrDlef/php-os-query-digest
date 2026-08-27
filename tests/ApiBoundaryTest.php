@@ -42,6 +42,7 @@ final class ApiBoundaryTest extends TestCase
         'MrDlef\OsQueryDigest\Http\Guzzle\DigestMiddleware',
         'MrDlef\OsQueryDigest\Http\LoggingObserver',
         'MrDlef\OsQueryDigest\Http\ObservedSearch',
+        'MrDlef\OsQueryDigest\Http\Ring\DigestingHandler',
         'MrDlef\OsQueryDigest\Http\SearchObserver',
         'MrDlef\OsQueryDigest\LazyDigest',
         'MrDlef\OsQueryDigest\Monolog\DigestProcessor',
