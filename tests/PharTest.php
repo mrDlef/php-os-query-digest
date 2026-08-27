@@ -73,6 +73,41 @@ final class PharTest extends TestCase
      * The whole point of the artefact: one file, no autoloader, no vendor
      * directory, and the same fingerprint the library produces in process.
      */
+    /**
+     * The name of the published image, in the four places that print it.
+     *
+     * The release workflow used to build it from `github.repository_owner`,
+     * which is `mrDlef` — and a registry repository name must be lowercase, so
+     * the push failed on the first release that ran it, after the tag was
+     * public. A literal in four files can disagree; this is what stops it.
+     */
+    public function testTheImageIsNamedTheSameEverywhereItIsPublished(): void
+    {
+        $expected = 'ghcr.io/mrdlef/os-query-digest';
+
+        $files = [
+            'README.md',
+            'Makefile',
+            '.github/workflows/release.yml',
+            'docs/getting-started.md',
+        ];
+
+        $found = [];
+        foreach ($files as $file) {
+            $contents = file_get_contents(self::ROOT . '/' . $file);
+            self::assertIsString($contents, 'Unreadable: ' . $file);
+
+            preg_match_all('#ghcr\.io/\S*?os-query-digest#', $contents, $matches);
+            $found[$file] = array_values(array_unique($matches[0]));
+        }
+
+        self::assertSame(
+            array_map(static fn(string $file): array => [$expected], array_combine($files, $files)),
+            $found,
+            'The published image is named differently in different places.',
+        );
+    }
+
     public function testItDigestsAQueryWithNothingInstalled(): void
     {
         [$status, $out, $err] = $this->runPhar(['--hash', '--index=logs-2026.08.13'], self::BODY);

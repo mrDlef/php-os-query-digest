@@ -16,7 +16,12 @@ on:
         required: true
 
 env:
-  IMAGE: ghcr.io/${{ github.repository_owner }}/os-query-digest
+  # Written out, not derived from `github.repository_owner`: that is `mrDlef`,
+  # and a registry repository name must be lowercase, so deriving it produced a
+  # name buildx refuses — at push time, which is the last place to find out. It
+  # is the same literal the README, the Makefile and the docs publish, and a test
+  # fails if the four ever disagree.
+  IMAGE: ghcr.io/mrdlef/os-query-digest
 
 jobs:
   phar:
