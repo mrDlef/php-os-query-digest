@@ -28,8 +28,8 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 ## v0.13.0 — unreleased
 
 _the parameters beside `body`, a record that may leave the building, an index
-name only you can read, a third way in at the transport, one file to download,
-and the examples nothing read_
+name only you can read and one no longer half-collapsed, a third way in at the
+transport, one file to download, and the examples nothing read_
 
 **Fingerprints:** `q4:` → `q5:` — a search whose `size`, `from` or `sort` sits
 beside `body` rather than inside it now says so. Only the prefix moved: all
@@ -121,6 +121,63 @@ deployment makes in configuration rather than in code, and the playground gained
 the toggle — where turning it on removes the `text` row from the result rather
 than blanking it, which is what the record does.
 
+### A numeric index segment no longer collapses halfway
+
+`datePatterns()` collapsed a standalone numeric segment up to eight digits and
+then, from nine, only part of it:
+
+```
+ 8 digits  logs-99999999     →  logs-*
+ 9 digits  logs-999999999    →  logs-*9
+10 digits  logs-9999999999   →  logs-*99
+```
+
+The leftover is the digits past the first eight, so it varied with the *value*.
+An epoch-seconds suffix is ten digits, which made every rollover its own
+fingerprint:
+
+```
+logs-1756259400  →  logs-*00     q4:ebd17811af9b
+logs-1756259412  →  logs-*12     q4:228ebfe1e5b7
+logs-1756345837  →  logs-*37     q4:a908898fa64a
+```
+
+Three names of one query shape, three fingerprints — precisely the failure this
+class exists to prevent, while the dated form right beside it did the right
+thing. And `logs-*99` *reads* as a pattern, so nothing in a dashboard suggested
+the grouping was broken. A name that looks collapsed is worse than one that
+plainly is not.
+
+The cause is two rules and their order. The date rule matches eight bare digits,
+because `logs-20260813` is a real index name; it ran first, ate the leading eight
+of a longer run, and left `*99` — which the numeric-segment rule can no longer
+match, being anchored to segment boundaries.
+
+**The fix is two lookarounds, and the obvious guard was the wrong one.** Anchoring
+the date rule to segment boundaries fixes the digit run and breaks a date with a
+time on it: `orders-2026.08.13T00` would collapse to `orders-*.13T00`, worse than
+before. Bounding it by *digits* instead — `(?<!\d)…(?!\d)` — refuses the front of
+a longer run while still accepting eight digits followed by anything that is not
+one:
+
+```
+logs-999999999        →  logs-*        (was logs-*9)
+logs-1756259400       →  logs-*        (was logs-*00)
+logs-000000001        →  logs-*        (was logs-*1)
+logs-20260813T00      →  logs-*T00     unchanged
+orders-2026.08.13T00  →  orders-*T00   unchanged
+```
+
+**No fixture moved.** All eighteen keep their hashes, because no pinned example
+carried a segment of nine digits or more. Two things did move and had to: the
+block in the options guide that documented the mangling, and the test that pinned
+it — both now say the suffix is left alone, which was always the argument for
+`custom()` being a callable.
+
+This is why the fix is in this release rather than the next one: `v0.13.0` already
+moves the prefix, so it rides along inside that bump. After the tag it would have
+cost a `q6:` of its own, for two lookarounds.
+
 ### An index name only you can read
 
 `IndexNormalizer::datePatterns()` collapses what any cluster does — dates, and
@@ -139,20 +196,12 @@ Options::create()->withIndexNormalizer(IndexNormalizer::custom(
 // tenant_0178_members_4f171971a955af948fae1c7a964c49b8  →  tenant_*_members
 ```
 
-A callable, not a third mode, and the reason is in the shipped rule itself. A
-mode that collapsed long hex runs would have to guess where a hash ends, and the
-date rule shows what guessing costs: it matches eight digits with no separators,
-because `logs-20260813` is a real index name — so a mapping hash that happens to
-open with a long digit run is already collapsed *in part*.
-
-```
-tenant_0178_members_4f171971a955af948fae1c7a964c49b8  →  tenant_*_members_4f171971a955af948fae1c7a964c49b8
-tenant_0179_members_9999999999999999999999999999aaaa  →  tenant_*_members_*9999aaaa
-```
-
-Two names of one shape, two fingerprints, and the second *looks* collapsed. That
-is pinned by a test now rather than merely true. Only the application knows where
-its own suffix begins.
+A callable, not a third mode. A mode that collapsed long hex runs would have to
+decide what a hash *is* — how long, which alphabet — and would move the
+fingerprint of every index name with hex anywhere in it. The shipped rules stop
+where the cluster's own conventions stop: the tenant number is a number and
+collapses, and the suffix is left alone whatever it is made of. Only the
+application knows where its own suffix begins.
 
 Three decisions inside the hook:
 

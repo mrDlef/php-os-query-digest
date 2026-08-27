@@ -1140,7 +1140,16 @@ namespace MrDlef\OsQueryDigest {
             }
 
             // 2026.08.13, 2026-08-13, 20260813 …
-            $index = (string) preg_replace('/\d{4}[-._]?\d{2}[-._]?\d{2}/', '*', $index);
+            //
+            // Bounded by digits, not by segment: the compact form is eight bare
+            // digits, so without the guards it matched the *front* of any longer run
+            // and left the rest behind — `logs-1756259400` collapsed to `logs-*00`,
+            // which varies with the value and so mints a fingerprint per rollover.
+            // A name that looks collapsed is worse than one that plainly is not.
+            // Segment boundaries would have been the obvious guard and the wrong
+            // one: they also refuse `20260813T00`, where the eight digits really are
+            // a date.
+            $index = (string) preg_replace('/(?<!\d)\d{4}[-._]?\d{2}[-._]?\d{2}(?!\d)/', '*', $index);
             // Standalone numeric segments: logs-000042 → logs-*, but v2 stays v2.
             $index = (string) preg_replace('/(?<=^|[-._])\d+(?=$|[-._])/', '*', $index);
 
