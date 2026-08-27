@@ -15,5 +15,15 @@ parameters:
         # A pattern, not a path: it only exists in the mutation job, and
         # PHPStan rejects an excludePaths entry that is not there.
         - tools/infection/vendor/*
+        # The OpenSearch clients ClientCaptureTest drives, installed under
+        # tools/ for the same reason: opensearch-php needs a newer PHP than this
+        # library supports. Also not our code.
+        - tools/clients/vendor/*
+        # And the one test that drives them. Every class it names lives in that
+        # tree, so PHPStan cannot see any of them — analysing this file would
+        # report a class-not-found per line and say nothing about the code. It
+        # is checked by running, against a cluster, which is the only instrument
+        # for what it claims anyway.
+        - tests/Integration/ClientCaptureTest.php
     treatPhpDocTypesAsCertain: true
     reportUnmatchedIgnoredErrors: true

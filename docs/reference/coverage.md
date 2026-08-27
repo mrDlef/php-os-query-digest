@@ -58,16 +58,31 @@ offers is a property of its transport, not of its name:
 
 | client | transport | attach with |
 |---|---|---|
-| `elasticsearch-php` 8 | `elastic/transport`, PSR-18 | `Http\DigestingClient` or `Http\Guzzle\DigestMiddleware` |
+| `elasticsearch-php` 8 [^es8] | `elastic/transport`, PSR-18 | `Http\DigestingClient` or `Http\Guzzle\DigestMiddleware` |
 | `opensearch-php` ≥ 2.4 through `GuzzleClientFactory`, `SymfonyClientFactory` or `TransportFactory` | PSR-18 | `Http\DigestingClient` or `Http\Guzzle\DigestMiddleware` |
 | any Guzzle, HTTPlug or PSR-18 client of your own | PSR-18 | `Http\DigestingClient` or `Http\Guzzle\DigestMiddleware` |
 | `opensearch-php` through the deprecated `ClientBuilder` | `ezimuel/ringphp` | `Http\Ring\DigestingHandler` |
 | `opensearch-php` ≤ 2.3 | `ezimuel/ringphp` | `Http\Ring\DigestingHandler` |
 | `elasticsearch-php` 7.x | `ezimuel/ringphp` | `Http\Ring\DigestingHandler` |
 
+[^es8]: The integration attaches, but the pair does not work: `elasticsearch-php`
+    8 sends `Content-Type: application/vnd.elasticsearch+json; compatible-with=8`,
+    and an OpenSearch node answers `406 Not Acceptable` to it. The row is about
+    the shape of its transport, not about a combination anyone can run — which is
+    why `opensearch-php` exists. It is the only row this page cannot check.
+
 A ringphp handler is a `callable(array): array|FutureArrayInterface`, which
 predates PSR-7 — so there is no request object to decorate and no stack to push
 onto, and it needs an integration of its own rather than an adapter.
+
+**This table is checked, not claimed.**
+`tests/Integration/ClientCaptureTest.php` installs the clients themselves, sends
+a search through each one against a live node, and asserts what came back — every
+row above except the footnoted one. It also asserts the thing a reader of the
+table actually depends on and that no single integration's own tests can show:
+**the same search sent by different clients through different integrations is one
+fingerprint.** Prose was what let this page be wrong in one direction and then
+wrong in the other without anything failing.
 
 **The transport is one of three ways in**, and the other two do not care what your
 client is at all: the [Monolog processor](../guides/logging.md) digests a body your

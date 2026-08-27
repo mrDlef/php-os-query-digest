@@ -17,7 +17,7 @@ export DOCKER_GID := $(shell id -g)
 .PHONY: test test-all stan cs cs-check rector rector-check check hooks fixtures spec \
         playground playground-data playground-runtime playground-check mutation \
         dashboards dashboards-check dashboards-up \
-        release-check release-notes bench docs docs-build docs-playground \
+        release-check release-notes bench docs docs-build docs-playground clients \
         phar image \
         certify integration clusters clusters-down clean
 
@@ -170,8 +170,15 @@ certify: clusters
 	@vendor/bin/phpunit --filter CertificationTest
 	@$(MAKE) clusters-down
 
+## Install the OpenSearch clients ClientCaptureTest drives. Not from a lock, and
+## not in the root tree: opensearch-php needs PHP 8.2 and this library's floor is
+## 7.4. Without this the test skips itself.
+clients:
+	composer --working-dir=tools/clients update
+
 ## Replay the committed matrix against live nodes. This is the regression
-## guard: it fails if a version stopped behaving the way the file says.
+## guard: it fails if a version stopped behaving the way the file says. Run
+## `make clients` first to include the client-capture checks.
 integration: clusters
 	OPENSEARCH_URL=http://localhost:9202 vendor/bin/phpunit --testsuite=integration
 	OPENSEARCH_URL=http://localhost:9203 vendor/bin/phpunit --testsuite=integration

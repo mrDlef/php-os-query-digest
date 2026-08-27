@@ -121,6 +121,18 @@ the type-declaration set never emits syntax the matrix cannot install. Its
 config avoids named arguments for the same reason: Rector installs happily on
 7.4, where `php74: true` would be a parse error.
 
+**The integration suite needs a cluster, and one of its tests needs the clients
+too.** `make integration` boots throwaway 2.x and 3.x nodes and replays the
+certified matrix against them. `ClientCaptureTest` goes further and drives the
+actual OpenSearch clients — `opensearch-php`, `elasticsearch-php` 7 — to check
+that the transport integrations still capture what
+`docs/reference/coverage.md` says they do, and that all of them mint one
+fingerprint for one search. Those clients live in `tools/clients/composer.json`
+because `opensearch-php` needs PHP 8.2 and this library's floor is 7.4, so
+`make clients` installs them and the test skips itself without them. That tree is
+deliberately **unlocked**: the point is to notice when a client changes what it
+transports over, and a pinned lock would hide it.
+
 ### Would the tests notice?
 
 Line coverage answers "was this executed?". For a library whose product is a

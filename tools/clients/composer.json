@@ -1,0 +1,9 @@
+{
+    "_comment": "The OpenSearch clients this library claims to capture at the transport, in their own manifest. They cannot go in the root require-dev: opensearch-php requires PHP 8.2 and this library's floor is 7.4, so `composer update` would stop working on three of the seven versions in the matrix. Only ClientCaptureTest reads this tree, and it skips when the tree is absent.",
+    "_no_lock": "Deliberately unlocked, unlike tools/infection. The point of this harness is to notice when a client changes what it transports over, and a pinned lock would hide exactly that. `composer update` here is the check.",
+    "require": {
+        "elasticsearch/elasticsearch": "^7.17",
+        "guzzlehttp/guzzle": "^7.4",
+        "opensearch-project/opensearch-php": "^2.4 || ^3.0"
+    }
+}
