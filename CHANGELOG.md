@@ -27,9 +27,9 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 
 ## v0.13.0 — unreleased
 
-_the parameters beside `body`, a record that may leave the building, which
-clients can actually be captured, one file to download, and the examples
-nothing read_
+_the parameters beside `body`, a record that may leave the building, an index
+name only you can read, which clients can actually be captured, one file to
+download, and the examples nothing read_
 
 **Fingerprints:** `q4:` → `q5:` — a search whose `size`, `from` or `sort` sits
 beside `body` rather than inside it now says so. Only the prefix moved: all
@@ -120,6 +120,59 @@ list.
 deployment makes in configuration rather than in code, and the playground gained
 the toggle — where turning it on removes the `text` row from the result rather
 than blanking it, which is what the record does.
+
+### An index name only you can read
+
+`IndexNormalizer::datePatterns()` collapses what any cluster does — dates, and
+standalone numeric segments, which covers rolling indices and, pleasantly,
+multi-tenant numeric prefixes. What it cannot collapse is a suffix whose meaning
+is yours: a **content-versioned** index, where the physical name carries a hash
+of the mapping and the alias moves over it on reindex. Every mapping change then
+minted a fresh fingerprint for every query shape, and every dashboard built on
+the hash reset on the next deploy — the thing the class exists to prevent.
+
+```php
+Options::create()->withIndexNormalizer(IndexNormalizer::custom(
+    fn (string $index): string => preg_replace('/_[0-9a-f]{32}$/', '', $index),
+));
+
+// tenant_0178_members_4f171971a955af948fae1c7a964c49b8  →  tenant_*_members
+```
+
+A callable, not a third mode, and the reason is in the shipped rule itself. A
+mode that collapsed long hex runs would have to guess where a hash ends, and the
+date rule shows what guessing costs: it matches eight digits with no separators,
+because `logs-20260813` is a real index name — so a mapping hash that happens to
+open with a long digit run is already collapsed *in part*.
+
+```
+tenant_0178_members_4f171971a955af948fae1c7a964c49b8  →  tenant_*_members_4f171971a955af948fae1c7a964c49b8
+tenant_0179_members_9999999999999999999999999999aaaa  →  tenant_*_members_*9999aaaa
+```
+
+Two names of one shape, two fingerprints, and the second *looks* collapsed. That
+is pinned by a test now rather than merely true. Only the application knows where
+its own suffix begins.
+
+Three decisions inside the hook:
+
+- **Your rule runs first, then the shipped one.** So the example lands on
+  `tenant_*_members` rather than `tenant_0178_members`: the hook strips what this library
+  cannot know is meaningless, and dates and numbers are collapsed afterwards as
+  always. Nobody reimplements what already works.
+- **It is called once per name.** `normalize()` also splits a comma-separated
+  list, deduplicates it and sorts it — machinery, not policy — so a request
+  against `a,b` gets two calls and that part stays where it is. A rule may return
+  `''` to drop one name from the list.
+- **It is not trusted to return a string.** Anything non-scalar reads as an
+  erased name rather than throwing, the same trade the redactor makes: this runs
+  in a logging path, where a `TypeError` out of a closure would cost the log line
+  and not just the digest.
+
+Like the redactor, it has no `fromArray()` key and no `MODES` entry — a callable
+cannot come out of a configuration file — so `fromMode('custom')` throws, and the
+playground's mode list is unchanged. Nothing moves for anyone who does not ask:
+the default is the same rule it was.
 
 ### The transport guide sent the official client to the wrong integration
 

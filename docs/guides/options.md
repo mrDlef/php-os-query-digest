@@ -50,3 +50,67 @@ It is not, on its own, a guarantee that no literal is emitted.
 included, so the pair that emits none is `withText(false)` with any normalization
 above `none` — which is the default, and the only combination worth calling
 value-free.
+
+## An index name only you can read
+
+`datePatterns()` collapses what any cluster does — dates, and standalone numeric
+segments, which covers rolling indices and, pleasantly, multi-tenant numeric
+prefixes:
+
+<!-- verified: options-index-shipped -->
+```
+tenant_0178_members  →  tenant_*_members
+logs-2026.08.13  →  logs-*
+```
+
+What it cannot collapse is a suffix whose meaning is yours: a **content-versioned**
+index, where the physical name carries a hash of the mapping and the alias moves
+over it on reindex. Left alone, every mapping change mints a fresh fingerprint
+for every query shape, and every dashboard built on the hash resets on the next
+deploy — the thing the normalizer exists to prevent.
+
+```php
+use MrDlef\OsQueryDigest\IndexNormalizer;
+
+Options::create()->withIndexNormalizer(IndexNormalizer::custom(
+    fn (string $index): string => preg_replace('/_[0-9a-f]{32}$/', '', $index),
+));
+```
+
+<!-- verified: options-index-custom -->
+```
+tenant_0178_members_4f171971a955af948fae1c7a964c49b8  →  tenant_*_members
+tenant_0179_members_0000000000000000000000000000ffff  →  tenant_*_members
+```
+
+**Your rule runs first, then the shipped one.** The hook is for stripping what
+this library cannot know is meaningless; dates and numeric segments are then
+collapsed exactly as always. So the example lands on `tenant_*_members`, not on
+`tenant_0178_members` — you do not reimplement what already works.
+
+Three things it is worth knowing:
+
+- **It is called once per name.** A request against `a,b` gets two calls, and the
+  deduplicating and sorting of a comma-separated list stays where it is. A rule
+  may return `''` to drop one name from the list.
+- **It is not trusted to return a string.** Anything non-scalar reads as an
+  erased name rather than throwing: this runs in a logging path, where a
+  `TypeError` out of a closure would cost the log line and not just the digest.
+- **A rule changes fingerprints** — that is the point — so roll it out the way you
+  would a prefix bump, not quietly on a Friday.
+
+There is no shipped mode for this, deliberately. A rule that collapsed long hex
+runs generally would have to guess where a hash ends, and the shipped date rule
+already shows what that costs: it matches eight digits with no separators,
+because `logs-20260813` is a real name — so a mapping hash that happens to open
+with a long digit run is collapsed *in part*.
+
+<!-- verified: options-index-partial -->
+```
+tenant_0178_members_4f171971a955af948fae1c7a964c49b8  →  tenant_*_members_4f171971a955af948fae1c7a964c49b8
+tenant_0179_members_9999999999999999999999999999aaaa  →  tenant_*_members_*9999aaaa
+```
+
+Two names of the same shape, two fingerprints, and the second *looks* collapsed.
+Only you know where your suffix begins, which is why this is a callable rather
+than a third mode.

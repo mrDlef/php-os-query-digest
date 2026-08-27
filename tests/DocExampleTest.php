@@ -6,6 +6,7 @@ namespace MrDlef\OsQueryDigest\Tests;
 
 use MrDlef\OsQueryDigest\Cli\Command;
 use MrDlef\OsQueryDigest\Formatter;
+use MrDlef\OsQueryDigest\IndexNormalizer;
 use MrDlef\OsQueryDigest\Options;
 use PHPUnit\Framework\TestCase;
 
@@ -211,6 +212,9 @@ final class DocExampleTest extends TestCase
         'cli-slowlog-json',
         'logging-record',
         'logging-record-value-free',
+        'options-index-shipped',
+        'options-index-custom',
+        'options-index-partial',
         'logging-line',
         'transport-record',
         'explain-output',
@@ -303,6 +307,48 @@ final class DocExampleTest extends TestCase
             $digest->hash(),
             'The page says the hash survives the switch.',
         );
+    }
+
+    /**
+     * The `index → collapsed` arrows in the options guide. Three of the four
+     * claims there are counter-intuitive — a tenant prefix collapsing for free,
+     * the custom rule composing with the shipped one, and a mapping hash being
+     * mangled in part — which is exactly the kind a hand-written page gets
+     * subtly wrong.
+     */
+    public function testTheIndexArrowsInTheOptionsGuideAreRealCollapses(): void
+    {
+        // A second copy of the page's own rule, like `getting-started-digest`:
+        // the check is that the page's claimed output matches this rule, not
+        // that its PHP matches this one. Edit both.
+        $stripMappingHash = static fn(string $index): string => (string) preg_replace(
+            '/_[0-9a-f]{32}$/',
+            '',
+            $index,
+        );
+
+        $normalizers = [
+            'options-index-shipped' => IndexNormalizer::datePatterns(),
+            'options-index-custom' => IndexNormalizer::custom($stripMappingHash),
+            'options-index-partial' => IndexNormalizer::datePatterns(),
+        ];
+
+        $expected = [];
+        $actual = [];
+
+        foreach ($normalizers as $marker => $normalizer) {
+            foreach (self::lines(self::oneBlock('docs/guides/options.md', $marker)) as $line) {
+                $sides = explode('→', $line);
+                self::assertCount(2, $sides, $marker . ': "' . $line . '" is not an arrow.');
+
+                $index = trim($sides[0]);
+                $expected[$marker . ': ' . $index] = trim($sides[1]);
+                $actual[$marker . ': ' . $index] = $normalizer->normalize($index);
+            }
+        }
+
+        self::assertNotSame([], $actual, 'The options guide prints no index arrows at all.');
+        self::assertSame($expected, $actual, 'The options guide claims a collapse this library does not do.');
     }
 
     /**

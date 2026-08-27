@@ -150,6 +150,7 @@ Constants: `NONE`, `VALUES`, `STRUCTURAL`.
 ```php
 static datePatterns(): IndexNormalizer   // the default
 static identity(): IndexNormalizer
+static custom(callable $rewrite): IndexNormalizer
 static fromMode(string $mode): IndexNormalizer
 
 normalize(string $index): string
@@ -158,6 +159,12 @@ normalize(string $index): string
 Constants: `DATE_PATTERNS`, `IDENTITY`. `datePatterns()` collapses
 `logs-2026.08.13` to `logs-*`, so a daily index does not mint a new fingerprint
 every midnight.
+
+`custom()` takes `fn(string $index): string`, called once per name in a
+comma-separated list. **Your rule runs first, then `datePatterns()`.** It has no
+array form and is not a `MODES` entry — a callable cannot come out of a
+configuration file, the same line `withRedactor()` sits on. See
+[an index name only you can read](../guides/options.md#an-index-name-only-you-can-read).
 
 ---
 
