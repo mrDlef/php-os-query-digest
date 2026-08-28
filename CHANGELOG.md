@@ -25,7 +25,7 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 | `q5:` | v0.13.0 | the search parameters an `['index' => …, 'body' => …]` envelope carries beside `body` are read instead of dropped |
 | `q5x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
-## v0.14.0 — unreleased
+## v0.14.0 — 2026-08-28
 
 _what kind of work a search is, the report the CLI was keeping to itself, and
 which normalisation level answers which question_
