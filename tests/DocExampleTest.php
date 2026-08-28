@@ -7,6 +7,7 @@ namespace MrDlef\OsQueryDigest\Tests;
 use MrDlef\OsQueryDigest\Cli\Command;
 use MrDlef\OsQueryDigest\Formatter;
 use MrDlef\OsQueryDigest\IndexNormalizer;
+use MrDlef\OsQueryDigest\Normalization;
 use MrDlef\OsQueryDigest\Options;
 use PHPUnit\Framework\TestCase;
 
@@ -118,6 +119,27 @@ final class DocExampleTest extends TestCase
     ];
 
     /**
+     * The two runs of one catalogue search the "which level" section compares:
+     * page 1 with two categories, page 3 with eight. The section's whole claim
+     * is a claim about *four* digests — two apart under the default, one under
+     * `structural()` — so none of them is transcribed.
+     *
+     * @var array<string,string> label => request
+     */
+    private const LEVELS = [
+        'page 1, two categories' => '{"query":{"bool":{"filter":['
+            . '{"term":{"shop":"fr"}},'
+            . '{"terms":{"category":["boots","coats"]}}'
+            . ']}},"size":20,"sort":[{"price":"asc"}]}',
+        'page 3, eight categories' => '{"query":{"bool":{"filter":['
+            . '{"term":{"shop":"fr"}},'
+            . '{"terms":{"category":["boots","coats","hats","gloves","scarves","socks","belts","bags"]}}'
+            . ']}},"size":20,"from":40,"sort":[{"price":"asc"}]}',
+    ];
+
+    private const LEVELS_INDEX = 'catalog-2026.08';
+
+    /**
      * The one fingerprint in the docs that is not meant to be real: the page
      * about hash stability shows the *shape* of a hash. Anything else the pages
      * print has to be recomputed here.
@@ -218,6 +240,7 @@ final class DocExampleTest extends TestCase
         'logging-line',
         'transport-record',
         'explain-output',
+        'how-it-works-levels',
     ];
 
     /** @var array<int,string> */
@@ -560,6 +583,50 @@ final class DocExampleTest extends TestCase
     }
 
     /**
+     * The level comparison on the same page. It is the one block whose point is
+     * that two fingerprints are *equal*, so the collapse is asserted as well as
+     * transcribed: a `structural()` that stopped erasing pagination would still
+     * print three plausible lines.
+     */
+    public function testTheLevelBlockComparesFingerprintsTheseLevelsProduce(): void
+    {
+        $values = Formatter::create();
+        $structural = Formatter::create(
+            Options::create()->withNormalization(Normalization::structural()),
+        );
+
+        $expected = [];
+        foreach (self::LEVELS as $label => $request) {
+            $digest = $values->describe($request, self::LEVELS_INDEX);
+
+            $expected[] = 'values()      ' . $label;
+            $expected[] = '  sig   ' . $digest->signature();
+            $expected[] = '  hash  ' . $digest->hash();
+        }
+
+        $collapsed = [];
+        foreach (self::LEVELS as $request) {
+            $collapsed[] = $structural->describe($request, self::LEVELS_INDEX);
+        }
+
+        self::assertSame(
+            $collapsed[0]->signature(),
+            $collapsed[1]->signature(),
+            'The page says structural() collapses the pair; it no longer does.',
+        );
+
+        $expected[] = 'structural()  either page, either basket';
+        $expected[] = '  sig   ' . $collapsed[0]->signature();
+        $expected[] = '  hash  ' . $collapsed[0]->hash();
+
+        self::assertSame(
+            $expected,
+            self::lines(self::oneBlock('docs/explanation/how-it-works.md', 'how-it-works-levels')),
+            'The normalisation levels section compares fingerprints these levels do not produce.',
+        );
+    }
+
+    /**
      * A marked block nobody checks claims to be verified and is not, and a
      * check whose marker was renamed away silently stops running.
      */
@@ -624,6 +691,15 @@ final class DocExampleTest extends TestCase
 
         foreach (self::SOURCES as [$request, $index]) {
             $hashes[] = $formatter->describe($request, $index)->hash();
+        }
+
+        // The one section that prints a fingerprint no default formatter mints.
+        $structural = Formatter::create(
+            Options::create()->withNormalization(Normalization::structural()),
+        );
+        foreach (self::LEVELS as $request) {
+            $hashes[] = $formatter->describe($request, self::LEVELS_INDEX)->hash();
+            $hashes[] = $structural->describe($request, self::LEVELS_INDEX)->hash();
         }
 
         foreach (self::LANDING as $page => $marker) {

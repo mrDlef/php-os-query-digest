@@ -32,6 +32,12 @@ $ os-query-digest --ndjson --hash < slow.ndjson | sort | uniq -c | sort -rn
 Those three are not three slow queries to read: they are one shape, hit on two
 different days, with two different `service` values.
 
+Counting is also where `--normalization=structural` earns its keep: under the
+default, page 1 and page 3 of one search are two fingerprints, and a `uniq -c`
+ranks pagination. [Which level answers which
+question](../explanation/how-it-works.md#which-level-answers-which-question)
+is the comparison.
+
 A malformed line is reported on stderr and skipped, so one mangled record does
 not cost you the rest of the file. Exit codes: `0` ok, `1` an input could not be
 parsed, `2` a bad invocation. `--help` lists every flag.

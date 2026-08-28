@@ -25,6 +25,30 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 | `q5:` | v0.13.0 | the search parameters an `['index' => …, 'body' => …]` envelope carries beside `body` are read instead of dropped |
 | `q5x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
+## v0.14.0 — unreleased
+
+_which normalisation level answers which question_
+
+**Fingerprints:** `q5:` unchanged.
+
+### Which level answers which question
+
+The two normalisation levels have always been documented by what they *erase* —
+a table of literals, cardinality, pagination. Nothing said which question each
+one answers, and the difference is not cosmetic: under the default, page 1 and
+page 3 of one search are two fingerprints, as are an eight-value and a two-value
+`terms`. That is correct when the question is latency, because those really are
+different amounts of work and the slow one has to be nameable. It is wrong when
+the question is volume: a top-N then ranks pagination rather than searches, and
+one search arrives as a fan of rows.
+
+`structural()` was already the setting for that second question, and now the
+documentation says so — the two levels are compared on one catalogue search, run
+at page 1 with two categories and at page 3 with eight, with the signatures that
+explain the collapse. The block is recomputed by `DocExampleTest`, including the
+claim that the two `structural()` runs are *equal*, which is the kind of claim a
+hand-written page keeps printing long after it stops being true.
+
 ## v0.13.0 — 2026-08-27
 
 _the parameters beside `body`, a record that may leave the building, an index

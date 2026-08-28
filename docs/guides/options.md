@@ -37,6 +37,16 @@ taken as JSON gives them — `"5"` is rejected, because a front end that guesses
 at `"5"` also accepts `"five"`. `redactor` has no array form; a callable cannot
 be expressed there.
 
+## The level, and the question you are asking
+
+`values()`, the default, erases literals and keeps the rest — including
+pagination and how many values a `terms` clause holds. That is what you want
+when the question is latency, and the wrong grouping when it is volume:
+`structural()` is the setting that puts page 1 and page 3 of one search on one
+row. [Which level answers which
+question](../explanation/how-it-works.md#which-level-answers-which-question)
+compares the two on the same search.
+
 ## `withText(false)`, and what it does not promise
 
 It removes the readable line from the digest — never rendered, so no accessor on
