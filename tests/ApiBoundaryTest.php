@@ -30,6 +30,8 @@ final class ApiBoundaryTest extends TestCase
      * @var array<int,class-string>
      */
     private const PUBLIC_API = [
+        'MrDlef\OsQueryDigest\Analysis\Report',
+        'MrDlef\OsQueryDigest\Analysis\Shape',
         'MrDlef\OsQueryDigest\Digest',
         'MrDlef\OsQueryDigest\Exception\InvalidOptionException',
         'MrDlef\OsQueryDigest\Exception\InvalidQueryException',

@@ -102,14 +102,21 @@ there from one that arrived with this morning's deploy.
 
 <!-- verified: cli-slowlog-json -->
 ```bash
-$ os-query-digest slowlog --json --top=1 slowlog.log | jq '.[0] | {count, p95_ms, first, last}'
+$ os-query-digest slowlog --json --top=1 slowlog.log | jq '.[0] | {count, kind, p95_ms, first, last}'
 {
   "count": 41,
+  "kind": "browse",
   "p95_ms": 246,
   "first": "2026-08-20T14:00:03,970",
   "last": "2026-08-20T14:02:03,355"
 }
 ```
+
+The grouping and the ranking behind that table are
+[`Analysis\Report`](../reference/api.md#analysisreport), not private to the
+command: an application that already has the digests can rank them the same way
+without a slow log — see [Ranking what you
+log](logging.md#ranking-what-you-log-without-a-log-index).
 
 Both appenders are read, the plain one and the JSON one beside it. Files are
 read a line at a time, so a rotated log of any size is fine, and every

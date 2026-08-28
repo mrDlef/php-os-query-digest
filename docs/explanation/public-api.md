@@ -6,12 +6,13 @@ one is marked neither, marked both, or if a public method hands back an
 internal type — because a type you can reach from a public signature is public
 whatever its annotation claims.
 
-**The public surface is twenty-one classes:**
+**The public surface is twenty-three classes:**
 
 |               |                                                                       |
 |---------------|-----------------------------------------------------------------------|
 | entry point   | `Formatter`                                                           |
 | results       | `Digest`, `Kind`, `LazyDigest`, `Explain\Explanation`, `Explain\Rule`  |
+| analysis      | `Analysis\Report`, `Analysis\Shape`                                   |
 | configuration | `Options`, `Normalization`, `IndexNormalizer`                         |
 | extension     | `Extension\ClauseRenderer`, `Extension\RenderedClause`                |
 | failures      | `Exception\InvalidQueryException`, `Exception\InvalidOptionException` |

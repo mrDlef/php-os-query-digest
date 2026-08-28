@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Cli;
 
+use MrDlef\OsQueryDigest\Analysis\Report;
+use MrDlef\OsQueryDigest\Analysis\Shape;
 use MrDlef\OsQueryDigest\Exception\InvalidOptionException;
 use MrDlef\OsQueryDigest\Exception\InvalidQueryException;
 use MrDlef\OsQueryDigest\Formatter;
@@ -31,8 +33,15 @@ use MrDlef\OsQueryDigest\Options;
  */
 final class SlowlogCommand
 {
-    /** How the ranking is ordered, and what the default answers. */
-    private const SORTS = ['total', 'count', 'p95', 'max', 'mean'];
+    /**
+     * How the ranking is ordered, and what the default answers. The list is
+     * {@see Report}'s: the grouping and the ranking are the library's, and a
+     * flag offering a key the report cannot rank by would be a promise made in
+     * the wrong file.
+     *
+     * @var array<int,string>
+     */
+    private const SORTS = Report::KEYS;
 
     private const DEFAULT_TOP = 20;
 
@@ -223,8 +232,7 @@ final class SlowlogCommand
         ?int $top,
         bool $json
     ): int {
-        /** @var array<string,Shape> $shapes */
-        $shapes = [];
+        $report = new Report();
         $lines = 0;
         $records = 0;
         $failed = 0;
@@ -285,10 +293,7 @@ final class SlowlogCommand
                     continue;
                 }
 
-                $hash = $digest->hash();
-                $shapes[$hash] ??= new Shape($digest);
-
-                $shapes[$hash]->record($digest, $record->tookMillis(), $record->timestamp());
+                $report->record($digest, $record->tookMillis(), $record->timestamp());
             }
 
             if ($file !== '-') {
@@ -296,7 +301,7 @@ final class SlowlogCommand
             }
         }
 
-        if ($shapes === []) {
+        if ($report->count() === 0) {
             $this->write(
                 $this->stderr,
                 $this->name . ': no search record in ' . self::plural($lines, 'line') . ".\n"
@@ -307,8 +312,8 @@ final class SlowlogCommand
             return Command::INVALID_INPUT;
         }
 
-        $ranked = self::rank($shapes, $sort);
-        $kept = $top === null ? $ranked : array_slice($ranked, 0, $top);
+        $ranked = $report->rank($sort);
+        $kept = $top === null ? $ranked : $report->top($top, $sort);
 
         if ($json) {
             $encoded = json_encode($kept, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
@@ -321,7 +326,7 @@ final class SlowlogCommand
         } else {
             $this->write(
                 $this->stdout,
-                self::summary($lines, $records, count($ranked), $failed, $otherPhase, $shapes)
+                self::summary($lines, $records, $failed, $otherPhase, $report)
                 . self::table($kept, $sort)
                 . self::footer(count($ranked), count($kept)),
             );
@@ -336,68 +341,19 @@ final class SlowlogCommand
         return ($labelled && $file !== '-' ? $file . ' ' : '') . 'line ' . $number;
     }
 
-    /**
-     * @param array<string,Shape> $shapes
-     *
-     * @return array<int,Shape>
-     */
-    private static function rank(array $shapes, string $sort): array
-    {
-        $ranked = array_values($shapes);
-
-        // Ties broken by count and then by hash, so two runs over one file
-        // print the same table — a report you cannot diff is a report you
-        // cannot use to say what a deploy changed.
-        usort($ranked, static function (Shape $a, Shape $b) use ($sort): int {
-            $first = self::key($b, $sort) <=> self::key($a, $sort);
-            if ($first !== 0) {
-                return $first;
-            }
-
-            return [$b->count(), $a->hash()] <=> [$a->count(), $b->hash()];
-        });
-
-        return $ranked;
-    }
-
-    private static function key(Shape $shape, string $sort): float
-    {
-        switch ($sort) {
-            case 'count':
-                return (float) $shape->count();
-            case 'mean':
-                return $shape->mean() ?? 0.0;
-            case 'p95':
-                return $shape->p95() ?? 0.0;
-            case 'max':
-                return $shape->max() ?? 0.0;
-            default:
-                return $shape->total();
-        }
-    }
-
-    /**
-     * @param array<string,Shape> $shapes
-     */
     private static function summary(
         int $lines,
         int $records,
-        int $shapeCount,
         int $failed,
         int $otherPhase,
-        array $shapes
+        Report $report
     ): string {
-        $total = 0.0;
-        foreach ($shapes as $shape) {
-            $total += $shape->total();
-        }
-
         $summary = sprintf(
             '%s, %s, %s, %s ms total',
             self::plural($lines, 'line'),
             self::plural($records, 'record'),
-            self::plural($shapeCount, 'shape'),
-            self::thousands($total),
+            self::plural($report->count(), 'shape'),
+            self::thousands($report->total()),
         );
 
         $notes = [];

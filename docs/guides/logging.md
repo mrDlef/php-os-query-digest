@@ -119,6 +119,36 @@ The shipped [dashboard pack](dashboards.md) needs no change: its panels group an
 aggregate on `os.hash` and read `os.sig`. `os.q` appears only in the index
 pattern's field list, so it simply has no values.
 
+## Ranking what you log, without a log index
+
+Shipping digests to an index and building panels on them is one way to read
+them. The other is to add them up where they are made, which needs no index and
+no dashboard:
+
+```php
+use MrDlef\OsQueryDigest\Analysis\Report;
+
+$report = new Report();
+
+// wherever a search comes back
+$report->record($digest, (float) $response['took']);
+
+// at the end of the request, the job, the test run
+foreach ($report->top(5) as $shape) {
+    printf("%-16s  %5d ×  %8.1f ms  %s\n",
+        $shape->hash(), $shape->count(), $shape->total(), $shape->signature());
+}
+```
+
+`Report` is the grouping and the ranking the `slowlog` command runs on a
+cluster's slow log — same class, fed from the other end. It holds one object per
+*shape*, so a long-running worker accumulating a million searches over forty
+shapes holds forty of them.
+
+It is the natural place to answer "what does this page actually search for":
+group the top by [`kind()`](../reference/kinds.md) and a request that fires
+eleven searches turns into two autocompletes, one lookup and eight browses.
+
 ## If it does not log its bodies
 
 This one still asks something of the application: that the request already
