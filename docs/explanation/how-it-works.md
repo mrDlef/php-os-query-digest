@@ -11,6 +11,42 @@
 `size=0` survives every level: "aggregations only" is a different kind of query
 from "give me hits".
 
+## Which level answers which question
+
+The default erases literals and stops there, which is the right trade for
+**latency**: page 3 of a search really is more work than page 1, and a `terms`
+filter holding eight values is not the one holding two. Kept apart, the shape
+that got slow is the one you can point at.
+
+It is the wrong trade for **volume**. Ask instead how much of the traffic one
+search accounts for, and those same distinctions fan it out into a row per page
+and a row per basket size — so a top-N ranks pagination rather than searches.
+`structural()` erases cardinality and pagination, and the fan collapses back to
+a single row.
+
+One catalogue search — a `term` on `shop`, a `terms` on `category`, sorted by
+price, twenty per page — run at page 1 with two categories and at page 3 with
+eight:
+
+<!-- verified: how-it-works-levels -->
+```
+values()      page 1, two categories
+  sig   catalog-* | q=(category:(? or ?) and shop:?) | size=20 sort=price:asc
+  hash  q5:8fd2dd38ce3a
+values()      page 3, eight categories
+  sig   catalog-* | q=(category:(? or ? or ? or ? or ? or +3) and shop:?) | size=20 from=40 sort=price:asc
+  hash  q5:3af67be7bbcb
+structural()  either page, either basket
+  sig   catalog-* | q=(category:(?) and shop:?) | size=? sort=price:asc
+  hash  q5:b64ab1f3a179
+```
+
+Ranking a slow log by what it costs is the first question, so the CLI and the
+shipped dashboards are built on the default. Counting what an application
+searches for is the second one, and it wants `structural()`. Both at once is two
+formatters and two fields on the same log line — the cost is a second parse of
+the same body, not a second integration.
+
 ## Canonicalisation
 
 Before rendering, the query is rewritten so that equivalent queries written

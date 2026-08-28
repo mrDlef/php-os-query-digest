@@ -153,6 +153,11 @@ normalisation rules.
 - **[Hash stability](https://mrdlef.github.io/php-os-query-digest/explanation/hash-stability/)**
   comes before storing a fingerprint anywhere permanent: the prefix moves when
   the rules do, so a stored hash is never silently reinterpreted.
+- **[Which normalisation level answers which
+  question](https://mrdlef.github.io/php-os-query-digest/explanation/how-it-works/#which-level-answers-which-question)** —
+  the default fingerprints page 1 and page 3 of a search apart, which is right
+  for ranking by latency and wrong for counting what your application searches
+  for.
 
 The site tracks the latest release, not `main`.
 

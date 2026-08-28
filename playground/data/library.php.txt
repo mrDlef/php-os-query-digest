@@ -556,9 +556,7 @@ namespace MrDlef\OsQueryDigest\Explain {
 
         public function record(string $rule, string $detail = ''): void
         {
-            if (!isset($this->rules[$rule])) {
-                $this->rules[$rule] = ['count' => 0, 'details' => []];
-            }
+            $this->rules[$rule] ??= ['count' => 0, 'details' => []];
 
             ++$this->rules[$rule]['count'];
 
@@ -1192,9 +1190,7 @@ namespace MrDlef\OsQueryDigest {
 
         public function digest(): Digest
         {
-            if ($this->digest === null) {
-                $this->digest = ($this->factory)();
-            }
+            $this->digest ??= ($this->factory)();
 
             return $this->digest;
         }
