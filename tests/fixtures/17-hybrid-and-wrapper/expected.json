@@ -1,5 +1,6 @@
 {
     "idx": "catalog-*",
+    "kind": "browse",
     "q": "catalog-* | q=(in_stock:true and (embedding:knn(k=20) or title|description:\"waterproof hiking boots\") and popularity:rank_feature() and released_at:distance_feature(pivot=30d)) | size=24",
     "sig": "catalog-* | q=(in_stock:? and (embedding:knn(k=?) or title|description:~?) and popularity:rank_feature() and released_at:distance_feature(pivot=?)) | size=24",
     "hash": "q5:b1d9d5875df4"

@@ -136,6 +136,10 @@ suggested, never required.
 - **It cannot break your logging.** Nothing is required at runtime, the digest
   is lazy, and a request it cannot parse yields an error field rather than an
   exception. You lose the digest, never the log line.
+- **It says what kind of work each search is.** Every digest carries a `kind` —
+  `suggest`, `aggregate`, `scan`, `lookup`, `browse` — read off the parsed
+  request, so a top-N grouped by it reads as a sentence instead of two hundred
+  hashes.
 - **It tells you why.** When two queries you thought were different share a
   hash, `explain()` names the rule that merged them.
 - **It is verified, not asserted.** Certified against real OpenSearch 2.19.6 and

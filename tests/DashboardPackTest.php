@@ -124,9 +124,9 @@ final class DashboardPackTest extends TestCase
         $mapped = self::mappedFields();
 
         self::assertSame(
-            ['hash', 'idx', 'q', 'sig'],
+            ['hash', 'idx', 'kind', 'q', 'sig'],
             self::digestFields(),
-            'The digest no longer emits the four fields the template maps under `os`.',
+            'The digest no longer emits the five fields the template maps under `os`.',
         );
 
         foreach (array_keys(self::VARIANTS) as $variant) {

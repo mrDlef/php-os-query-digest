@@ -138,9 +138,13 @@ final class DqlRenderer
             case LeafNode::OP_TERM:
                 return $field . ':' . $renderer->scalar($field, reset($values));
 
+            case LeafNode::OP_BOOL_PREFIX:
             case LeafNode::OP_MATCH:
+                // A completion op renders as the op it refines, deliberately —
+                // see LeafNode. Its own name lives in the model, not the line.
                 return $field . ':' . ($sigils ? '~' : '') . $renderer->scalar($field, reset($values));
 
+            case LeafNode::OP_PHRASE_PREFIX:
             case LeafNode::OP_PHRASE:
                 return $field . ':' . $renderer->phrase($field, reset($values));
 

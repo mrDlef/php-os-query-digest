@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest;
 
+use MrDlef\OsQueryDigest\Classify\Classifier;
 use MrDlef\OsQueryDigest\Exception\InvalidQueryException;
 use MrDlef\OsQueryDigest\Explain\Explanation;
 use MrDlef\OsQueryDigest\Explain\Rule;
@@ -39,12 +40,15 @@ final class Formatter
 
     private Hasher $hasher;
 
+    private Classifier $classifier;
+
     private function __construct(Options $options)
     {
         $this->options = $options;
         $this->parser = new RequestParser($options->clauseRenderers());
         $this->canonicalizer = new Canonicalizer();
         $this->renderer = new LineRenderer();
+        $this->classifier = new Classifier();
         $this->hasher = new Hasher(self::hashVersion($options), $options->hashLength());
     }
 
@@ -152,6 +156,10 @@ final class Formatter
             Truncator::apply($signature, $this->options->maxLength()),
             $this->hasher->hash($hashInput),
             $model->notes(),
+            // Classified after canonicalisation, on the same tree the signature
+            // is rendered from: two requests that share a fingerprint cannot
+            // then disagree about what kind of work they are.
+            $this->classifier->of($model),
         );
     }
 

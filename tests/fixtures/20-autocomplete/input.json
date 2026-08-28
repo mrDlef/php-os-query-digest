@@ -1,0 +1,17 @@
+{
+    "index": "members-2026.08",
+    "request": {
+        "query": {
+            "bool": {
+                "filter": [
+                    { "term": { "tenant": 178 } }
+                ],
+                "must": [
+                    { "match_phrase_prefix": { "full_name": "ada lov" } }
+                ]
+            }
+        },
+        "size": 8,
+        "_source": [ "full_name" ]
+    }
+}

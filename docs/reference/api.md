@@ -1,6 +1,6 @@
 # Public API
 
-Twenty classes. Everything else in `src/` is `@internal` and may move in a
+Twenty-one classes. Everything else in `src/` is `@internal` and may move in a
 patch release — see [what counts as public](../explanation/public-api.md) for
 why the line is drawn there.
 
@@ -42,6 +42,7 @@ something reads the result — use it when the record may be filtered out.
 
 ```php
 index(): string
+kind(): Kind
 text(): string
 signature(): string
 hash(): string
@@ -50,9 +51,28 @@ toArray(): array
 ```
 
 Implements `JsonSerializable` and `__toString()` (which returns `text()`).
-`toArray()` gives the compact `{idx, q, sig, hash, notes}` object — without `q`
-under `Options::withText(false)`, where `text()` returns the signature because
-there is no literal line to return.
+`toArray()` gives the compact `{idx, kind, q, sig, hash, notes}` object — without
+`q` under `Options::withText(false)`, where `text()` returns the signature
+because there is no literal line to return. `kind` stays: it holds no literal.
+
+### `Kind`
+
+```php
+static suggest(): Kind
+static aggregate(): Kind
+static scan(): Kind
+static lookup(): Kind
+static browse(): Kind
+static unknown(): Kind
+
+name(): string
+is(string $name): bool
+```
+
+Constants: `SUGGEST`, `AGGREGATE`, `SCAN`, `LOOKUP`, `BROWSE`, `UNKNOWN`, and
+`KINDS` — the six of them, in the order they are decided. Implements
+`__toString()`. What each one means, and how it is read off a request, is in
+[Kinds](kinds.md).
 
 ### `LazyDigest`
 

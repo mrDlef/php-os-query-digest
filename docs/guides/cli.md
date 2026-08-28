@@ -11,6 +11,7 @@ idx:  logs-*
 text: logs-* | q=(service:api) | size=50
 sig:  logs-* | q=(service:?) | size=50
 hash: q5:5b2210eb5318
+kind: browse
 ```
 
 `--explain` appends the rules table, `--json` emits the digest object, `--hash`

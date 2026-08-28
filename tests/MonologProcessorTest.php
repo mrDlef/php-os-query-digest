@@ -160,7 +160,7 @@ final class MonologProcessorTest extends TestCase
 
         $digest = $this->digested();
 
-        self::assertSame(['idx', 'sig', 'hash'], array_keys($digest));
+        self::assertSame(['idx', 'kind', 'sig', 'hash'], array_keys($digest));
 
         // The whole record, not just the digest: nothing may carry the value.
         $encoded = json_encode($this->handler->getRecords());

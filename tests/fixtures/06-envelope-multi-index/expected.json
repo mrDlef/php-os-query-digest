@@ -1,5 +1,6 @@
 {
     "idx": "logs-*",
+    "kind": "browse",
     "q": "logs-* | q=(message:timeout or message:\"connection reset by peer\") | size=10",
     "sig": "logs-* | q=(message:~? or message:\"?\") | size=10",
     "hash": "q5:4f1eaee8e165"

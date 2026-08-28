@@ -1,5 +1,6 @@
 {
     "idx": "forum-*",
+    "kind": "browse",
     "q": "forum-* | q=(parent_id(comment):4712 and created_at >= now-7d) | size=20 | script_score:min_score",
     "sig": "forum-* | q=(parent_id(comment):? and created_at >= ?) | size=20 | script_score:min_score",
     "hash": "q5:621e3adba249",

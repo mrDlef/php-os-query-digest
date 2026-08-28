@@ -23,11 +23,17 @@ The digest serialises to a compact object:
 ```json
 {
   "idx": "logs-*",
+  "kind": "aggregate",
   "q": "logs-* | q=(@timestamp >= now-15m and service:api) | size=0",
   "sig": "logs-* | q=(@timestamp >= ? and service:?) | size=0",
   "hash": "q5:b7cc218cda09"
 }
 ```
+
+`kind` is what the request is *for* — this one asks for buckets and no
+documents. It is read off the shape, holds no value, and is the field to group
+by when the question is what your application searches for rather than which
+search is slow. The six of them are in [Kinds](../reference/kinds.md).
 
 ## With Monolog
 
@@ -83,6 +89,7 @@ The record is then three fields:
 ```json
 {
   "idx": "logs-*",
+  "kind": "aggregate",
   "sig": "logs-* | q=(@timestamp >= ? and service:?) | size=0",
   "hash": "q5:b7cc218cda09"
 }

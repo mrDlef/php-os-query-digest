@@ -73,8 +73,8 @@ Two things address it, both documented in the README:
 
 - `withRedactor()` lets you rewrite or drop a value by field name before it is
   rendered;
-- the **signature** and the **hash** never contain values at all, so logging
-  only `$digest->hash()` is safe by construction.
+- the **signature**, the **hash** and the **kind** never contain values at all,
+  so logging only those is safe by construction.
 
 **A custom `ClauseRenderer` runs your code on that input.** If you register one,
 what it returns is rendered. It receives the raw clause body; treat it with the

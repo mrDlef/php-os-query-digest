@@ -91,6 +91,7 @@ const elements = () => ({
     textLabel: el('text-label'),
     sig: el('sig'),
     hash: el('hash'),
+    kind: el('kind'),
     notesBox: el('notes-box'),
     notes: el('notes'),
     rules: el('rules'),
@@ -246,6 +247,7 @@ function render(result) {
     ui.textLabel.hidden = !hasText;
     ui.sig.textContent = digest.sig ?? '';
     ui.hash.textContent = digest.hash ?? '';
+    ui.kind.textContent = digest.kind ?? '';
 
     const notes = digest.notes ?? [];
     ui.notesBox.hidden = notes.length === 0;

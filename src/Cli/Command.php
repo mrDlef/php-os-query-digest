@@ -392,6 +392,7 @@ final class Command
             'text: ' . $digest->text(),
             'sig:  ' . $digest->signature(),
             'hash: ' . $digest->hash(),
+            'kind: ' . $digest->kind()->name(),
         ];
 
         $notes = $digest->notes();

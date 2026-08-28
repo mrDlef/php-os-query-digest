@@ -1,5 +1,6 @@
 {
     "idx": "logs-*",
+    "kind": "browse",
     "q": "logs-* | q=((status:500 AND host:web-*) and path:/api/v1/*) | size=100",
     "sig": "logs-* | q=(raw(?) and path:*?*) | size=100",
     "hash": "q5:6fb4a2d9c302"
