@@ -22,9 +22,7 @@ final class Trace
 
     public function record(string $rule, string $detail = ''): void
     {
-        if (!isset($this->rules[$rule])) {
-            $this->rules[$rule] = ['count' => 0, 'details' => []];
-        }
+        $this->rules[$rule] ??= ['count' => 0, 'details' => []];
 
         ++$this->rules[$rule]['count'];
 

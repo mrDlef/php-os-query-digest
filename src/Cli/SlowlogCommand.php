@@ -286,9 +286,7 @@ final class SlowlogCommand
                 }
 
                 $hash = $digest->hash();
-                if (!isset($shapes[$hash])) {
-                    $shapes[$hash] = new Shape($digest);
-                }
+                $shapes[$hash] ??= new Shape($digest);
 
                 $shapes[$hash]->record($digest, $record->tookMillis(), $record->timestamp());
             }

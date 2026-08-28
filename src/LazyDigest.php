@@ -30,9 +30,7 @@ final class LazyDigest implements \JsonSerializable
 
     public function digest(): Digest
     {
-        if ($this->digest === null) {
-            $this->digest = ($this->factory)();
-        }
+        $this->digest ??= ($this->factory)();
 
         return $this->digest;
     }
