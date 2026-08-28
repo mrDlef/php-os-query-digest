@@ -45,6 +45,11 @@ the pack works unchanged under
 field is then simply absent from the records, and it appears in the pack only in
 the index pattern's field list.
 
+`os.kind` is mapped as a keyword and no shipped panel groups on it either. It is
+there so that a filter — `os.kind: suggest` — narrows all four panels at once to
+one kind of work, which is the question the shipped ones cannot ask on their
+own. See [Kinds](../reference/kinds.md).
+
 The first two are ordinary visualisations: open them, change the field, add a
 metric. **The last two are Vega**, and not for decoration — they ask their
 question with `bucket_script`, `bucket_selector` and `bucket_sort`, and no

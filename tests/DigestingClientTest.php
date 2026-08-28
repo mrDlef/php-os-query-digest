@@ -304,7 +304,7 @@ final class DigestingClientTest extends TestCase
         self::assertIsString($encoded);
         $decoded = json_decode($encoded, true);
         self::assertIsArray($decoded);
-        self::assertSame(['idx', 'q', 'sig', 'hash'], array_keys($decoded));
+        self::assertSame(['idx', 'kind', 'q', 'sig', 'hash'], array_keys($decoded));
         self::assertSame('logs-*', $decoded['idx']);
     }
 
@@ -328,7 +328,7 @@ final class DigestingClientTest extends TestCase
         $decoded = json_decode($encoded, true);
 
         self::assertIsArray($decoded);
-        self::assertSame(['idx', 'sig', 'hash'], array_keys($decoded));
+        self::assertSame(['idx', 'kind', 'sig', 'hash'], array_keys($decoded));
     }
 
     public function testTheLoggingObserverKeepsTheLineWhenTheDigestFails(): void

@@ -113,12 +113,20 @@ final class QueryParser
                 return $this->terms($body);
 
             case 'match':
-            case 'match_bool_prefix':
                 return $this->single($body, LeafNode::OP_MATCH);
 
             case 'match_phrase':
-            case 'match_phrase_prefix':
                 return $this->single($body, LeafNode::OP_PHRASE);
+
+            case 'match_bool_prefix':
+                // The two completion spellings are modelled apart from the ops
+                // above and rendered as them: what they buy is a readable
+                // classification — a type-ahead is not a search someone typed
+                // and submitted — and nothing else in a request says so.
+                return $this->single($body, LeafNode::OP_BOOL_PREFIX);
+
+            case 'match_phrase_prefix':
+                return $this->single($body, LeafNode::OP_PHRASE_PREFIX);
 
             case 'prefix':
                 return $this->single($body, LeafNode::OP_PREFIX);

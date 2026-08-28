@@ -123,6 +123,7 @@ nav:
       - Teach it a query type: guides/extending.md
   - Reference:
       - Public API: reference/api.md
+      - Kinds: reference/kinds.md
       - Coverage: reference/coverage.md
       - OpenSearch versions: reference/versions.md
   - Explanation:

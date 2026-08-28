@@ -55,6 +55,244 @@ namespace MrDlef\OsQueryDigest\Render {
     }
 }
 
+// src/Classify/Classifier.php
+namespace MrDlef\OsQueryDigest\Classify {
+    use MrDlef\OsQueryDigest\Kind;
+    use MrDlef\OsQueryDigest\Tree\AndNode;
+    use MrDlef\OsQueryDigest\Tree\JoinNode;
+    use MrDlef\OsQueryDigest\Tree\LeafNode;
+    use MrDlef\OsQueryDigest\Tree\NestedNode;
+    use MrDlef\OsQueryDigest\Tree\Node;
+    use MrDlef\OsQueryDigest\Tree\NotNode;
+    use MrDlef\OsQueryDigest\Tree\OpaqueNode;
+    use MrDlef\OsQueryDigest\Tree\OrNode;
+    use MrDlef\OsQueryDigest\Tree\QueryModel;
+
+    /**
+     * Reads a parsed request as a {@see Kind}.
+     *
+     * Two rules hold the whole thing up, and both are easy to get wrong from the
+     * raw body — which is where this was prototyped before it moved in here:
+     *
+     * - **Only `query` and `post_filter` select.** A faceted browse legitimately
+     *   carries `filter` aggregations with `match` clauses inside them; classifying
+     *   over the whole body reports every one of them as a text search. The
+     *   aggregations say what is *counted*, never what is asked.
+     * - **`size` absent is not `size: 0`.** A request with aggregations and no
+     *   `size` still comes back with ten documents, so the buckets-only intent is
+     *   only legible by also reading `_source`.
+     *
+     * The order below is the classification: first match wins, most specific first.
+     *
+     * @internal
+     */
+    final class Classifier
+    {
+        /**
+         * The two ops that exist only to complete what someone is typing. A
+         * `match_phrase_prefix` in a request is a type-ahead; there is no second
+         * reading of it.
+         */
+        private const COMPLETION = [
+            LeafNode::OP_PHRASE_PREFIX,
+            LeafNode::OP_BOOL_PREFIX,
+        ];
+
+        /** Naming documents rather than describing them. */
+        private const IDENTITY = [
+            LeafNode::OP_TERM,
+            LeafNode::OP_TERMS,
+        ];
+
+        /**
+         * The only field this library knows to be an identity. `ids` parses to a
+         * `terms` on it, so that query needs no case of its own.
+         */
+        private const ID = '_id';
+
+        /**
+         * The cluster's own default page size — deliberately its number and not one
+         * of ours. A request that names no `_id` and asks for five thousand
+         * documents is reading in bulk, whatever its single `term` clause looks
+         * like; one that takes the default, or less, is fetching.
+         */
+        private const DEFAULT_PAGE = 10;
+
+        public function of(QueryModel $model): Kind
+        {
+            $survey = self::survey($model);
+
+            if ($model->suggests() || self::completes($survey)) {
+                return Kind::suggest();
+            }
+
+            if (self::answersWithoutDocuments($model)) {
+                return Kind::aggregate();
+            }
+
+            if ($model->cursored()) {
+                return Kind::scan();
+            }
+
+            // Documents come back and the query is there but unreadable — a plugin
+            // type, a script, a clause a registered renderer described. Saying
+            // `browse` here would be a guess dressed as a measurement.
+            if ($survey['ops'] === [] && $survey['opaque']) {
+                return Kind::unknown();
+            }
+
+            if (self::namesDocuments($model, $survey)) {
+                return Kind::lookup();
+            }
+
+            return Kind::browse();
+        }
+
+        /**
+         * Someone is still typing.
+         *
+         * A `prefix` clause counts only when it is the *whole* question — one op,
+         * however many fields it is spread over, which is what an autocomplete
+         * across `name` and `email` looks like. Among other clauses it is an
+         * ordinary filter: `prefix: {host: "web-"}` beside a phrase search and a
+         * highlight is a search results page, and reading every one of those as a
+         * type-ahead would empty the kind of its meaning.
+         *
+         * @param array{ops:array<int,string>,fields:array<int,string>,leaves:int,opaque:bool,negated:bool} $survey
+         */
+        private static function completes(array $survey): bool
+        {
+            if (array_intersect(self::COMPLETION, $survey['ops']) !== []) {
+                return true;
+            }
+
+            // Every clause a prefix, however many there are: an autocomplete over
+            // `name` and `email` is two of them. Written as a difference rather
+            // than as an equality so it does not depend on the survey deduplicating
+            // or re-indexing what it collected.
+            return $survey['ops'] !== [] && array_diff($survey['ops'], [LeafNode::OP_PREFIX]) === [];
+        }
+
+        /**
+         * No documents reach the caller.
+         *
+         * Two spellings, and the second is the one a prototype gets wrong: aggs
+         * with no `size` at all is *not* buckets-only — the cluster still returns
+         * ten documents — unless `_source` is off, which is how an application says
+         * it will not look at them.
+         *
+         * A `size: 0` with no aggregations lands here too. It asks for a total
+         * rather than for buckets, but it is the same animal from the outside: the
+         * traffic that never asks for a document.
+         */
+        private static function answersWithoutDocuments(QueryModel $model): bool
+        {
+            if ($model->size() === 0) {
+                return true;
+            }
+
+            return $model->size() === null && $model->sourceDisabled() && $model->aggs() !== [];
+        }
+
+        /**
+         * "Give me these documents", as opposed to "give me a page of what
+         * matches".
+         *
+         * Exact clauses only, and nothing that makes it a listing: no `from`, no
+         * `sort` — a caller who asks for an order is asking for a *result set*,
+         * even when the selection is a handful of keys — no aggregations, and no
+         * negation, since excluding is describing rather than naming.
+         *
+         * What is left still has to be *naming* rather than filtering, and the
+         * difference is not in the op: `terms` over eight order statuses and a
+         * country is a filtered list, not a fetch. So either the request names
+         * `_id`, the one identity this library can recognise — a multi-tenant fetch
+         * puts a tenant `term` beside its `ids`, and is still a fetch — or it is a
+         * single clause asking for no more than a page, which is what fetching by a
+         * business key looks like. `term: {service: "api"}` with `size: 5000` is
+         * the same clause and is not a fetch.
+         *
+         * An unreadable clause anywhere disqualifies it: naming documents is a
+         * claim about the whole question, and part of this one was not read.
+         *
+         * @param array{ops:array<int,string>,fields:array<int,string>,leaves:int,opaque:bool,negated:bool} $survey
+         */
+        private static function namesDocuments(QueryModel $model, array $survey): bool
+        {
+            if ($survey['ops'] === [] || $survey['negated'] || $survey['opaque'] || $model->aggs() !== []) {
+                return false;
+            }
+
+            // Spelled out rather than `($model->from() ?? 0) > 0`: `??` binds looser
+            // than `||`, so the compact form reads as a different expression than it
+            // looks like, and one that no test can tell apart from this one.
+            $from = $model->from();
+            if ($model->sort() !== [] || ($from !== null && $from > 0)) {
+                return false;
+            }
+
+            if (array_diff($survey['ops'], self::IDENTITY) !== []) {
+                return false;
+            }
+
+            if (in_array(self::ID, $survey['fields'], true)) {
+                return true;
+            }
+
+            return $survey['leaves'] === 1 && ($model->size() ?? self::DEFAULT_PAGE) <= self::DEFAULT_PAGE;
+        }
+
+        /**
+         * What the selecting trees hold. `post_filter` is one of them: it narrows
+         * the hits, so it selects — that is exactly why the model keeps it in its
+         * own slot rather than merged into the query.
+         *
+         * @return array{ops:array<int,string>,fields:array<int,string>,leaves:int,opaque:bool,negated:bool}
+         */
+        private static function survey(QueryModel $model): array
+        {
+            $found = ['ops' => [], 'fields' => [], 'leaves' => 0, 'opaque' => false, 'negated' => false];
+
+            foreach ([$model->query(), $model->postFilter()] as $node) {
+                if ($node !== null) {
+                    self::walk($node, $found);
+                }
+            }
+
+            return $found;
+        }
+
+        /**
+         * @param array{ops:array<int,string>,fields:array<int,string>,leaves:int,opaque:bool,negated:bool} $found
+         */
+        private static function walk(Node $node, array &$found): void
+        {
+            // One chain rather than a guard per case: a wrapper is walked *and*
+            // recorded — a negation still has to reach what it negates, or a
+            // request that excludes an unreadable clause would read as readable.
+            if ($node instanceof LeafNode) {
+                $found['ops'][] = $node->op();
+                $found['fields'][] = $node->field();
+                $found['leaves']++;
+            } elseif ($node instanceof OpaqueNode) {
+                $found['opaque'] = true;
+            } elseif ($node instanceof NotNode) {
+                $found['negated'] = true;
+                self::walk($node->child(), $found);
+            } elseif ($node instanceof NestedNode || $node instanceof JoinNode) {
+                self::walk($node->child(), $found);
+            } elseif ($node instanceof AndNode || $node instanceof OrNode) {
+                foreach ($node->children() as $child) {
+                    self::walk($child, $found);
+                }
+            }
+
+            // Whatever is left — match_all, match_none — says nothing about the
+            // kind of work, and deliberately contributes nothing.
+        }
+    }
+}
+
 // src/Digest.php
 namespace MrDlef\OsQueryDigest {
     /**
@@ -76,20 +314,33 @@ namespace MrDlef\OsQueryDigest {
         /** @var array<int,string> */
         private array $notes;
 
+        private Kind $kind;
+
         /**
          * @param string|null       $text  the readable line, or null when the
          *                                 formatter was configured not to produce
          *                                 one — see
          *                                 {@see Options::withText()}
          * @param array<int,string> $notes
+         * @param Kind|null         $kind  what kind of work the search is; a digest
+         *                                 built by hand rather than parsed says
+         *                                 {@see Kind::UNKNOWN}, which is what it
+         *                                 knows
          */
-        public function __construct(string $index, ?string $text, string $signature, string $hash, array $notes = [])
-        {
+        public function __construct(
+            string $index,
+            ?string $text,
+            string $signature,
+            string $hash,
+            array $notes = [],
+            ?Kind $kind = null
+        ) {
             $this->index = $index;
             $this->text = $text;
             $this->signature = $signature;
             $this->hash = $hash;
             $this->notes = array_values($notes);
+            $this->kind = $kind ?? Kind::unknown();
         }
 
         /** Normalised index pattern. */
@@ -124,6 +375,16 @@ namespace MrDlef\OsQueryDigest {
         }
 
         /**
+         * What kind of work this search is — a type-ahead, a page of results, a
+         * bucket count. Read off the parsed request, so it holds no literal and
+         * survives {@see Options::withText()} set to false.
+         */
+        public function kind(): Kind
+        {
+            return $this->kind;
+        }
+
+        /**
          * Parts that were acknowledged but not rendered inline (boost-only `should`
          * groups, unsupported top-level sections).
          *
@@ -139,7 +400,9 @@ namespace MrDlef\OsQueryDigest {
          */
         public function toArray(): array
         {
-            $out = ['idx' => $this->index];
+            // Before the query itself: it is the coarse grouping, the one a reader
+            // scanning a log file reads first and the one a dashboard facets on.
+            $out = ['idx' => $this->index, 'kind' => $this->kind->name()];
 
             // Omitted rather than filled with the signature: a deployment that turns
             // the line off is one deciding per *field* whether it may ship these
@@ -343,6 +606,9 @@ namespace MrDlef\OsQueryDigest\Explain {
                 'text: ' . $this->digest->text(),
                 'sig:  ' . $this->digest->signature(),
                 'hash: ' . $this->digest->hash(),
+                // After the three, not among them: those are one query written three
+                // ways, and the kind is a different statement about it.
+                'kind: ' . $this->digest->kind()->name(),
             ];
 
             $notes = $this->digest->notes();
@@ -778,6 +1044,7 @@ namespace MrDlef\OsQueryDigest\Fingerprint {
 
 // src/Formatter.php
 namespace MrDlef\OsQueryDigest {
+    use MrDlef\OsQueryDigest\Classify\Classifier;
     use MrDlef\OsQueryDigest\Exception\InvalidQueryException;
     use MrDlef\OsQueryDigest\Explain\Explanation;
     use MrDlef\OsQueryDigest\Explain\Rule;
@@ -813,12 +1080,15 @@ namespace MrDlef\OsQueryDigest {
 
         private Hasher $hasher;
 
+        private Classifier $classifier;
+
         private function __construct(Options $options)
         {
             $this->options = $options;
             $this->parser = new RequestParser($options->clauseRenderers());
             $this->canonicalizer = new Canonicalizer();
             $this->renderer = new LineRenderer();
+            $this->classifier = new Classifier();
             $this->hasher = new Hasher(self::hashVersion($options), $options->hashLength());
         }
 
@@ -926,6 +1196,10 @@ namespace MrDlef\OsQueryDigest {
                 Truncator::apply($signature, $this->options->maxLength()),
                 $this->hasher->hash($hashInput),
                 $model->notes(),
+                // Classified after canonicalisation, on the same tree the signature
+                // is rendered from: two requests that share a fingerprint cannot
+                // then disagree about what kind of work they are.
+                $this->classifier->of($model),
             );
         }
 
@@ -1158,6 +1432,125 @@ namespace MrDlef\OsQueryDigest {
             } while ($index !== $previous);
 
             return $index;
+        }
+    }
+}
+
+// src/Kind.php
+namespace MrDlef\OsQueryDigest {
+    /**
+     * What kind of work a search is.
+     *
+     * A fingerprint says which searches are the *same*; it does not say what they
+     * are *for*. A top-N of two hundred hashes is unreadable, and the same list
+     * grouped by kind is a sentence: where the load goes, which autocompletes are
+     * slow, how much traffic never asks for a document at all.
+     *
+     * It is read off the parsed request — never off the raw body — so it sees the
+     * canonicalised tree and it costs nothing extra. It holds no literal, so it
+     * survives {@see Options::withText()} set to false the way the hash does.
+     *
+     * PHP 7.4 has no enums, so this is a small value object with named
+     * constructors, like {@see Normalization}.
+     *
+     * @api
+     */
+    final class Kind
+    {
+        /** A type-ahead: the user has not finished typing. */
+        public const SUGGEST = 'suggest';
+
+        /** No documents come back — buckets, or a count. */
+        public const AGGREGATE = 'aggregate';
+
+        /** A walk over a result set rather than a page of one. */
+        public const SCAN = 'scan';
+
+        /** Documents named by identity: these ids, this key. */
+        public const LOOKUP = 'lookup';
+
+        /** A page of what matches — the ordinary search. */
+        public const BROWSE = 'browse';
+
+        /** Documents come back, and nothing in the query can be read. */
+        public const UNKNOWN = 'unknown';
+
+        /**
+         * Every kind, in the order {@see \MrDlef\OsQueryDigest\Classify\Classifier}
+         * decides them — most specific first, which is why `unknown` is not last:
+         * it is not a fallback but a verdict, and `browse` is what a readable
+         * request falls back to.
+         *
+         * Public because a configuration front — a dashboard legend, a `<select>` —
+         * needs the list, and hard-coding it elsewhere is how it drifts.
+         *
+         * @var array<int,string>
+         */
+        public const KINDS = [
+            self::SUGGEST,
+            self::AGGREGATE,
+            self::SCAN,
+            self::UNKNOWN,
+            self::LOOKUP,
+            self::BROWSE,
+        ];
+
+        private string $name;
+
+        private function __construct(string $name)
+        {
+            $this->name = $name;
+        }
+
+        public static function suggest(): self
+        {
+            return new self(self::SUGGEST);
+        }
+
+        public static function aggregate(): self
+        {
+            return new self(self::AGGREGATE);
+        }
+
+        public static function scan(): self
+        {
+            return new self(self::SCAN);
+        }
+
+        public static function lookup(): self
+        {
+            return new self(self::LOOKUP);
+        }
+
+        public static function browse(): self
+        {
+            return new self(self::BROWSE);
+        }
+
+        public static function unknown(): self
+        {
+            return new self(self::UNKNOWN);
+        }
+
+        public function name(): string
+        {
+            return $this->name;
+        }
+
+        /**
+         * Reading a stored record back is a string comparison against the constants
+         * above — there is deliberately no `named()` here. A kind is minted by this
+         * library, and a constructor taking a name would have to decide what a name
+         * from an older release means, which is a promise nothing needs yet.
+         */
+        public function is(string $name): bool
+        {
+            return $this->name === $name;
+        }
+
+        public function __toString(): string
+        {
+            return $this->name;
         }
     }
 }
@@ -2197,12 +2590,20 @@ namespace MrDlef\OsQueryDigest\Parser {
                     return $this->terms($body);
 
                 case 'match':
-                case 'match_bool_prefix':
                     return $this->single($body, LeafNode::OP_MATCH);
 
                 case 'match_phrase':
-                case 'match_phrase_prefix':
                     return $this->single($body, LeafNode::OP_PHRASE);
+
+                case 'match_bool_prefix':
+                    // The two completion spellings are modelled apart from the ops
+                    // above and rendered as them: what they buy is a readable
+                    // classification — a type-ahead is not a search someone typed
+                    // and submitted — and nothing else in a request says so.
+                    return $this->single($body, LeafNode::OP_BOOL_PREFIX);
+
+                case 'match_phrase_prefix':
+                    return $this->single($body, LeafNode::OP_PHRASE_PREFIX);
 
                 case 'prefix':
                     return $this->single($body, LeafNode::OP_PREFIX);
@@ -3107,6 +3508,13 @@ namespace MrDlef\OsQueryDigest\Parser {
          */
         private const ENVELOPE_PARAMS = ['size', 'from'];
 
+        /**
+         * Body sections that make a request a walk over a result set rather than a
+         * page of one. They are notes already — this reads them a second time, as a
+         * fact rather than as a string.
+         */
+        private const CURSORS = ['search_after', 'pit', 'slice'];
+
         private QueryParser $queryParser;
 
         private AggParser $aggParser;
@@ -3131,6 +3539,7 @@ namespace MrDlef\OsQueryDigest\Parser {
             $trace ??= new Trace();
             $body = $request;
             $envelopeSort = null;
+            $scroll = false;
 
             if (array_key_exists('body', $request) && is_array($request['body'])) {
                 $envelopeIndex = Arr::get($request, 'index');
@@ -3152,6 +3561,12 @@ namespace MrDlef\OsQueryDigest\Parser {
                     }
                 }
                 $envelopeSort = Arr::get($request, 'sort');
+
+                // Read for the classification only, and never noted: `scroll` is a
+                // query-string parameter, so promoting it into the signature would
+                // move the fingerprint of every scrolling search — and this reads
+                // it precisely to say that such a search is a scan.
+                $scroll = Arr::get($request, 'scroll') !== null;
             }
 
             $notes = [];
@@ -3203,7 +3618,40 @@ namespace MrDlef\OsQueryDigest\Parser {
                 $this->intOrNull(Arr::get($body, 'from')),
                 array_merge($this->sort(Arr::get($body, 'sort')), $this->uriSort($envelopeSort)),
                 array_values(array_unique($notes)),
+                self::filled(Arr::get($body, 'suggest')),
+                $scroll || self::cursored($body),
+                // `_source: false` exactly. A list or an object is a *filtered*
+                // source, and a request asking for two fields is still asking for
+                // documents.
+                Arr::get($body, '_source') === false,
             );
+        }
+
+        /**
+         * @param array<mixed> $body
+         */
+        private static function cursored(array $body): bool
+        {
+            foreach (self::CURSORS as $section) {
+                if (self::filled(Arr::get($body, $section))) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * A section that is there and says something. Every section read this way
+         * is written as an object or a list, and an empty one is what a request
+         * builder leaves behind when the feature is switched off — it does not make
+         * the request a type-ahead or a walk.
+         *
+         * @param mixed $section
+         */
+        private static function filled($section): bool
+        {
+            return is_array($section) && $section !== [];
         }
 
         /**
@@ -3511,9 +3959,13 @@ namespace MrDlef\OsQueryDigest\Render {
                 case LeafNode::OP_TERM:
                     return $field . ':' . $renderer->scalar($field, reset($values));
 
+                case LeafNode::OP_BOOL_PREFIX:
                 case LeafNode::OP_MATCH:
+                    // A completion op renders as the op it refines, deliberately —
+                    // see LeafNode. Its own name lives in the model, not the line.
                     return $field . ':' . ($sigils ? '~' : '') . $renderer->scalar($field, reset($values));
 
+                case LeafNode::OP_PHRASE_PREFIX:
                 case LeafNode::OP_PHRASE:
                     return $field . ':' . $renderer->phrase($field, reset($values));
 
@@ -4389,6 +4841,20 @@ namespace MrDlef\OsQueryDigest\Tree {
         public const OP_MATCH = 'match';
         public const OP_PHRASE = 'phrase';
         public const OP_PREFIX = 'prefix';
+
+        /**
+         * The two completion spellings of a match: `match_phrase_prefix` and
+         * `match_bool_prefix`. They are modelled apart from the ops they refine —
+         * and *only* apart — because an autocomplete is a recognisable kind of
+         * search and nothing else in the tree says so; see
+         * {@see \MrDlef\OsQueryDigest\Classify\Classifier}.
+         *
+         * They render exactly like {@see self::OP_PHRASE} and {@see self::OP_MATCH}:
+         * the last term of a type-ahead is the same clause a reader wants to see,
+         * and rendering it differently would move every fingerprint that has one.
+         */
+        public const OP_PHRASE_PREFIX = 'phrase_prefix';
+        public const OP_BOOL_PREFIX = 'bool_prefix';
         public const OP_WILDCARD = 'wildcard';
         public const OP_REGEXP = 'regexp';
         public const OP_EXISTS = 'exists';
@@ -4498,6 +4964,23 @@ namespace MrDlef\OsQueryDigest\Tree {
             return new self($this->field, $this->op, $values);
         }
 
+        /**
+         * The op a clause *sorts* as.
+         *
+         * A completion op renders as the op it refines, so it has to sort as that
+         * op too. Siblings are ordered by this key before rendering: left to sort
+         * under their own names, `phrase_prefix` and `bool_prefix` would slot
+         * elsewhere among their siblings and move the fingerprint of every query
+         * mixing one with a clause whose key falls between — a hash move with
+         * nothing to show for it in the rendered line.
+         *
+         * @var array<string,string>
+         */
+        private const SORTS_AS = [
+            self::OP_PHRASE_PREFIX => self::OP_PHRASE,
+            self::OP_BOOL_PREFIX => self::OP_MATCH,
+        ];
+
         public function sortKey(): string
         {
             // Values are part of the key: two `term` clauses on the same field but
@@ -4510,7 +4993,7 @@ namespace MrDlef\OsQueryDigest\Tree {
                 sort($flat);
             }
 
-            return $this->field . ':' . $this->op . ':' . implode(',', $flat);
+            return $this->field . ':' . (self::SORTS_AS[$this->op] ?? $this->op) . ':' . implode(',', $flat);
         }
 
         /**
@@ -4775,6 +5258,21 @@ namespace MrDlef\OsQueryDigest\Tree {
         private array $notes;
 
         /**
+         * The three facts below are read for {@see \MrDlef\OsQueryDigest\Kind}
+         * and are deliberately **not rendered**. They say what the request is *for*
+         * rather than what it selects, and putting them in the line would move
+         * every fingerprint that has one — for a classification that is available
+         * beside the hash anyway.
+         */
+        private bool $suggests;
+
+        /** A cursor: `search_after`, `pit`, `slice`, or a `scroll` beside `body`. */
+        private bool $cursored;
+
+        /** `_source: false` exactly — a filtered `_source` still returns documents. */
+        private bool $sourceDisabled;
+
+        /**
          * @param AggNode[]                           $aggs
          * @param array<int,array{0:string,1:string}> $sort
          * @param array<int,string>                   $notes
@@ -4787,7 +5285,10 @@ namespace MrDlef\OsQueryDigest\Tree {
             ?int $size = null,
             ?int $from = null,
             array $sort = [],
-            array $notes = []
+            array $notes = [],
+            bool $suggests = false,
+            bool $cursored = false,
+            bool $sourceDisabled = false
         ) {
             $this->index = $index;
             $this->query = $query;
@@ -4797,6 +5298,9 @@ namespace MrDlef\OsQueryDigest\Tree {
             $this->from = $from;
             $this->sort = array_values($sort);
             $this->notes = array_values($notes);
+            $this->suggests = $suggests;
+            $this->cursored = $cursored;
+            $this->sourceDisabled = $sourceDisabled;
         }
 
         public function index(): string
@@ -4848,6 +5352,24 @@ namespace MrDlef\OsQueryDigest\Tree {
             return $this->notes;
         }
 
+        /** A top-level `suggest` section. */
+        public function suggests(): bool
+        {
+            return $this->suggests;
+        }
+
+        /** The request walks a cursor rather than asking for one page. */
+        public function cursored(): bool
+        {
+            return $this->cursored;
+        }
+
+        /** `_source` was turned off outright. */
+        public function sourceDisabled(): bool
+        {
+            return $this->sourceDisabled;
+        }
+
         public function withIndex(string $index): self
         {
             return new self(
@@ -4859,6 +5381,9 @@ namespace MrDlef\OsQueryDigest\Tree {
                 $this->from,
                 $this->sort,
                 $this->notes,
+                $this->suggests,
+                $this->cursored,
+                $this->sourceDisabled,
             );
         }
 
@@ -4876,6 +5401,9 @@ namespace MrDlef\OsQueryDigest\Tree {
                 $this->from,
                 $this->sort,
                 $this->notes,
+                $this->suggests,
+                $this->cursored,
+                $this->sourceDisabled,
             );
         }
     }

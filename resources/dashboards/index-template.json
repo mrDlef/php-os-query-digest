@@ -29,6 +29,9 @@
                         },
                         "idx": {
                             "type": "keyword"
+                        },
+                        "kind": {
+                            "type": "keyword"
                         }
                     }
                 }

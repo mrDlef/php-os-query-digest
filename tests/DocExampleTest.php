@@ -7,6 +7,7 @@ namespace MrDlef\OsQueryDigest\Tests;
 use MrDlef\OsQueryDigest\Cli\Command;
 use MrDlef\OsQueryDigest\Formatter;
 use MrDlef\OsQueryDigest\IndexNormalizer;
+use MrDlef\OsQueryDigest\Kind;
 use MrDlef\OsQueryDigest\Normalization;
 use MrDlef\OsQueryDigest\Options;
 use PHPUnit\Framework\TestCase;
@@ -54,6 +55,7 @@ final class DocExampleTest extends TestCase
         'docs/explanation/how-it-works.md',
         'docs/explanation/hash-stability.md',
         'docs/reference/coverage.md',
+        'docs/reference/kinds.md',
     ];
 
     /**
@@ -241,6 +243,7 @@ final class DocExampleTest extends TestCase
         'transport-record',
         'explain-output',
         'how-it-works-levels',
+        'kinds-table',
     ];
 
     /** @var array<int,string> */
@@ -624,6 +627,40 @@ final class DocExampleTest extends TestCase
             self::lines(self::oneBlock('docs/explanation/how-it-works.md', 'how-it-works-levels')),
             'The normalisation levels section compares fingerprints these levels do not produce.',
         );
+    }
+
+    /**
+     * The kinds page, which carries its own requests: each line is a kind and
+     * the request that is one, so the page is the source and this only runs it.
+     * A taxonomy documented in prose drifts from the code the first time a rule
+     * is tightened — this fails instead.
+     */
+    public function testTheKindsPageClassifiesTheRequestsItPrints(): void
+    {
+        $formatter = Formatter::create();
+        $printed = [];
+
+        foreach (self::lines(self::oneBlock('docs/reference/kinds.md', 'kinds-table')) as $line) {
+            if (preg_match('/^([a-z]+)\s+(\{.*\})$/', $line, $found) !== 1) {
+                self::fail('Not a `kind  request` line: ' . $line);
+            }
+
+            $printed[] = $found[1];
+
+            self::assertSame(
+                $found[1],
+                $formatter->describe($found[2], 'catalog')->kind()->name(),
+                'The kinds page calls this a ' . $found[1] . ': ' . $found[2],
+            );
+        }
+
+        // And it shows every one of them: a kind the library can mint and the
+        // reference does not name is a kind nobody can act on.
+        $expected = Kind::KINDS;
+        sort($expected);
+        sort($printed);
+
+        self::assertSame($expected, $printed, 'The kinds page does not name every kind.');
     }
 
     /**

@@ -104,6 +104,9 @@ final class Explanation implements \JsonSerializable
             'text: ' . $this->digest->text(),
             'sig:  ' . $this->digest->signature(),
             'hash: ' . $this->digest->hash(),
+            // After the three, not among them: those are one query written three
+            // ways, and the kind is a different statement about it.
+            'kind: ' . $this->digest->kind()->name(),
         ];
 
         $notes = $this->digest->notes();

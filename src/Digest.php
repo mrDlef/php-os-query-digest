@@ -23,20 +23,33 @@ final class Digest implements \JsonSerializable
     /** @var array<int,string> */
     private array $notes;
 
+    private Kind $kind;
+
     /**
      * @param string|null       $text  the readable line, or null when the
      *                                 formatter was configured not to produce
      *                                 one — see
      *                                 {@see Options::withText()}
      * @param array<int,string> $notes
+     * @param Kind|null         $kind  what kind of work the search is; a digest
+     *                                 built by hand rather than parsed says
+     *                                 {@see Kind::UNKNOWN}, which is what it
+     *                                 knows
      */
-    public function __construct(string $index, ?string $text, string $signature, string $hash, array $notes = [])
-    {
+    public function __construct(
+        string $index,
+        ?string $text,
+        string $signature,
+        string $hash,
+        array $notes = [],
+        ?Kind $kind = null
+    ) {
         $this->index = $index;
         $this->text = $text;
         $this->signature = $signature;
         $this->hash = $hash;
         $this->notes = array_values($notes);
+        $this->kind = $kind ?? Kind::unknown();
     }
 
     /** Normalised index pattern. */
@@ -71,6 +84,16 @@ final class Digest implements \JsonSerializable
     }
 
     /**
+     * What kind of work this search is — a type-ahead, a page of results, a
+     * bucket count. Read off the parsed request, so it holds no literal and
+     * survives {@see Options::withText()} set to false.
+     */
+    public function kind(): Kind
+    {
+        return $this->kind;
+    }
+
+    /**
      * Parts that were acknowledged but not rendered inline (boost-only `should`
      * groups, unsupported top-level sections).
      *
@@ -86,7 +109,9 @@ final class Digest implements \JsonSerializable
      */
     public function toArray(): array
     {
-        $out = ['idx' => $this->index];
+        // Before the query itself: it is the coarse grouping, the one a reader
+        // scanning a log file reads first and the one a dashboard facets on.
+        $out = ['idx' => $this->index, 'kind' => $this->kind->name()];
 
         // Omitted rather than filled with the signature: a deployment that turns
         // the line off is one deciding per *field* whether it may ship these

@@ -1,0 +1,9 @@
+{
+    "index": "orders-2026.08",
+    "request": {
+        "query": { "term": { "status": "shipped" } },
+        "sort": [ { "created": "asc" }, { "_id": "asc" } ],
+        "search_after": [ 1755561600000, "AB-1234" ],
+        "size": 1000
+    }
+}

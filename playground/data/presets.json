@@ -66,6 +66,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"service\": \"api\"\n                    }\n                },\n                {\n                    \"range\": {\n                        \"@timestamp\": {\n                            \"gte\": \"now-15m\",\n                            \"lt\": \"now\"\n                        }\n                    }\n                }\n            ],\n            \"must_not\": [\n                {\n                    \"term\": {\n                        \"status\": 200\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 50,\n    \"sort\": [\n        {\n            \"@timestamp\": \"desc\"\n        }\n    ],\n    \"_source\": [\n        \"@timestamp\",\n        \"message\",\n        \"status\"\n    ]\n}",
             "digest": {
                 "idx": "logs-*",
+                "kind": "browse",
                 "q": "logs-* | q=(@timestamp >= now-15m and @timestamp < now and not status:200 and service:api) | size=50 sort=@timestamp:desc",
                 "sig": "logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc",
                 "hash": "q5:fe168406e702"
@@ -105,6 +106,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"env\": \"prod\"\n                    }\n                },\n                {\n                    \"range\": {\n                        \"@timestamp\": {\n                            \"gte\": \"now-24h\"\n                        }\n                    }\n                }\n            ]\n        }\n    },\n    \"aggs\": {\n        \"by_host\": {\n            \"terms\": {\n                \"field\": \"host\",\n                \"size\": 10\n            },\n            \"aggs\": {\n                \"p95\": {\n                    \"percentiles\": {\n                        \"field\": \"latency_ms\",\n                        \"percents\": [\n                            95\n                        ]\n                    }\n                },\n                \"errors\": {\n                    \"sum\": {\n                        \"field\": \"error_count\"\n                    }\n                }\n            }\n        }\n    },\n    \"size\": 0,\n    \"track_total_hits\": false\n}",
             "digest": {
                 "idx": "logs-*",
+                "kind": "aggregate",
                 "q": "logs-* | q=(@timestamp >= now-24h and env:prod) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0",
                 "sig": "logs-* | q=(@timestamp >= ? and env:?) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0",
                 "hash": "q5:63a1ca5c80b9"
@@ -144,6 +146,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"must\": [\n                {\n                    \"match\": {\n                        \"title\": \"chaussures de running\"\n                    }\n                }\n            ],\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"in_stock\": true\n                    }\n                },\n                {\n                    \"range\": {\n                        \"price\": {\n                            \"gte\": 20,\n                            \"lte\": 150\n                        }\n                    }\n                }\n            ],\n            \"should\": [\n                {\n                    \"term\": {\n                        \"brand\": \"acme\"\n                    }\n                },\n                {\n                    \"term\": {\n                        \"promoted\": true\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 20,\n    \"from\": 40,\n    \"sort\": [\n        \"_score\",\n        {\n            \"price\": {\n                \"order\": \"asc\"\n            }\n        }\n    ]\n}",
             "digest": {
                 "idx": "catalog-v2",
+                "kind": "browse",
                 "q": "catalog-v2 | q=(in_stock:true and price >= 20 and price <= 150 and title:\"chaussures de running\") | size=20 from=40 sort=_score:desc,price:asc | should=2",
                 "sig": "catalog-v2 | q=(in_stock:? and price >= ? and price <= ? and title:~?) | size=20 from=40 sort=_score:desc,price:asc | should=2",
                 "hash": "q5:cde7babeb8a7",
@@ -183,6 +186,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"terms\": {\n                        \"status\": [\n                            \"new\",\n                            \"paid\",\n                            \"shipped\",\n                            \"cancelled\",\n                            \"refunded\",\n                            \"pending\",\n                            \"failed\",\n                            \"draft\"\n                        ]\n                    }\n                },\n                {\n                    \"term\": {\n                        \"country\": \"FR\"\n                    }\n                }\n            ]\n        }\n    }\n}",
             "digest": {
                 "idx": "orders",
+                "kind": "browse",
                 "q": "orders | q=(country:FR and status:(new or paid or shipped or cancelled or refunded or +3))",
                 "sig": "orders | q=(country:? and status:(? or ? or ? or ? or ? or +3))",
                 "hash": "q5:e9794c1be608"
@@ -206,6 +210,7 @@
             "body": "{\n    \"query\": {\n        \"nested\": {\n            \"path\": \"variants\",\n            \"query\": {\n                \"bool\": {\n                    \"filter\": [\n                        {\n                            \"term\": {\n                                \"variants.color\": \"red\"\n                            }\n                        },\n                        {\n                            \"range\": {\n                                \"variants.price\": {\n                                    \"lte\": 100\n                                }\n                            }\n                        }\n                    ]\n                }\n            }\n        }\n    }\n}",
             "digest": {
                 "idx": "catalog-v2",
+                "kind": "browse",
                 "q": "catalog-v2 | q=(variants:{ variants.color:red and variants.price <= 100 })",
                 "sig": "catalog-v2 | q=(variants:{ variants.color:? and variants.price <= ? })",
                 "hash": "q5:24d5e6929ac3"
@@ -220,6 +225,7 @@
             "body": "{\n    \"index\": [\n        \"logs-2026.08.12\",\n        \"logs-2026.08.13\"\n    ],\n    \"body\": {\n        \"query\": {\n            \"bool\": {\n                \"should\": [\n                    {\n                        \"match_phrase\": {\n                            \"message\": \"connection reset by peer\"\n                        }\n                    },\n                    {\n                        \"match\": {\n                            \"message\": \"timeout\"\n                        }\n                    }\n                ]\n            }\n        },\n        \"size\": 10\n    }\n}",
             "digest": {
                 "idx": "logs-*",
+                "kind": "browse",
                 "q": "logs-* | q=(message:timeout or message:\"connection reset by peer\") | size=10",
                 "sig": "logs-* | q=(message:~? or message:\"?\") | size=10",
                 "hash": "q5:4f1eaee8e165"
@@ -259,6 +265,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"span_near\": {\n                        \"clauses\": [\n                            {\n                                \"span_term\": {\n                                    \"message\": \"connection\"\n                                }\n                            },\n                            {\n                                \"span_term\": {\n                                    \"message\": \"refused\"\n                                }\n                            }\n                        ],\n                        \"slop\": 2,\n                        \"in_order\": true\n                    }\n                },\n                {\n                    \"exists\": {\n                        \"field\": \"host\"\n                    }\n                },\n                {\n                    \"prefix\": {\n                        \"host\": \"web-\"\n                    }\n                }\n            ]\n        }\n    },\n    \"highlight\": {\n        \"fields\": {\n            \"message\": []\n        }\n    },\n    \"collapse\": {\n        \"field\": \"host\"\n    }\n}",
             "digest": {
                 "idx": "metrics-*",
+                "kind": "browse",
                 "q": "metrics-* | q=(host:* and host:web-* and span_near(?)) | +collapse +highlight",
                 "sig": "metrics-* | q=(host:* and host:?* and span_near(?)) | +collapse +highlight",
                 "hash": "q5:a235723d04dc",
@@ -294,6 +301,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"lang\": \"fr\"\n                    }\n                }\n            ],\n            \"should\": [\n                {\n                    \"match\": {\n                        \"body\": \"alpha\"\n                    }\n                },\n                {\n                    \"match\": {\n                        \"body\": \"beta\"\n                    }\n                },\n                {\n                    \"match\": {\n                        \"body\": \"gamma\"\n                    }\n                }\n            ],\n            \"minimum_should_match\": 2\n        }\n    }\n}",
             "digest": {
                 "idx": "docs",
+                "kind": "browse",
                 "q": "docs | q=(lang:fr and (body:alpha or body:beta or body:gamma){msm=2})",
                 "sig": "docs | q=(lang:? and (body:~? or body:~? or body:~?){msm=2})",
                 "hash": "q5:862a058a0f91"
@@ -308,6 +316,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"query_string\": {\n                        \"query\": \"status:500 AND host:web-*\"\n                    }\n                },\n                {\n                    \"wildcard\": {\n                        \"path\": \"/api/v1/*\"\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 100\n}",
             "digest": {
                 "idx": "logs-*",
+                "kind": "browse",
                 "q": "logs-* | q=((status:500 AND host:web-*) and path:/api/v1/*) | size=100",
                 "sig": "logs-* | q=(raw(?) and path:*?*) | size=100",
                 "hash": "q5:6fb4a2d9c302"
@@ -325,6 +334,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"terms\": {\n                        \"service\": [\n                            \"api\",\n                            \"worker\",\n                            \"cron\"\n                        ]\n                    }\n                },\n                {\n                    \"range\": {\n                        \"@timestamp\": {\n                            \"gte\": \"2026-08-13T00:00:00Z\",\n                            \"lt\": \"2026-08-14T00:00:00Z\"\n                        }\n                    }\n                }\n            ]\n        }\n    },\n    \"aggs\": {\n        \"over_time\": {\n            \"date_histogram\": {\n                \"field\": \"@timestamp\",\n                \"fixed_interval\": \"1h\"\n            },\n            \"aggs\": {\n                \"unique_users\": {\n                    \"cardinality\": {\n                        \"field\": \"user_id\"\n                    }\n                }\n            }\n        }\n    },\n    \"size\": 0\n}",
             "digest": {
                 "idx": "logs-*",
+                "kind": "aggregate",
                 "q": "logs-* | q=(@timestamp >= \"2026-08-13T00:00:00Z\" and @timestamp < \"2026-08-14T00:00:00Z\" and service:(api or worker or cron)) | aggs=over_time:date_histogram(@timestamp,1h)>unique_users:cardinality(user_id) | size=0",
                 "sig": "logs-* | q=(@timestamp >= ? and @timestamp < ? and service:(?)) | aggs=over_time:date_histogram(@timestamp,1h)>unique_users:cardinality(user_id) | size=0",
                 "hash": "q5:8b4c9e9aebc2"
@@ -356,6 +366,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"match\": {\n                        \"name\": \"running shoes\"\n                    }\n                },\n                {\n                    \"range\": {\n                        \"price\": {\n                            \"gte\": 20,\n                            \"lt\": 200\n                        }\n                    }\n                }\n            ]\n        }\n    },\n    \"aggs\": {\n        \"by_brand\": {\n            \"terms\": {\n                \"field\": \"brand\",\n                \"size\": 20\n            }\n        }\n    },\n    \"post_filter\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"brand\": \"acme\"\n                    }\n                },\n                {\n                    \"term\": {\n                        \"in_stock\": true\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 24\n}",
             "digest": {
                 "idx": "shop-catalog",
+                "kind": "browse",
                 "q": "shop-catalog | q=(name:\"running shoes\" and price >= 20 and price < 200) | post=(brand:acme and in_stock:true) | aggs=terms(brand,20) | size=24",
                 "sig": "shop-catalog | q=(name:~? and price >= ? and price < ?) | post=(brand:? and in_stock:?) | aggs=terms(brand,20) | size=24",
                 "hash": "q5:ce0146715c07"
@@ -370,6 +381,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"should\": [\n                {\n                    \"knn\": {\n                        \"image_embedding\": {\n                            \"vector\": [\n                                0.12,\n                                -0.34,\n                                0.98,\n                                0.01\n                            ],\n                            \"k\": 20,\n                            \"filter\": {\n                                \"term\": {\n                                    \"in_stock\": true\n                                }\n                            }\n                        }\n                    }\n                },\n                {\n                    \"neural\": {\n                        \"text_embedding\": {\n                            \"query_text\": \"waterproof hiking boots\",\n                            \"model_id\": \"aVeryLongModelId\",\n                            \"k\": 20\n                        }\n                    }\n                }\n            ],\n            \"minimum_should_match\": 1\n        }\n    },\n    \"size\": 20\n}",
             "digest": {
                 "idx": "products-v3",
+                "kind": "browse",
                 "q": "products-v3 | q=(image_embedding:knn(k=20) and in_stock:true or text_embedding:neural(query=\"waterproof hiking boots\",k=20)) | size=20",
                 "sig": "products-v3 | q=(image_embedding:knn(k=?) and in_stock:? or text_embedding:neural(query=?,k=?)) | size=20",
                 "hash": "q5:4dde138a2ad7"
@@ -393,6 +405,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"geo_distance\": {\n                        \"distance\": \"25km\",\n                        \"location\": {\n                            \"lat\": 48.8566,\n                            \"lon\": 2.3522\n                        }\n                    }\n                },\n                {\n                    \"geo_bounding_box\": {\n                        \"delivery_area\": {\n                            \"top_left\": {\n                                \"lat\": 49.2,\n                                \"lon\": 1.9\n                            },\n                            \"bottom_right\": {\n                                \"lat\": 48.5,\n                                \"lon\": 2.8\n                            }\n                        }\n                    }\n                },\n                {\n                    \"has_child\": {\n                        \"type\": \"review\",\n                        \"query\": {\n                            \"range\": {\n                                \"rating\": {\n                                    \"gte\": 4\n                                }\n                            }\n                        }\n                    }\n                },\n                {\n                    \"has_parent\": {\n                        \"parent_type\": \"chain\",\n                        \"query\": {\n                            \"term\": {\n                                \"active\": true\n                            }\n                        }\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 50\n}",
             "digest": {
                 "idx": "stores",
+                "kind": "browse",
                 "q": "stores | q=(delivery_area:geo_bbox() and has_child(review):{ rating >= 4 } and has_parent(chain):{ active:true } and location:geo_distance(25km)) | size=50",
                 "sig": "stores | q=(delivery_area:geo_bbox() and has_child(review):{ rating >= ? } and has_parent(chain):{ active:? } and location:geo_distance(?)) | size=50",
                 "hash": "q5:ccb4fb77328e"
@@ -416,6 +429,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"must\": [\n                {\n                    \"more_like_this\": {\n                        \"fields\": [\n                            \"title\",\n                            \"body\"\n                        ],\n                        \"like\": \"distributed consensus algorithms\",\n                        \"min_term_freq\": 1\n                    }\n                }\n            ],\n            \"filter\": [\n                {\n                    \"script\": {\n                        \"script\": {\n                            \"source\": \"doc['word_count'].value > params.floor\",\n                            \"params\": {\n                                \"floor\": 500\n                            }\n                        }\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 10\n}",
             "digest": {
                 "idx": "articles",
+                "kind": "browse",
                 "q": "articles | q=(script(doc['word_count'].value > params.floor) and title|body:like(\"distributed consensus algorithms\")) | size=10",
                 "sig": "articles | q=(script(?) and title|body:like(?)) | size=10",
                 "hash": "q5:522066bb4084"
@@ -444,6 +458,7 @@
             "body": "{\n    \"query\": {\n        \"script_score\": {\n            \"query\": {\n                \"bool\": {\n                    \"filter\": [\n                        {\n                            \"parent_id\": {\n                                \"type\": \"comment\",\n                                \"id\": \"4712\"\n                            }\n                        },\n                        {\n                            \"range\": {\n                                \"created_at\": {\n                                    \"gte\": \"now-7d\"\n                                }\n                            }\n                        }\n                    ]\n                }\n            },\n            \"script\": {\n                \"source\": \"_score * Math.log(2 + doc['votes'].value)\"\n            },\n            \"min_score\": 1.5\n        }\n    },\n    \"size\": 20\n}",
             "digest": {
                 "idx": "forum-*",
+                "kind": "browse",
                 "q": "forum-* | q=(parent_id(comment):4712 and created_at >= now-7d) | size=20 | script_score:min_score",
                 "sig": "forum-* | q=(parent_id(comment):? and created_at >= ?) | size=20 | script_score:min_score",
                 "hash": "q5:621e3adba249",
@@ -475,6 +490,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"geo_shape\": {\n                        \"drop_zone\": {\n                            \"shape\": {\n                                \"type\": \"polygon\",\n                                \"coordinates\": [\n                                    [\n                                        [\n                                            2.2,\n                                            48.9\n                                        ],\n                                        [\n                                            2.4,\n                                            48.8\n                                        ],\n                                        [\n                                            2.5,\n                                            48.9\n                                        ],\n                                        [\n                                            2.2,\n                                            48.9\n                                        ]\n                                    ]\n                                ]\n                            },\n                            \"relation\": \"within\"\n                        }\n                    }\n                },\n                {\n                    \"geo_shape\": {\n                        \"restricted_area\": {\n                            \"indexed_shape\": {\n                                \"index\": \"shapes\",\n                                \"id\": \"no-fly-75\",\n                                \"path\": \"geometry\"\n                            },\n                            \"relation\": \"disjoint\"\n                        }\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 50\n}",
             "digest": {
                 "idx": "deliveries",
+                "kind": "browse",
                 "q": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
                 "sig": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
                 "hash": "q5:cb5e4609d066",
@@ -501,6 +517,7 @@
             "body": "{\n    \"query\": {\n        \"bool\": {\n            \"must\": [\n                {\n                    \"hybrid\": {\n                        \"queries\": [\n                            {\n                                \"combined_fields\": {\n                                    \"query\": \"waterproof hiking boots\",\n                                    \"fields\": [\n                                        \"title\",\n                                        \"description\"\n                                    ]\n                                }\n                            },\n                            {\n                                \"knn\": {\n                                    \"embedding\": {\n                                        \"vector\": [\n                                            0.12,\n                                            0.98,\n                                            0.31\n                                        ],\n                                        \"k\": 20\n                                    }\n                                }\n                            }\n                        ]\n                    }\n                },\n                {\n                    \"rank_feature\": {\n                        \"field\": \"popularity\",\n                        \"saturation\": {\n                            \"pivot\": 8\n                        }\n                    }\n                }\n            ],\n            \"filter\": [\n                {\n                    \"wrapper\": {\n                        \"query\": \"eyJ0ZXJtIjp7ImluX3N0b2NrIjp0cnVlfX0=\"\n                    }\n                },\n                {\n                    \"distance_feature\": {\n                        \"field\": \"released_at\",\n                        \"pivot\": \"30d\",\n                        \"origin\": \"now\"\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 24\n}",
             "digest": {
                 "idx": "catalog-*",
+                "kind": "browse",
                 "q": "catalog-* | q=(in_stock:true and (embedding:knn(k=20) or title|description:\"waterproof hiking boots\") and popularity:rank_feature() and released_at:distance_feature(pivot=30d)) | size=24",
                 "sig": "catalog-* | q=(in_stock:? and (embedding:knn(k=?) or title|description:~?) and popularity:rank_feature() and released_at:distance_feature(pivot=?)) | size=24",
                 "hash": "q5:b1d9d5875df4"
@@ -543,6 +560,7 @@
             "body": "{\n    \"size\": 50,\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"service\": {\n                            \"value\": \"api\",\n                            \"boost\": 1\n                        }\n                    }\n                },\n                {\n                    \"range\": {\n                        \"@timestamp\": {\n                            \"from\": null,\n                            \"to\": null,\n                            \"include_lower\": true,\n                            \"include_upper\": true,\n                            \"boost\": 1\n                        }\n                    }\n                }\n            ],\n            \"must_not\": [\n                {\n                    \"term\": {\n                        \"status\": {\n                            \"value\": 200,\n                            \"boost\": 1\n                        }\n                    }\n                }\n            ],\n            \"adjust_pure_negative\": true,\n            \"boost\": 1\n        }\n    },\n    \"sort\": [\n        {\n            \"@timestamp\": {\n                \"order\": \"desc\"\n            }\n        }\n    ]\n}",
             "digest": {
                 "idx": "logs-*",
+                "kind": "browse",
                 "q": "logs-* | q=(@timestamp:* and not status:200 and service:api) | size=50 sort=@timestamp:desc",
                 "sig": "logs-* | q=(@timestamp:* and not status:? and service:?) | size=50 sort=@timestamp:desc",
                 "hash": "q5:a3cd3114b946"
@@ -588,6 +606,7 @@
             "body": "{\n    \"index\": \"members\",\n    \"body\": {\n        \"query\": {\n            \"bool\": {\n                \"filter\": [\n                    {\n                        \"term\": {\n                            \"status\": \"active\"\n                        }\n                    }\n                ]\n            }\n        },\n        \"sort\": [\n            {\n                \"joined_at\": \"asc\"\n            }\n        ]\n    },\n    \"size\": 20,\n    \"from\": 40,\n    \"sort\": \"last_name:desc\"\n}",
             "digest": {
                 "idx": "members",
+                "kind": "browse",
                 "q": "members | q=(status:active) | size=20 from=40 sort=joined_at:asc,last_name:desc",
                 "sig": "members | q=(status:?) | size=20 from=40 sort=joined_at:asc,last_name:desc",
                 "hash": "q5:e46fa944258c"
@@ -599,6 +618,70 @@
                     "why": "A single-clause connector was replaced by that clause.",
                     "on": [
                         "bool"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "20-autocomplete",
+            "label": "Autocomplete",
+            "index": "members-2026.08",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"bool\": {\n            \"filter\": [\n                {\n                    \"term\": {\n                        \"tenant\": 178\n                    }\n                }\n            ],\n            \"must\": [\n                {\n                    \"match_phrase_prefix\": {\n                        \"full_name\": \"ada lov\"\n                    }\n                }\n            ]\n        }\n    },\n    \"size\": 8,\n    \"_source\": [\n        \"full_name\"\n    ]\n}",
+            "digest": {
+                "idx": "members-*",
+                "kind": "suggest",
+                "q": "members-* | q=(full_name:\"ada lov\" and tenant:178) | size=8",
+                "sig": "members-* | q=(full_name:\"?\" and tenant:?) | size=8",
+                "hash": "q5:cdef5f164a58"
+            },
+            "rules": [
+                {
+                    "rule": "index_pattern",
+                    "count": 1,
+                    "why": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",
+                    "on": [
+                        "members-2026.08 -> members-*"
+                    ]
+                },
+                {
+                    "rule": "must_filter_merged",
+                    "count": 1,
+                    "why": "bool.must and bool.filter both became AND: they differ in scoring, not in which documents match."
+                },
+                {
+                    "rule": "section_ignored",
+                    "count": 1,
+                    "why": "Top-level sections that say nothing about what a query is for were ignored.",
+                    "on": [
+                        "_source"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "21-scan-cursor",
+            "label": "Scan cursor",
+            "index": "orders-2026.08",
+            "options": {},
+            "body": "{\n    \"query\": {\n        \"term\": {\n            \"status\": \"shipped\"\n        }\n    },\n    \"sort\": [\n        {\n            \"created\": \"asc\"\n        },\n        {\n            \"_id\": \"asc\"\n        }\n    ],\n    \"search_after\": [\n        1755561600000,\n        \"AB-1234\"\n    ],\n    \"size\": 1000\n}",
+            "digest": {
+                "idx": "orders-*",
+                "kind": "scan",
+                "q": "orders-* | q=(status:shipped) | size=1000 sort=created:asc,_id:asc | +search_after",
+                "sig": "orders-* | q=(status:?) | size=1000 sort=created:asc,_id:asc | +search_after",
+                "hash": "q5:ef281565e43c",
+                "notes": [
+                    "+search_after"
+                ]
+            },
+            "rules": [
+                {
+                    "rule": "index_pattern",
+                    "count": 1,
+                    "why": "The index was collapsed to a rolling pattern, so a daily index does not mint a new fingerprint every midnight.",
+                    "on": [
+                        "orders-2026.08 -> orders-*"
                     ]
                 }
             ]

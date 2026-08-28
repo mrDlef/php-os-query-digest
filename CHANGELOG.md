@@ -27,9 +27,47 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 
 ## v0.14.0 — unreleased
 
-_which normalisation level answers which question_
+_what kind of work a search is, and which normalisation level answers which
+question_
 
-**Fingerprints:** `q5:` unchanged.
+**Fingerprints:** `q5:` unchanged. Two query types are modelled apart from the
+ones they refine and render exactly as them, so every fixture kept its twelve
+hex characters.
+
+### What kind of work a search is
+
+A fingerprint says which searches are the same. It never said what they are
+*for*, and a top-N of two hundred hashes is unreadable for that reason. Every
+digest now carries a `Kind` — `suggest`, `aggregate`, `scan`, `lookup`,
+`browse`, `unknown` — on `Digest::kind()` and in the `kind` field of
+`toArray()`, so the same list grouped by it says where the load goes, which
+autocompletes are slow, and how much traffic never asks for a document.
+
+It is read off the parsed, canonicalised request rather than the raw body, which
+is what settles the two rules an application-side prototype gets wrong:
+
+- **Only `query` and `post_filter` select.** A faceted browse legitimately
+  carries `filter` aggregations with `match` clauses in them; classified over
+  the whole body, every faceted page reports as a text search.
+- **`size` absent is not `size: 0`.** A request with aggregations and no `size`
+  still comes back with ten documents. The buckets-only intent is only legible
+  by also reading `_source`, which the parser had been discarding as noise.
+
+It holds no literal, so it survives `withText(false)`: the deployment that
+cannot ship what a user typed is the one that most needs to know what its
+traffic is made of.
+
+Two query types were promoted for it — `match_phrase_prefix` and
+`match_bool_prefix`, which used to be indistinguishable from `match_phrase` and
+`match`, and are the only clauses that say "someone is still typing". **They
+render exactly as the ops they refine, and sort as them too**: siblings are
+ordered by a key that includes the op, so a completion op sorting under its own
+name would have reordered the clauses around it and moved fingerprints with
+nothing to show for it in the line. Nineteen fixtures kept their hash and two
+were added.
+
+`os.kind` is mapped in the shipped index template, so the dashboard pack can
+facet on it after a reimport.
 
 ### Which level answers which question
 

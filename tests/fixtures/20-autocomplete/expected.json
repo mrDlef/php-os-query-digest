@@ -1,0 +1,7 @@
+{
+    "idx": "members-*",
+    "kind": "suggest",
+    "q": "members-* | q=(full_name:\"ada lov\" and tenant:178) | size=8",
+    "sig": "members-* | q=(full_name:\"?\" and tenant:?) | size=8",
+    "hash": "q5:cdef5f164a58"
+}

@@ -1,0 +1,10 @@
+{
+    "idx": "orders-*",
+    "kind": "scan",
+    "q": "orders-* | q=(status:shipped) | size=1000 sort=created:asc,_id:asc | +search_after",
+    "sig": "orders-* | q=(status:?) | size=1000 sort=created:asc,_id:asc | +search_after",
+    "hash": "q5:ef281565e43c",
+    "notes": [
+        "+search_after"
+    ]
+}

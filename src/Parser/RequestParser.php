@@ -41,6 +41,13 @@ final class RequestParser
      */
     private const ENVELOPE_PARAMS = ['size', 'from'];
 
+    /**
+     * Body sections that make a request a walk over a result set rather than a
+     * page of one. They are notes already — this reads them a second time, as a
+     * fact rather than as a string.
+     */
+    private const CURSORS = ['search_after', 'pit', 'slice'];
+
     private QueryParser $queryParser;
 
     private AggParser $aggParser;
@@ -65,6 +72,7 @@ final class RequestParser
         $trace ??= new Trace();
         $body = $request;
         $envelopeSort = null;
+        $scroll = false;
 
         if (array_key_exists('body', $request) && is_array($request['body'])) {
             $envelopeIndex = Arr::get($request, 'index');
@@ -86,6 +94,12 @@ final class RequestParser
                 }
             }
             $envelopeSort = Arr::get($request, 'sort');
+
+            // Read for the classification only, and never noted: `scroll` is a
+            // query-string parameter, so promoting it into the signature would
+            // move the fingerprint of every scrolling search — and this reads
+            // it precisely to say that such a search is a scan.
+            $scroll = Arr::get($request, 'scroll') !== null;
         }
 
         $notes = [];
@@ -137,7 +151,40 @@ final class RequestParser
             $this->intOrNull(Arr::get($body, 'from')),
             array_merge($this->sort(Arr::get($body, 'sort')), $this->uriSort($envelopeSort)),
             array_values(array_unique($notes)),
+            self::filled(Arr::get($body, 'suggest')),
+            $scroll || self::cursored($body),
+            // `_source: false` exactly. A list or an object is a *filtered*
+            // source, and a request asking for two fields is still asking for
+            // documents.
+            Arr::get($body, '_source') === false,
         );
+    }
+
+    /**
+     * @param array<mixed> $body
+     */
+    private static function cursored(array $body): bool
+    {
+        foreach (self::CURSORS as $section) {
+            if (self::filled(Arr::get($body, $section))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * A section that is there and says something. Every section read this way
+     * is written as an object or a list, and an empty one is what a request
+     * builder leaves behind when the feature is switched off — it does not make
+     * the request a type-ahead or a walk.
+     *
+     * @param mixed $section
+     */
+    private static function filled($section): bool
+    {
+        return is_array($section) && $section !== [];
     }
 
     /**

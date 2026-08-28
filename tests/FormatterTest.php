@@ -7,6 +7,7 @@ namespace MrDlef\OsQueryDigest\Tests;
 use MrDlef\OsQueryDigest\Digest;
 use MrDlef\OsQueryDigest\Exception\InvalidQueryException;
 use MrDlef\OsQueryDigest\Formatter;
+use MrDlef\OsQueryDigest\Kind;
 use MrDlef\OsQueryDigest\LazyDigest;
 use MrDlef\OsQueryDigest\Normalization;
 use MrDlef\OsQueryDigest\Options;
@@ -134,7 +135,13 @@ final class FormatterTest extends TestCase
         $digest = Formatter::create()->describe(['query' => ['term' => ['a' => 1]]], 'idx');
 
         self::assertSame(
-            ['idx' => 'idx', 'q' => 'idx | q=(a:1)', 'sig' => 'idx | q=(a:?)', 'hash' => $digest->hash()],
+            [
+                'idx' => 'idx',
+                'kind' => 'lookup',
+                'q' => 'idx | q=(a:1)',
+                'sig' => 'idx | q=(a:?)',
+                'hash' => $digest->hash(),
+            ],
             $digest->toArray(),
         );
         self::assertSame(json_encode($digest->toArray()), json_encode($digest));
@@ -152,8 +159,13 @@ final class FormatterTest extends TestCase
         $digest = Formatter::create(Options::create()->withText(false))
             ->describe($request, 'members');
 
-        self::assertSame(['idx', 'sig', 'hash'], array_keys($digest->toArray()));
+        self::assertSame(['idx', 'kind', 'sig', 'hash'], array_keys($digest->toArray()));
         self::assertSame('members | q=(email:?)', $digest->toArray()['sig']);
+
+        // The kind stays: it is read off the shape, holds no literal, and is
+        // exactly what a deployment that cannot ship values still wants to
+        // group by.
+        self::assertSame(Kind::LOOKUP, $digest->toArray()['kind']);
 
         $encoded = json_encode($digest);
         self::assertIsString($encoded);
@@ -208,7 +220,16 @@ final class FormatterTest extends TestCase
         $lazy = Formatter::create()->lazy(['query' => ['term' => ['a' => 1]]], 'idx');
 
         self::assertInstanceOf(LazyDigest::class, $lazy);
-        self::assertSame(['idx' => 'idx', 'q' => 'idx | q=(a:1)', 'sig' => 'idx | q=(a:?)', 'hash' => $lazy->digest()->hash()], $lazy->jsonSerialize());
+        self::assertSame(
+            [
+                'idx' => 'idx',
+                'kind' => 'lookup',
+                'q' => 'idx | q=(a:1)',
+                'sig' => 'idx | q=(a:?)',
+                'hash' => $lazy->digest()->hash(),
+            ],
+            $lazy->jsonSerialize(),
+        );
     }
 
     public function testHardLengthCapAppliesToTheLineButNotTheHash(): void

@@ -14,6 +14,20 @@ final class LeafNode implements Node
     public const OP_MATCH = 'match';
     public const OP_PHRASE = 'phrase';
     public const OP_PREFIX = 'prefix';
+
+    /**
+     * The two completion spellings of a match: `match_phrase_prefix` and
+     * `match_bool_prefix`. They are modelled apart from the ops they refine —
+     * and *only* apart — because an autocomplete is a recognisable kind of
+     * search and nothing else in the tree says so; see
+     * {@see \MrDlef\OsQueryDigest\Classify\Classifier}.
+     *
+     * They render exactly like {@see self::OP_PHRASE} and {@see self::OP_MATCH}:
+     * the last term of a type-ahead is the same clause a reader wants to see,
+     * and rendering it differently would move every fingerprint that has one.
+     */
+    public const OP_PHRASE_PREFIX = 'phrase_prefix';
+    public const OP_BOOL_PREFIX = 'bool_prefix';
     public const OP_WILDCARD = 'wildcard';
     public const OP_REGEXP = 'regexp';
     public const OP_EXISTS = 'exists';
@@ -123,6 +137,23 @@ final class LeafNode implements Node
         return new self($this->field, $this->op, $values);
     }
 
+    /**
+     * The op a clause *sorts* as.
+     *
+     * A completion op renders as the op it refines, so it has to sort as that
+     * op too. Siblings are ordered by this key before rendering: left to sort
+     * under their own names, `phrase_prefix` and `bool_prefix` would slot
+     * elsewhere among their siblings and move the fingerprint of every query
+     * mixing one with a clause whose key falls between — a hash move with
+     * nothing to show for it in the rendered line.
+     *
+     * @var array<string,string>
+     */
+    private const SORTS_AS = [
+        self::OP_PHRASE_PREFIX => self::OP_PHRASE,
+        self::OP_BOOL_PREFIX => self::OP_MATCH,
+    ];
+
     public function sortKey(): string
     {
         // Values are part of the key: two `term` clauses on the same field but
@@ -135,7 +166,7 @@ final class LeafNode implements Node
             sort($flat);
         }
 
-        return $this->field . ':' . $this->op . ':' . implode(',', $flat);
+        return $this->field . ':' . (self::SORTS_AS[$this->op] ?? $this->op) . ':' . implode(',', $flat);
     }
 
     /**

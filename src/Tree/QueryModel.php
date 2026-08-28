@@ -46,6 +46,21 @@ final class QueryModel
     private array $notes;
 
     /**
+     * The three facts below are read for {@see \MrDlef\OsQueryDigest\Kind}
+     * and are deliberately **not rendered**. They say what the request is *for*
+     * rather than what it selects, and putting them in the line would move
+     * every fingerprint that has one — for a classification that is available
+     * beside the hash anyway.
+     */
+    private bool $suggests;
+
+    /** A cursor: `search_after`, `pit`, `slice`, or a `scroll` beside `body`. */
+    private bool $cursored;
+
+    /** `_source: false` exactly — a filtered `_source` still returns documents. */
+    private bool $sourceDisabled;
+
+    /**
      * @param AggNode[]                           $aggs
      * @param array<int,array{0:string,1:string}> $sort
      * @param array<int,string>                   $notes
@@ -58,7 +73,10 @@ final class QueryModel
         ?int $size = null,
         ?int $from = null,
         array $sort = [],
-        array $notes = []
+        array $notes = [],
+        bool $suggests = false,
+        bool $cursored = false,
+        bool $sourceDisabled = false
     ) {
         $this->index = $index;
         $this->query = $query;
@@ -68,6 +86,9 @@ final class QueryModel
         $this->from = $from;
         $this->sort = array_values($sort);
         $this->notes = array_values($notes);
+        $this->suggests = $suggests;
+        $this->cursored = $cursored;
+        $this->sourceDisabled = $sourceDisabled;
     }
 
     public function index(): string
@@ -119,6 +140,24 @@ final class QueryModel
         return $this->notes;
     }
 
+    /** A top-level `suggest` section. */
+    public function suggests(): bool
+    {
+        return $this->suggests;
+    }
+
+    /** The request walks a cursor rather than asking for one page. */
+    public function cursored(): bool
+    {
+        return $this->cursored;
+    }
+
+    /** `_source` was turned off outright. */
+    public function sourceDisabled(): bool
+    {
+        return $this->sourceDisabled;
+    }
+
     public function withIndex(string $index): self
     {
         return new self(
@@ -130,6 +169,9 @@ final class QueryModel
             $this->from,
             $this->sort,
             $this->notes,
+            $this->suggests,
+            $this->cursored,
+            $this->sourceDisabled,
         );
     }
 
@@ -147,6 +189,9 @@ final class QueryModel
             $this->from,
             $this->sort,
             $this->notes,
+            $this->suggests,
+            $this->cursored,
+            $this->sourceDisabled,
         );
     }
 }

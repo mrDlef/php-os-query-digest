@@ -42,6 +42,7 @@ The hash is safe to put anywhere. `os.q` is not, and they arrive together:
 ```json
 {
   "idx":  "logs-*",
+  "kind": "browse",
   "q":    "logs-* | q=(email:alice@example.com and status:shipped) | size=20",
   "sig":  "logs-* | q=(email:? and status:?) | size=20",
   "hash": "q5:614ecdff8fdf"
@@ -53,7 +54,7 @@ being able to paste it into Dashboards is the point of having it. So a `term` on
 an email address puts that address wherever the line goes — and log shipping
 tends to go further than people remember.
 
-`sig` and `hash` never carry values. If your log index leaves your perimeter, log
+`kind`, `sig` and `hash` never carry values. If your log index leaves your perimeter, log
 those two and drop `q`; every query on
 [these pages](index.md) works without it. The
 [threat model](https://github.com/mrDlef/php-os-query-digest/blob/main/SECURITY.md)
