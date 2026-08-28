@@ -27,8 +27,8 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 
 ## v0.14.0 — unreleased
 
-_what kind of work a search is, and which normalisation level answers which
-question_
+_what kind of work a search is, the report the CLI was keeping to itself, and
+which normalisation level answers which question_
 
 **Fingerprints:** `q5:` unchanged. Two query types are modelled apart from the
 ones they refine and render exactly as them, so every fixture kept its twelve
@@ -68,6 +68,35 @@ were added.
 
 `os.kind` is mapped in the shipped index template, so the dashboard pack can
 facet on it after a reimport.
+
+### The report the command line was keeping to itself
+
+`Cli\Shape` already aggregated what an insight layer needs — count, mean, p95,
+max, the window, the slowest sample — and it was `@internal`, lived under
+`Cli\`, and was only ever fed by `slowlog` reading a cluster's slow log files.
+An application already logging digests has the same stream and the same
+question, and could reuse none of it.
+
+It is now `Analysis\Shape`, public, beside a new `Analysis\Report` that owns
+the grouping and the ranking: `record()` a digest with what it cost, then
+`rank()` or `top()` by total, count, p95, max or mean. The `slowlog` command is
+its first consumer rather than its owner — the ranking, the tie-break that makes
+two runs diffable, and the list of sort keys the `--sort` flag offers all come
+from the report now, so a key the CLI advertises is a key the library can rank
+by.
+
+Two things are worth knowing before feeding it:
+
+- **It holds one object per shape**, not per search, so a worker accumulating a
+  million searches over forty shapes holds forty of them.
+- **`slowest.text` is the one field that can hold a literal.** It is the slowest
+  record's readable line, labelled as a sample; under `withText(false)` it is
+  the signature, so a report built from value-free digests carries no value
+  anywhere. Print the signature for the group: under a count of twenty-eight,
+  one record's values read as the group's, and they are not.
+
+A shape also carries its `kind`, which is in the `--json` report and in
+`jsonSerialize()`.
 
 ### Which level answers which question
 

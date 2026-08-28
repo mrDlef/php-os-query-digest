@@ -2,19 +2,28 @@
 
 declare(strict_types=1);
 
-namespace MrDlef\OsQueryDigest\Cli;
+namespace MrDlef\OsQueryDigest\Analysis;
 
 use MrDlef\OsQueryDigest\Digest;
+use MrDlef\OsQueryDigest\Kind;
 
 /**
- * Every slow log record that shares one fingerprint, and what they cost.
+ * Every search that shares one fingerprint, and what they cost.
  *
- * The table prints the **signature**, never one record's text: under a count of
- * twenty-eight, a single sample's literals read as the group's, and they are
- * not. The slowest sample survives in the JSON output, where it is labelled as
- * what it is.
+ * Fed by whatever has the stream: the `slowlog` command reads a cluster's slow
+ * log, an application reads the digests it is already logging. Both group by
+ * fingerprint and both want a mean and a p95, and neither should have to
+ * implement a percentile.
  *
- * @internal
+ * **It keeps one record's text**, the slowest, and that is the one field here
+ * that can hold a literal. Under
+ * {@see \MrDlef\OsQueryDigest\Options::withText()} set to false there is no
+ * such line and it holds the signature instead. Print the signature when
+ * showing the group — under a count of twenty-eight, one sample's literals read
+ * as the group's, and they are not — and label the sample as a sample wherever
+ * it is shown.
+ *
+ * @api
  */
 final class Shape implements \JsonSerializable
 {
@@ -39,7 +48,17 @@ final class Shape implements \JsonSerializable
         $this->slowestText = $digest->text();
     }
 
-    public function record(Digest $digest, ?float $millis, ?string $timestamp): void
+    /**
+     * One more search of this shape.
+     *
+     * The digest is taken again rather than assumed to be the one this shape
+     * was opened with: they share a fingerprint, not their values, and the
+     * slowest one's line is what gets kept.
+     *
+     * @param float|null  $millis    what it cost, when that is known
+     * @param string|null $timestamp when it happened, compared as text
+     */
+    public function record(Digest $digest, ?float $millis = null, ?string $timestamp = null): void
     {
         $this->count++;
 
@@ -71,6 +90,20 @@ final class Shape implements \JsonSerializable
     public function hash(): string
     {
         return $this->digest->hash();
+    }
+
+    /**
+     * What kind of work these searches are. One fingerprint is one shape, so
+     * every record in a shape shares it.
+     */
+    public function kind(): Kind
+    {
+        return $this->digest->kind();
+    }
+
+    public function index(): string
+    {
+        return $this->digest->index();
     }
 
     public function signature(): string
@@ -137,6 +170,7 @@ final class Shape implements \JsonSerializable
             'hash' => $this->digest->hash(),
             'sig' => $this->digest->signature(),
             'idx' => $this->digest->index(),
+            'kind' => $this->digest->kind()->name(),
             'count' => $this->count,
             'measured' => count($this->durations),
             'total_ms' => $this->durations === [] ? null : round($this->total(), 3),

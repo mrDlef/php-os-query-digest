@@ -213,6 +213,39 @@ cost a parse. What else is on it:
 | `statusCode()` | null if the request never got a response |
 | `position()` | which line of an `_msearch`; null if it was not one |
 
+An observer that ranks rather than logs is the same eight lines, and the
+[report](../reference/api.md#analysisreport) is the library's own:
+
+```php
+use MrDlef\OsQueryDigest\Analysis\Report;
+use MrDlef\OsQueryDigest\Http\{ObservedSearch, SearchObserver};
+
+final class Ranking implements SearchObserver
+{
+    private Report $report;
+
+    public function __construct(Report $report)
+    {
+        $this->report = $report;
+    }
+
+    public function observe(ObservedSearch $search): void
+    {
+        $took = $search->tookMillis();
+
+        // Falls back to the wall clock: an _msearch line reports no `took` of
+        // its own, and a shape counted without a duration has no p95.
+        $this->report->record(
+            $search->digest()->digest(),
+            $took === null ? $search->elapsedMillis() : (float) $took,
+        );
+    }
+}
+```
+
+This one does parse every search, because ranking them all is the point — the
+laziness is there for the observers that drop most of what they see.
+
 ## What it will not do
 
 **It cannot break the call.** Reading the request is wrapped, so is reading the

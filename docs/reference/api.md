@@ -1,6 +1,6 @@
 # Public API
 
-Twenty-one classes. Everything else in `src/` is `@internal` and may move in a
+Twenty-three classes. Everything else in `src/` is `@internal` and may move in a
 patch release — see [what counts as public](../explanation/public-api.md) for
 why the line is drawn there.
 
@@ -316,6 +316,61 @@ __construct(LoggerInterface $logger, string $level = LogLevel::INFO, string $mes
 
 Writes one PSR-3 record per search, with `os` and `took` in the shape the
 [dashboard pack](../guides/dashboards.md) maps.
+
+---
+
+## Analysis
+
+### `Analysis\Report`
+
+```php
+record(Digest $digest, ?float $millis = null, ?string $timestamp = null): void
+records(): int
+count(): int
+total(): float
+shape(string $hash): ?Shape
+rank(string $by = Report::TOTAL): Shape[]
+top(int $count, string $by = Report::TOTAL): Shape[]
+```
+
+Searches grouped by fingerprint and ranked by what they cost — what the
+`slowlog` command does with a cluster's slow log, on whatever stream you have.
+Constants: `TOTAL`, `COUNT`, `P95`, `MAX`, `MEAN`, and `KEYS`. An unknown key
+throws `InvalidOptionException` rather than falling back to the default.
+Implements `JsonSerializable`, which serialises to the ranked shapes.
+
+`records()` is how many searches went in, `count()` how many distinct shapes came
+out. It holds one object per *shape*, so a million searches over forty shapes is
+forty objects.
+
+### `Analysis\Shape`
+
+```php
+hash(): string
+signature(): string
+index(): string
+kind(): Kind
+count(): int
+measured(): int
+total(): float
+mean(): ?float
+p95(): ?float
+max(): ?float
+record(Digest $digest, ?float $millis, ?string $timestamp): void
+```
+
+Every search sharing one fingerprint, and what they cost. `count()` is all of
+them, `measured()` only those that carried a duration — so a stream without
+`took` still counts, and returns `null` for the statistics rather than zero.
+`p95()` is nearest rank: on a handful of records it lands on the maximum, which
+is the honest answer.
+
+Implements `JsonSerializable`. That object carries `slowest.text`, the slowest
+record's readable line, which is the **one field here that can hold a literal**
+— under [`withText(false)`](../guides/options.md#withtextfalse-and-what-it-does-not-promise)
+it holds the signature instead. Show the signature for the group and label the
+sample as a sample: under a count of twenty-eight, one record's values read as
+the group's, and they are not.
 
 ---
 
