@@ -10,6 +10,7 @@ use MrDlef\OsQueryDigest\IndexNormalizer;
 use MrDlef\OsQueryDigest\Kind;
 use MrDlef\OsQueryDigest\Normalization;
 use MrDlef\OsQueryDigest\Options;
+use MrDlef\OsQueryDigest\RecordLayout;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -236,6 +237,7 @@ final class DocExampleTest extends TestCase
         'cli-slowlog-json',
         'logging-record',
         'logging-record-value-free',
+        'logging-record-flat',
         'options-index-shipped',
         'options-index-custom',
         'options-index-partial',
@@ -284,6 +286,25 @@ final class DocExampleTest extends TestCase
                 $page . ' prints a digest that is not the one this library produces for the request above it.',
             );
         }
+    }
+
+    /**
+     * The same request under a flat layout, on the same page. Its claim is that
+     * the two spellings hold the same values, so it is checked against the
+     * nested record rather than against a copy of one.
+     */
+    public function testTheFlatRecordIsTheNestedOneSpeltFlat(): void
+    {
+        [$request, $index] = self::SOURCES['logging-record'];
+
+        $context = RecordLayout::flat()->apply([], Formatter::create()->lazy($request, $index));
+        $encoded = json_encode($context);
+        self::assertIsString($encoded);
+
+        self::assertSame(
+            json_decode($encoded, true),
+            self::decode(self::oneBlock('docs/guides/logging.md', 'logging-record-flat')),
+        );
     }
 
     /**

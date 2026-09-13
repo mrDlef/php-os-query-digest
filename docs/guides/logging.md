@@ -47,7 +47,7 @@ use MrDlef\OsQueryDigest\Monolog\DigestProcessor;
 $logger->pushProcessor(new DigestProcessor());
 
 $logger->info('opensearch.search', [
-    'query' => $request,               // → {"idx": …, "q": …, "sig": …, "hash": …}
+    'query' => $request,               // → {"idx": …, "kind": …, "q": …, "sig": …, "hash": …}
     'index' => 'logs-2026.08.16',
     'took'  => $response['took'],      // untouched, like the rest of the context
 ]);
@@ -66,6 +66,51 @@ an exception. **You lose the digest, never the log line.**
 
 Monolog is a *suggested* dependency, never a required one — the library itself
 still has none. Both major versions work: `^2.0` on PHP 7.4, `^3.0` from 8.1.
+
+## When your collector cannot read a nested field
+
+Some log platforms group and chart only on top-level keys. Rather than have
+everyone on one of those write the same flattener by hand, ask for the flat
+spelling:
+
+```php
+use MrDlef\OsQueryDigest\RecordLayout;
+
+$logger->pushProcessor(new DigestProcessor(null, 'query', 'index', RecordLayout::flat()));
+```
+
+<!-- verified: logging-record-flat -->
+```json
+{
+    "dsl_idx": "logs-*",
+    "dsl_kind": "aggregate",
+    "dsl_q": "logs-* | q=(@timestamp >= now-15m and service:api) | size=0",
+    "dsl_sig": "logs-* | q=(@timestamp >= ? and service:?) | size=0",
+    "dsl_hash": "q5:b7cc218cda09",
+    "dsl_notes": null,
+    "dsl_error": null
+}
+```
+
+Same fields, same values, same fingerprint: `dsl.hash` and `dsl_hash` are one
+contract in two spellings, so a hash logged either way compares with the other.
+Three things worth knowing before you switch:
+
+- **The key that held the request is removed**, since a flat record has nowhere
+  to put a sub-object — leaving it would leave the raw body in the line.
+- **`notes` becomes a `; `-joined string.** A collector that cannot query a
+  nested object cannot query an array either.
+- **Every key is always present**, `null` where this record has no such field —
+  the keys are chosen before anything is parsed. `dsl_error` is the one that
+  fills in when a request cannot be read, and it is null on every request that
+  can.
+
+`RecordLayout::flat('q_')` picks another prefix; the separator is part of it, so
+`dsl-` or no prefix at all are equally available. `RecordLayout::nested('search')`
+does the same for the nested spelling.
+
+Laziness survives either way: the seven keys share one parse, and it still only
+happens if a handler serialises the record.
 
 ## When the values may not leave the building
 

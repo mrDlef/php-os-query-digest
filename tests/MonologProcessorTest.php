@@ -11,6 +11,7 @@ use MrDlef\OsQueryDigest\Formatter;
 use MrDlef\OsQueryDigest\Monolog\DigestProcessor;
 use MrDlef\OsQueryDigest\Monolog\SafeDigest;
 use MrDlef\OsQueryDigest\Options;
+use MrDlef\OsQueryDigest\RecordLayout;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -194,6 +195,31 @@ final class MonologProcessorTest extends TestCase
      * formats every record as it stores it, so it would parse the digest during
      * the log call and hide the very property under test.
      */
+    /**
+     * A flat layout has nowhere to put a sub-object, so the key that held the
+     * request has to go rather than linger holding the raw body — which is the
+     * wall of braces this library exists to keep out of a log line.
+     */
+    public function testAFlatLayoutReplacesTheRequestKeyWithSiblings(): void
+    {
+        $this->logger->pushProcessor(new DigestProcessor(null, 'query', 'index', RecordLayout::flat()));
+        $this->logger->info('opensearch.search', [
+            'query' => ['query' => ['term' => ['env' => 'prod']]],
+            'index' => 'logs-2026.09.13',
+        ]);
+
+        $encoded = json_encode($this->handler->getRecords()[0]['context']);
+        self::assertIsString($encoded);
+        $context = json_decode($encoded, true);
+        self::assertIsArray($context);
+
+        self::assertArrayNotHasKey('query', $context, 'The request key must not survive a flat layout.');
+        self::assertSame('logs-*', $context['dsl_idx']);
+        self::assertIsString($context['dsl_hash']);
+        self::assertStringStartsWith('q5:', $context['dsl_hash']);
+        self::assertSame('logs-2026.09.13', $context['index'], 'Nothing else in the context moves.');
+    }
+
     public function testTheProcessorItselfNeverParses(): void
     {
         $spy = self::spy();

@@ -52,6 +52,7 @@ final class ApiBoundaryTest extends TestCase
         'MrDlef\OsQueryDigest\Monolog\SafeDigest',
         'MrDlef\OsQueryDigest\Normalization',
         'MrDlef\OsQueryDigest\Options',
+        'MrDlef\OsQueryDigest\RecordLayout',
         'MrDlef\OsQueryDigest\IndexNormalizer',
     ];
 

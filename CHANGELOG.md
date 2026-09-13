@@ -27,14 +27,51 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 
 ## v0.15.0 — unreleased
 
-_the field list of a `multi_match` stops eating the line, and the logged fields
-stop being named after one engine_
+_the field list of a `multi_match` stops eating the line, the logged fields stop
+being named after one engine, and a record can be flat_
 
 **Fingerprints:** `q5:` unchanged. The cap is a display limit, and display
 limits are lifted before the hash input is rendered, so every pinned fixture
 kept its twelve hex characters. The renamed log fields are the record's
 envelope, never the hash input — **a hash stored under `os.hash` and one stored
 under `dsl.hash` are the same hash.**
+
+### A log record can be flat
+
+Some collectors group and chart only on top-level keys, and nothing in the
+library emitted anything but a nested object — so everyone on one of those was
+writing the same flattener by hand. `RecordLayout` now says where the digest's
+fields go, and both emitters take one:
+
+```php
+new LoggingObserver($logger, LogLevel::INFO, 'opensearch.search', RecordLayout::flat());
+new DigestProcessor(null, 'query', 'index', RecordLayout::flat());
+```
+
+```
+nested   {"dsl": {"idx": "…", "kind": "…", "hash": "q5:…"}, "took": 12}
+flat     {"dsl_idx": "…", "dsl_kind": "…", "dsl_hash": "q5:…", "took": 12}
+```
+
+Nested stays the default, and the two are one contract in two spellings: same
+fields, same names, same values, so a hash logged either way compares with the
+other. `RecordLayout::flat('q_')` picks the prefix — the separator is part of
+it — and `RecordLayout::nested('search')` does the same for the key.
+
+Three things a flat record does differently, all forced by what makes it flat:
+
+- **The key that held the request is dropped** by the Monolog processor, which
+  otherwise had nowhere to put the digest and would have left the raw body in
+  the line.
+- **`notes` becomes a `; `-joined string.** A collector that cannot query a
+  nested object cannot query an array either.
+- **Every key is always present**, `null` where a record has no such field,
+  because the keys are chosen before anything is parsed. `dsl_error` is the one
+  that fills in when a request cannot be read.
+
+**Laziness survives.** The seven keys share one deferred parse, so a record a
+`FingersCrossedHandler` never flushes still costs nothing — and a request that
+cannot be read is attempted once, not once per key.
 
 ### Breaking: the logged fields are `dsl.*`, not `os.*`
 
