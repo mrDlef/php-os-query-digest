@@ -131,6 +131,22 @@ final class RecordLayoutTest extends TestCase
     }
 
     /**
+     * A formatter that writes context as text — Monolog's `LineFormatter` — casts
+     * the value instead of serialising it, and that path has to resolve the
+     * digest on its own. Nothing is encoded first here, deliberately: with a
+     * `json_encode` in front, a cast that resolved nothing would still read the
+     * value the encoder left behind and the gap would not show.
+     */
+    public function testCastingToTextResolvesTheDigestOnItsOwn(): void
+    {
+        $nested = RecordLayout::nested()->apply([], self::digest());
+        self::assertStringContainsString('service:api', self::text($nested['dsl']));
+
+        $flat = RecordLayout::flat()->apply([], self::digest());
+        self::assertStringStartsWith('q5:', self::text($flat['dsl_hash']));
+    }
+
+    /**
      * The one field a flat layout cannot carry as it stands. Joined rather than
      * dropped: a collector that cannot query a nested object cannot query an
      * array either, and the notes are worth more as a string than as nothing.
@@ -187,6 +203,20 @@ final class RecordLayoutTest extends TestCase
             array_diff(array_unique($emitted), RecordLayout::FIELDS),
             'A digest emits a field no flat record would carry.',
         );
+    }
+
+    /**
+     * What a text formatter does to a context value: cast it, having asserted
+     * it is castable at all.
+     *
+     * @param mixed $value
+     */
+    private static function text($value): string
+    {
+        self::assertIsObject($value);
+        self::assertTrue(method_exists($value, '__toString'), 'A context value must read as text.');
+
+        return (string) $value;
     }
 
     private static function digest(): LazyDigest

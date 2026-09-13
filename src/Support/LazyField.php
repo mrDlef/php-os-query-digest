@@ -44,7 +44,7 @@ final class LazyField implements \JsonSerializable
         if (is_array($value)) {
             $parts = [];
             foreach ($value as $note) {
-                $parts[] = self::scalar($note);
+                $parts[] = is_scalar($note) ? (string) $note : '';
             }
 
             return implode('; ', $parts);
@@ -59,17 +59,7 @@ final class LazyField implements \JsonSerializable
      */
     public function __toString(): string
     {
-        return self::scalar($this->jsonSerialize());
-    }
-
-    /**
-     * @param mixed $value
-     */
-    private static function scalar($value): string
-    {
-        if (is_bool($value)) {
-            return $value ? 'true' : 'false';
-        }
+        $value = $this->jsonSerialize();
 
         return is_scalar($value) ? (string) $value : '';
     }

@@ -5179,7 +5179,7 @@ namespace MrDlef\OsQueryDigest\Support {
             if (is_array($value)) {
                 $parts = [];
                 foreach ($value as $note) {
-                    $parts[] = self::scalar($note);
+                    $parts[] = is_scalar($note) ? (string) $note : '';
                 }
 
                 return implode('; ', $parts);
@@ -5194,17 +5194,7 @@ namespace MrDlef\OsQueryDigest\Support {
          */
         public function __toString(): string
         {
-            return self::scalar($this->jsonSerialize());
-        }
-
-        /**
-         * @param mixed $value
-         */
-        private static function scalar($value): string
-        {
-            if (is_bool($value)) {
-                return $value ? 'true' : 'false';
-            }
+            $value = $this->jsonSerialize();
 
             return is_scalar($value) ? (string) $value : '';
         }
@@ -5287,7 +5277,7 @@ namespace MrDlef\OsQueryDigest\Support {
             return $this->digest !== null ? $this->digest->text() : (string) $this->error;
         }
 
-        public static function describe(\Throwable $error): string
+        private static function describe(\Throwable $error): string
         {
             return 'os-query-digest could not read this request: ' . $error->getMessage();
         }

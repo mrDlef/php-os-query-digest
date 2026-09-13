@@ -78,7 +78,7 @@ final class RecordFields
         return $this->digest !== null ? $this->digest->text() : (string) $this->error;
     }
 
-    public static function describe(\Throwable $error): string
+    private static function describe(\Throwable $error): string
     {
         return 'os-query-digest could not read this request: ' . $error->getMessage();
     }
