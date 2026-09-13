@@ -299,8 +299,8 @@ final class DigestingClientTest extends TestCase
         self::assertIsInt($context['elapsed_ms']);
         self::assertArrayNotHasKey('line', $context, 'A plain search has no line to report.');
 
-        // `os` is the sub-object the index template maps.
-        $encoded = json_encode($context['os']);
+        // `dsl` is the sub-object the index template maps.
+        $encoded = json_encode($context['dsl']);
         self::assertIsString($encoded);
         $decoded = json_decode($encoded, true);
         self::assertIsArray($decoded);
@@ -323,7 +323,7 @@ final class DigestingClientTest extends TestCase
             $formatter,
         ))->sendRequest(new Request('POST', '/logs-2026.08.21/_search', [], self::BODY));
 
-        $encoded = json_encode($logger->records[0][2]['os']);
+        $encoded = json_encode($logger->records[0][2]['dsl']);
         self::assertIsString($encoded);
         $decoded = json_decode($encoded, true);
 
@@ -340,7 +340,7 @@ final class DigestingClientTest extends TestCase
 
         self::assertCount(1, $logger->records);
 
-        $encoded = json_encode($logger->records[0][2]['os']);
+        $encoded = json_encode($logger->records[0][2]['dsl']);
         self::assertIsString($encoded);
         self::assertStringContainsString('could not read this request', $encoded);
     }

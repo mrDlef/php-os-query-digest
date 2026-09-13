@@ -188,7 +188,7 @@ function fields(): array
     $fields = [];
     foreach (flatten($properties) as $name => $type) {
         // A text field is searched, never aggregated — which is the whole
-        // reason `os.sig` is a keyword and `os.q` is not.
+        // reason `dsl.sig` is a keyword and `dsl.q` is not.
         $aggregatable = $type !== 'text';
 
         $fields[] = [
@@ -256,14 +256,14 @@ function topShapes(): array
             metric('2', 'sum', ['field' => 'took'], 'Total ms'),
             metric('3', 'median', ['field' => 'took', 'percents' => [50]], 'Median ms'),
             bucket('4', 'terms', [
-                'field' => 'os.hash',
+                'field' => 'dsl.hash',
                 'orderBy' => '2',
                 'order' => 'desc',
                 'size' => 10,
                 'customLabel' => 'Shape',
             ]),
             bucket('5', 'terms', [
-                'field' => 'os.sig',
+                'field' => 'dsl.sig',
                 'orderBy' => '1',
                 'order' => 'desc',
                 'size' => 1,
@@ -309,7 +309,7 @@ function percentileOverTime(): array
                 'type' => 'terms',
                 'schema' => 'group',
                 'params' => [
-                    'field' => 'os.hash',
+                    'field' => 'dsl.hash',
                     'orderBy' => '1.95',
                     'order' => 'desc',
                     'size' => 5,

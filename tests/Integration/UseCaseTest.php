@@ -356,7 +356,7 @@ final class UseCaseTest extends TestCase
 
     /**
      * The template the pack ships has to be one a cluster accepts, and it has to
-     * produce the mapping the pages depend on — `os.hash` a keyword rather than
+     * produce the mapping the pages depend on — `dsl.hash` a keyword rather than
      * an analysed field, which is the difference between an aggregation and a
      * pile of word fragments.
      */
@@ -379,10 +379,10 @@ final class UseCaseTest extends TestCase
             $mapping = $this->request('GET', '/' . $index . '/_mapping');
             $properties = self::dig(
                 $mapping['body'],
-                [$index, 'mappings', 'properties', 'os', 'properties'],
+                [$index, 'mappings', 'properties', 'dsl', 'properties'],
             );
 
-            self::assertIsArray($properties, 'The template mapped no `os` object.');
+            self::assertIsArray($properties, 'The template mapped no `dsl` object.');
             self::assertSame('keyword', self::text($properties, ['hash', 'type']));
             self::assertSame('keyword', self::text($properties, ['sig', 'type']));
             self::assertSame('text', self::text($properties, ['q', 'type']));

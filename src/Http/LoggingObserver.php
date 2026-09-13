@@ -13,10 +13,18 @@ use Psr\Log\LogLevel;
  *
  *     new DigestingClient($client, new LoggingObserver($logger));
  *
- * The record's context is `os` — `{idx, q, sig, hash}` — beside `took`, which is
- * exactly the mapping in `resources/dashboards/index-template.json`. Import that
- * template and the four panels, point this at your log channel, and the
- * dashboard fills itself.
+ * The record's context is `dsl` — `{idx, kind, q, sig, hash}` — beside `took`,
+ * which is exactly the mapping in
+ * `resources/dashboards/index-template.json`. Import that template and the four
+ * panels, point this at your log channel, and the dashboard fills itself.
+ *
+ * **`dsl`, and not `os`, which it was called until v0.15.0.** The key is a
+ * contract people type into queries and dashboards every day, so it has to stay
+ * true for as long as they keep them: the library digests Query DSL, which is
+ * what OpenSearch, Elasticsearch and every API compatible with them speak, and
+ * naming it after one of those engines would have gone stale the day a second
+ * one was supported. The package keeps its own name — that is a brand, not a
+ * field someone greps.
  *
  * `elapsed_ms` is not in the template, and is here anyway: it is wall clock, so
  * it is there even when `took` is not, and the gap between the two is the
@@ -50,7 +58,7 @@ final class LoggingObserver implements SearchObserver
     public function observe(ObservedSearch $search): void
     {
         $context = [
-            'os' => new SafeDigest($search->digest()),
+            'dsl' => new SafeDigest($search->digest()),
             'took' => $search->tookMillis(),
             'elapsed_ms' => (int) $search->elapsedMillis(),
             'status' => $search->statusCode(),

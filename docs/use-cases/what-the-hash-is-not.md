@@ -37,7 +37,7 @@ is two functions and answers the question you are actually asking.
 
 ## Not an anonymised query
 
-The hash is safe to put anywhere. `os.q` is not, and they arrive together:
+The hash is safe to put anywhere. `dsl.q` is not, and they arrive together:
 
 ```json
 {

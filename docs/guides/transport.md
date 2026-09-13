@@ -21,7 +21,7 @@ That is the whole integration. Every search now produces one log record:
 ```json
 {
   "message": "opensearch.search",
-  "os": {
+  "dsl": {
     "idx": "logs-*",
     "kind": "browse",
     "q": "logs-* | q=(not status:200 and service:api) | size=5",
@@ -34,7 +34,7 @@ That is the whole integration. Every search now produces one log record:
 }
 ```
 
-`os` and `took` are exactly what the [dashboard pack](dashboards.md) maps, so
+`dsl` and `took` are exactly what the [dashboard pack](dashboards.md) maps, so
 importing the template and the four panels is the only other thing to do.
 
 ## Which one to use

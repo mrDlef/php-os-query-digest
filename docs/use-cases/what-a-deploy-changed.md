@@ -16,7 +16,7 @@ nothing on the left:
   "size": 0,
   "aggs": {
     "shapes": {
-      "terms": { "field": "os.hash", "size": 100 },
+      "terms": { "field": "dsl.hash", "size": 100 },
       "aggs": {
         "before": { "filter": { "range": { "@timestamp": { "lt": "2026-08-19T15:00:00Z" } } } },
         "after":  { "filter": { "range": { "@timestamp": { "gte": "2026-08-19T15:00:00Z" } } } },
@@ -27,7 +27,7 @@ nothing on the left:
           }
         },
         "first_seen": { "min": { "field": "@timestamp" } },
-        "shape": { "terms": { "field": "os.sig", "size": 1 } }
+        "shape": { "terms": { "field": "dsl.sig", "size": 1 } }
       }
     }
   }
@@ -75,7 +75,7 @@ rather not care, log your release alongside the digest:
 
 ```php
 $logger->info('opensearch.search', [
-    'os'      => $formatter->lazy($request, $index),
+    'dsl'     => $formatter->lazy($request, $index),
     'took'    => $response['took'],
     'release' => getenv('APP_RELEASE'),   // 'v2.31.0'
 ]);
@@ -90,7 +90,7 @@ survives a rollback, an overlapping canary, and a deploy nobody wrote down:
   "size": 0,
   "aggs": {
     "shapes": {
-      "terms": { "field": "os.hash", "size": 200 },
+      "terms": { "field": "dsl.hash", "size": 200 },
       "aggs": {
         "releases": { "terms": { "field": "release", "size": 10 } },
         "only_one_release": {

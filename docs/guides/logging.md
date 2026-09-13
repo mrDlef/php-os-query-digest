@@ -116,7 +116,7 @@ Three things worth knowing:
   together are what a regulated deployment wants.
 
 The shipped [dashboard pack](dashboards.md) needs no change: its panels group and
-aggregate on `os.hash` and read `os.sig`. `os.q` appears only in the index
+aggregate on `dsl.hash` and read `dsl.sig`. `dsl.q` appears only in the index
 pattern's field list, so it simply has no values.
 
 ## Ranking what you log, without a log index
