@@ -25,6 +25,7 @@ final class OptionsFromArrayTest extends TestCase
         self::assertSame($defaults->normalization()->level(), $built->normalization()->level());
         self::assertSame($defaults->maxClauses(), $built->maxClauses());
         self::assertSame($defaults->maxValues(), $built->maxValues());
+        self::assertSame($defaults->maxFields(), $built->maxFields());
         self::assertSame($defaults->maxLength(), $built->maxLength());
         self::assertSame($defaults->includeAggNames(), $built->includeAggNames());
         self::assertSame($defaults->emitText(), $built->emitText());
@@ -38,6 +39,7 @@ final class OptionsFromArrayTest extends TestCase
             'normalization' => Normalization::STRUCTURAL,
             'maxClauses' => 3,
             'maxValues' => 2,
+            'maxFields' => 1,
             'maxLength' => 80,
             'indexNormalizer' => IndexNormalizer::IDENTITY,
             'aggNames' => true,
@@ -49,6 +51,7 @@ final class OptionsFromArrayTest extends TestCase
         self::assertSame(Normalization::STRUCTURAL, $options->normalization()->level());
         self::assertSame(3, $options->maxClauses());
         self::assertSame(2, $options->maxValues());
+        self::assertSame(1, $options->maxFields());
         self::assertSame(80, $options->maxLength());
         self::assertSame('q9', $options->hashVersion());
         self::assertSame(8, $options->hashLength());
@@ -72,10 +75,11 @@ final class OptionsFromArrayTest extends TestCase
 
     public function testNullLiftsACap(): void
     {
-        $options = Options::fromArray(['maxClauses' => null, 'maxValues' => null, 'maxLength' => null]);
+        $options = Options::fromArray(['maxClauses' => null, 'maxValues' => null, 'maxFields' => null, 'maxLength' => null]);
 
         self::assertNull($options->maxClauses());
         self::assertNull($options->maxValues());
+        self::assertNull($options->maxFields());
         self::assertNull($options->maxLength());
     }
 
