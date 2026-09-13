@@ -124,7 +124,7 @@ final class ReportPrinter
         return self::thousands((float) $count) . ' ' . $noun . ($count === 1 ? '' : 's');
     }
 
-    public static function duration(?float $millis): string
+    private static function duration(?float $millis): string
     {
         return $millis === null ? '-' : self::thousands($millis);
     }

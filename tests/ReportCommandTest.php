@@ -127,6 +127,7 @@ final class ReportCommandTest extends TestCase
         self::assertIsArray($first);
         self::assertSame('q5:aaaabbbbcccc', $first['hash'] ?? null);
         self::assertSame('browse', $first['kind'] ?? null, 'The logged kind must survive into the report.');
+        self::assertSame('logs-*', $first['idx'] ?? null, 'So must the index it was logged against.');
     }
 
     /**
