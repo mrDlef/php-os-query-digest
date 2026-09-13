@@ -239,6 +239,7 @@ final class DocExampleTest extends TestCase
         'options-index-shipped',
         'options-index-custom',
         'options-index-partial',
+        'options-max-fields',
         'logging-line',
         'transport-record',
         'explain-output',
@@ -283,6 +284,29 @@ final class DocExampleTest extends TestCase
                 $page . ' prints a digest that is not the one this library produces for the request above it.',
             );
         }
+    }
+
+    /**
+     * The two field-list lines in the options guide: the capped one, and the
+     * same search with the cap lifted. The page's claim is that they differ on
+     * the line and agree on the hash, so both halves are checked — a page that
+     * only proved the first would be documenting a fingerprint move.
+     */
+    public function testTheFieldListLinesAreWhatTheCapProduces(): void
+    {
+        $search = ['query' => ['multi_match' => [
+            'query' => 'shoes',
+            'fields' => ['title^10', 'subtitle^5', 'content', 'tags', 'author', 'isbn'],
+        ]]];
+
+        $capped = Formatter::create()->describe($search);
+        $lifted = Formatter::create(Options::create()->withMaxFields(null))->describe($search);
+
+        self::assertSame(
+            [$capped->signature(), $lifted->signature()],
+            self::lines(self::oneBlock('docs/guides/options.md', 'options-max-fields')),
+        );
+        self::assertSame($capped->hash(), $lifted->hash());
     }
 
     /**

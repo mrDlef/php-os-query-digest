@@ -131,33 +131,40 @@ final class DqlRenderer
         $renderer = $profile->values();
         $sigils = $profile->distinguishTypes();
 
+        // Two names for one field, and the split matters: `$shown` is what the
+        // line prints, `$field` is what the value renderer — and through it the
+        // redactor — is keyed on. A redactor deciding whether a value may be
+        // logged must see the fields the query named, never a shortened display
+        // of them.
+        $shown = self::shownField($field, $profile);
+
         switch ($leaf->op()) {
             case LeafNode::OP_EXISTS:
-                return $field . ':*';
+                return $shown . ':*';
 
             case LeafNode::OP_TERM:
-                return $field . ':' . $renderer->scalar($field, reset($values));
+                return $shown . ':' . $renderer->scalar($field, reset($values));
 
             case LeafNode::OP_BOOL_PREFIX:
             case LeafNode::OP_MATCH:
                 // A completion op renders as the op it refines, deliberately —
                 // see LeafNode. Its own name lives in the model, not the line.
-                return $field . ':' . ($sigils ? '~' : '') . $renderer->scalar($field, reset($values));
+                return $shown . ':' . ($sigils ? '~' : '') . $renderer->scalar($field, reset($values));
 
             case LeafNode::OP_PHRASE_PREFIX:
             case LeafNode::OP_PHRASE:
-                return $field . ':' . $renderer->phrase($field, reset($values));
+                return $shown . ':' . $renderer->phrase($field, reset($values));
 
             case LeafNode::OP_PREFIX:
-                return $field . ':' . $renderer->scalar($field, reset($values)) . '*';
+                return $shown . ':' . $renderer->scalar($field, reset($values)) . '*';
 
             case LeafNode::OP_WILDCARD:
                 return $sigils
-                    ? $field . ':*' . $renderer->scalar($field, reset($values)) . '*'
-                    : $field . ':' . $renderer->scalar($field, reset($values));
+                    ? $shown . ':*' . $renderer->scalar($field, reset($values)) . '*'
+                    : $shown . ':' . $renderer->scalar($field, reset($values));
 
             case LeafNode::OP_REGEXP:
-                return $field . ':/' . $renderer->scalar($field, reset($values)) . '/';
+                return $shown . ':/' . $renderer->scalar($field, reset($values)) . '/';
 
             case LeafNode::OP_RAW:
                 $raw = $renderer->raw($field, Arr::str(reset($values)));
@@ -165,13 +172,13 @@ final class DqlRenderer
                 // a marker to stay distinguishable from a plain term.
                 $raw = $sigils ? 'raw(' . $raw . ')' : '(' . $raw . ')';
 
-                return $field === '' ? $raw : $field . ':' . $raw;
+                return $shown === '' ? $raw : $shown . ':' . $raw;
 
             case LeafNode::OP_TERMS:
-                return $field . ':(' . $this->termsValues($field, $values, $profile) . ')';
+                return $shown . ':(' . $this->termsValues($field, $values, $profile) . ')';
 
             case LeafNode::OP_LIKE:
-                return $field . ':like(' . $this->termsValues($field, $values, $profile) . ')';
+                return $shown . ':like(' . $this->termsValues($field, $values, $profile) . ')';
 
             case LeafNode::OP_PARENT_ID:
                 // Reads like the join clauses — `parent_id(blog):7` next to
@@ -185,23 +192,23 @@ final class DqlRenderer
             case LeafNode::OP_NEURAL:
             case LeafNode::OP_RANK_FEATURE:
             case LeafNode::OP_DISTANCE_FEATURE:
-                return $field . ':' . $leaf->op() . '(' . $this->params($field, $values, $profile) . ')';
+                return $shown . ':' . $leaf->op() . '(' . $this->params($field, $values, $profile) . ')';
 
             case LeafNode::OP_GEO_DISTANCE:
-                return $field . ':geo_distance(' . $renderer->scalar($field, reset($values)) . ')';
+                return $shown . ':geo_distance(' . $renderer->scalar($field, reset($values)) . ')';
 
             case LeafNode::OP_GEO_BBOX:
             case LeafNode::OP_GEO_POLYGON:
             case LeafNode::OP_INTERVALS:
                 // Nothing inside is worth a log line: the field and the kind of
                 // clause are the whole shape.
-                return $field . ':' . $leaf->op() . '()';
+                return $shown . ':' . $leaf->op() . '()';
 
             case LeafNode::OP_PERCOLATE:
                 // Rendered without the value renderer, like the shape queries:
                 // the only value it can hold is the closed marker `indexed`,
                 // which says where the document came from, not what it was.
-                return $field . ':percolate(' . implode(',', Arr::strings($values)) . ')';
+                return $shown . ':percolate(' . implode(',', Arr::strings($values)) . ')';
 
             case LeafNode::OP_GEO_SHAPE:
             case LeafNode::OP_XY_SHAPE:
@@ -209,7 +216,7 @@ final class DqlRenderer
                 // the relation survive into the signature: they decide which
                 // documents match, and `within` versus `disjoint` is not a
                 // parameter but the opposite query.
-                return $field . ':' . $leaf->op() . '(' . implode(',', Arr::strings($values)) . ')';
+                return $shown . ':' . $leaf->op() . '(' . implode(',', Arr::strings($values)) . ')';
 
             case LeafNode::OP_EXTENSION:
                 // The label leads the values, so it survives the signature the
@@ -218,7 +225,7 @@ final class DqlRenderer
                 $label = Arr::str(reset($values));
                 $rendered = $label . '(' . $this->params($field, array_slice($values, 1, null, true), $profile) . ')';
 
-                return $field === '' ? $rendered : $field . ':' . $rendered;
+                return $shown === '' ? $rendered : $shown . ':' . $rendered;
 
             case LeafNode::OP_SCRIPT:
                 // The source is a value: it holds thresholds and parameters, so
@@ -226,7 +233,37 @@ final class DqlRenderer
                 return 'script(' . $renderer->raw($field, Arr::str(reset($values))) . ')';
         }
 
-        return $field . ':?';
+        return $shown . ':?';
+    }
+
+    /**
+     * The field list as the line shows it: `title^10|content^5|tags|+3 more`.
+     *
+     * A `multi_match`, a `query_string` and a `more_like_this` join their
+     * fields into the node's single field at parse time, so the cap is applied
+     * on the way out rather than on the tree — the hash renders the same node
+     * through {@see RenderProfile::uncapped()} and still sees every field.
+     *
+     * A field name holding a `|` would be split by this, which is why nothing
+     * but the display is allowed to depend on it.
+     */
+    private static function shownField(string $field, RenderProfile $profile): string
+    {
+        $max = $profile->maxFields();
+
+        if ($max === null || strpos($field, '|') === false) {
+            return $field;
+        }
+
+        $fields = explode('|', $field);
+        if (count($fields) <= $max) {
+            return $field;
+        }
+
+        $kept = array_slice($fields, 0, max(0, $max));
+        $kept[] = '+' . (count($fields) - count($kept)) . ' more';
+
+        return implode('|', $kept);
     }
 
     /**

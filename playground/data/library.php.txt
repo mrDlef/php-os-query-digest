@@ -1524,6 +1524,7 @@ namespace MrDlef\OsQueryDigest {
                 true,
                 $this->options->maxClauses(),
                 $this->options->maxValues(),
+                $this->options->maxFields(),
                 $normalization->erasesCardinality(),
                 $normalization->erasesPagination(),
                 $this->options->includeAggNames(),
@@ -1538,6 +1539,7 @@ namespace MrDlef\OsQueryDigest {
                     false,
                     $this->options->maxClauses(),
                     $this->options->maxValues(),
+                    $this->options->maxFields(),
                     false,
                     false,
                     $this->options->includeAggNames(),
@@ -2330,6 +2332,7 @@ namespace MrDlef\OsQueryDigest {
             'normalization',
             'maxClauses',
             'maxValues',
+            'maxFields',
             'maxLength',
             'indexNormalizer',
             'aggNames',
@@ -2346,6 +2349,8 @@ namespace MrDlef\OsQueryDigest {
         private ?int $maxClauses = 12;
 
         private ?int $maxValues = 5;
+
+        private ?int $maxFields = 3;
 
         private ?int $maxLength = 512;
 
@@ -2429,6 +2434,26 @@ namespace MrDlef\OsQueryDigest {
         {
             $clone = clone $this;
             $clone->maxValues = $maxValues;
+
+            return $clone;
+        }
+
+        /**
+         * Maximum fields rendered in the field list of a `multi_match`,
+         * `query_string` or `more_like_this`, before the rest is summarised as
+         * `+N more`. Null disables the limit.
+         *
+         * Capped tighter than the other limits because a field list is the least
+         * discriminating part of a search: it is the schema, near-constant across
+         * an application's queries, while the filters beside it are what vary. Left
+         * uncapped it takes the display budget from them — on a search built over a
+         * boosted field list, more than half the rendered signature, which is
+         * exactly the half that says nothing.
+         */
+        public function withMaxFields(?int $maxFields): self
+        {
+            $clone = clone $this;
+            $clone->maxFields = $maxFields;
 
             return $clone;
         }
@@ -2538,6 +2563,11 @@ namespace MrDlef\OsQueryDigest {
             return $this->maxValues;
         }
 
+        public function maxFields(): ?int
+        {
+            return $this->maxFields;
+        }
+
         public function maxLength(): ?int
         {
             return $this->maxLength;
@@ -2614,6 +2644,8 @@ namespace MrDlef\OsQueryDigest {
                     return $this->withMaxClauses(self::asIntOrNull($key, $value));
                 case 'maxValues':
                     return $this->withMaxValues(self::asIntOrNull($key, $value));
+                case 'maxFields':
+                    return $this->withMaxFields(self::asIntOrNull($key, $value));
                 case 'maxLength':
                     return $this->withMaxLength(self::asIntOrNull($key, $value));
                 case 'indexNormalizer':
@@ -4313,33 +4345,40 @@ namespace MrDlef\OsQueryDigest\Render {
             $renderer = $profile->values();
             $sigils = $profile->distinguishTypes();
 
+            // Two names for one field, and the split matters: `$shown` is what the
+            // line prints, `$field` is what the value renderer — and through it the
+            // redactor — is keyed on. A redactor deciding whether a value may be
+            // logged must see the fields the query named, never a shortened display
+            // of them.
+            $shown = self::shownField($field, $profile);
+
             switch ($leaf->op()) {
                 case LeafNode::OP_EXISTS:
-                    return $field . ':*';
+                    return $shown . ':*';
 
                 case LeafNode::OP_TERM:
-                    return $field . ':' . $renderer->scalar($field, reset($values));
+                    return $shown . ':' . $renderer->scalar($field, reset($values));
 
                 case LeafNode::OP_BOOL_PREFIX:
                 case LeafNode::OP_MATCH:
                     // A completion op renders as the op it refines, deliberately —
                     // see LeafNode. Its own name lives in the model, not the line.
-                    return $field . ':' . ($sigils ? '~' : '') . $renderer->scalar($field, reset($values));
+                    return $shown . ':' . ($sigils ? '~' : '') . $renderer->scalar($field, reset($values));
 
                 case LeafNode::OP_PHRASE_PREFIX:
                 case LeafNode::OP_PHRASE:
-                    return $field . ':' . $renderer->phrase($field, reset($values));
+                    return $shown . ':' . $renderer->phrase($field, reset($values));
 
                 case LeafNode::OP_PREFIX:
-                    return $field . ':' . $renderer->scalar($field, reset($values)) . '*';
+                    return $shown . ':' . $renderer->scalar($field, reset($values)) . '*';
 
                 case LeafNode::OP_WILDCARD:
                     return $sigils
-                        ? $field . ':*' . $renderer->scalar($field, reset($values)) . '*'
-                        : $field . ':' . $renderer->scalar($field, reset($values));
+                        ? $shown . ':*' . $renderer->scalar($field, reset($values)) . '*'
+                        : $shown . ':' . $renderer->scalar($field, reset($values));
 
                 case LeafNode::OP_REGEXP:
-                    return $field . ':/' . $renderer->scalar($field, reset($values)) . '/';
+                    return $shown . ':/' . $renderer->scalar($field, reset($values)) . '/';
 
                 case LeafNode::OP_RAW:
                     $raw = $renderer->raw($field, Arr::str(reset($values)));
@@ -4347,13 +4386,13 @@ namespace MrDlef\OsQueryDigest\Render {
                     // a marker to stay distinguishable from a plain term.
                     $raw = $sigils ? 'raw(' . $raw . ')' : '(' . $raw . ')';
 
-                    return $field === '' ? $raw : $field . ':' . $raw;
+                    return $shown === '' ? $raw : $shown . ':' . $raw;
 
                 case LeafNode::OP_TERMS:
-                    return $field . ':(' . $this->termsValues($field, $values, $profile) . ')';
+                    return $shown . ':(' . $this->termsValues($field, $values, $profile) . ')';
 
                 case LeafNode::OP_LIKE:
-                    return $field . ':like(' . $this->termsValues($field, $values, $profile) . ')';
+                    return $shown . ':like(' . $this->termsValues($field, $values, $profile) . ')';
 
                 case LeafNode::OP_PARENT_ID:
                     // Reads like the join clauses — `parent_id(blog):7` next to
@@ -4367,23 +4406,23 @@ namespace MrDlef\OsQueryDigest\Render {
                 case LeafNode::OP_NEURAL:
                 case LeafNode::OP_RANK_FEATURE:
                 case LeafNode::OP_DISTANCE_FEATURE:
-                    return $field . ':' . $leaf->op() . '(' . $this->params($field, $values, $profile) . ')';
+                    return $shown . ':' . $leaf->op() . '(' . $this->params($field, $values, $profile) . ')';
 
                 case LeafNode::OP_GEO_DISTANCE:
-                    return $field . ':geo_distance(' . $renderer->scalar($field, reset($values)) . ')';
+                    return $shown . ':geo_distance(' . $renderer->scalar($field, reset($values)) . ')';
 
                 case LeafNode::OP_GEO_BBOX:
                 case LeafNode::OP_GEO_POLYGON:
                 case LeafNode::OP_INTERVALS:
                     // Nothing inside is worth a log line: the field and the kind of
                     // clause are the whole shape.
-                    return $field . ':' . $leaf->op() . '()';
+                    return $shown . ':' . $leaf->op() . '()';
 
                 case LeafNode::OP_PERCOLATE:
                     // Rendered without the value renderer, like the shape queries:
                     // the only value it can hold is the closed marker `indexed`,
                     // which says where the document came from, not what it was.
-                    return $field . ':percolate(' . implode(',', Arr::strings($values)) . ')';
+                    return $shown . ':percolate(' . implode(',', Arr::strings($values)) . ')';
 
                 case LeafNode::OP_GEO_SHAPE:
                 case LeafNode::OP_XY_SHAPE:
@@ -4391,7 +4430,7 @@ namespace MrDlef\OsQueryDigest\Render {
                     // the relation survive into the signature: they decide which
                     // documents match, and `within` versus `disjoint` is not a
                     // parameter but the opposite query.
-                    return $field . ':' . $leaf->op() . '(' . implode(',', Arr::strings($values)) . ')';
+                    return $shown . ':' . $leaf->op() . '(' . implode(',', Arr::strings($values)) . ')';
 
                 case LeafNode::OP_EXTENSION:
                     // The label leads the values, so it survives the signature the
@@ -4400,7 +4439,7 @@ namespace MrDlef\OsQueryDigest\Render {
                     $label = Arr::str(reset($values));
                     $rendered = $label . '(' . $this->params($field, array_slice($values, 1, null, true), $profile) . ')';
 
-                    return $field === '' ? $rendered : $field . ':' . $rendered;
+                    return $shown === '' ? $rendered : $shown . ':' . $rendered;
 
                 case LeafNode::OP_SCRIPT:
                     // The source is a value: it holds thresholds and parameters, so
@@ -4408,7 +4447,37 @@ namespace MrDlef\OsQueryDigest\Render {
                     return 'script(' . $renderer->raw($field, Arr::str(reset($values))) . ')';
             }
 
-            return $field . ':?';
+            return $shown . ':?';
+        }
+
+        /**
+         * The field list as the line shows it: `title^10|content^5|tags|+3 more`.
+         *
+         * A `multi_match`, a `query_string` and a `more_like_this` join their
+         * fields into the node's single field at parse time, so the cap is applied
+         * on the way out rather than on the tree — the hash renders the same node
+         * through {@see RenderProfile::uncapped()} and still sees every field.
+         *
+         * A field name holding a `|` would be split by this, which is why nothing
+         * but the display is allowed to depend on it.
+         */
+        private static function shownField(string $field, RenderProfile $profile): string
+        {
+            $max = $profile->maxFields();
+
+            if ($max === null || strpos($field, '|') === false) {
+                return $field;
+            }
+
+            $fields = explode('|', $field);
+            if (count($fields) <= $max) {
+                return $field;
+            }
+
+            $kept = array_slice($fields, 0, max(0, $max));
+            $kept[] = '+' . (count($fields) - count($kept)) . ' more';
+
+            return implode('|', $kept);
         }
 
         /**
@@ -4730,6 +4799,9 @@ namespace MrDlef\OsQueryDigest\Render {
         /** @var int|null max values inside a terms clause, null = unlimited */
         private ?int $maxValues;
 
+        /** @var int|null max fields in a multi-field clause, null = unlimited */
+        private ?int $maxFields;
+
         /** @var bool collapse a terms list to a single placeholder */
         private bool $eraseCardinality;
 
@@ -4743,6 +4815,7 @@ namespace MrDlef\OsQueryDigest\Render {
             bool $distinguishTypes = false,
             ?int $maxClauses = null,
             ?int $maxValues = null,
+            ?int $maxFields = null,
             bool $eraseCardinality = false,
             bool $erasePagination = false,
             bool $includeAggNames = false
@@ -4751,6 +4824,7 @@ namespace MrDlef\OsQueryDigest\Render {
             $this->distinguishTypes = $distinguishTypes;
             $this->maxClauses = $maxClauses;
             $this->maxValues = $maxValues;
+            $this->maxFields = $maxFields;
             $this->eraseCardinality = $eraseCardinality;
             $this->erasePagination = $erasePagination;
             $this->includeAggNames = $includeAggNames;
@@ -4774,6 +4848,11 @@ namespace MrDlef\OsQueryDigest\Render {
         public function maxValues(): ?int
         {
             return $this->maxValues;
+        }
+
+        public function maxFields(): ?int
+        {
+            return $this->maxFields;
         }
 
         public function eraseCardinality(): bool
@@ -4800,6 +4879,7 @@ namespace MrDlef\OsQueryDigest\Render {
             return new self(
                 $this->values,
                 $this->distinguishTypes,
+                null,
                 null,
                 null,
                 $this->eraseCardinality,

@@ -25,6 +25,42 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 | `q5:` | v0.13.0 | the search parameters an `['index' => …, 'body' => …]` envelope carries beside `body` are read instead of dropped |
 | `q5x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
+## v0.15.0 — unreleased
+
+_the field list of a `multi_match` stops eating the line_
+
+**Fingerprints:** `q5:` unchanged. The new cap is a display limit, and display
+limits are lifted before the hash input is rendered, so every pinned fixture
+kept its twelve hex characters.
+
+### A field list is not what tells two searches apart
+
+A `multi_match` — and `query_string`, and `more_like_this` — carries the list of
+fields it searches, boosts included. It is the least discriminating part of a
+search: the fields are the schema, near enough the same on every search an
+application makes, while the filters beside them are what vary. Nothing capped
+it, so on a search built over one it took the display budget from the clauses
+that did the discriminating.
+
+Measured against a week of a real multi-tenant deployment, 603 544 searches:
+field lists took **58 % of the rendered signature** at the median, 79 % of
+signatures hit the 512-character cap, and **76 % of records printed a line that
+stood for more than one fingerprint** — one of them for 860 distinct shapes and
+28 % of the week's traffic. The hashes were right and told those shapes apart;
+the line beside them could not.
+
+So the list is capped at three, tighter than the twelve sibling clauses and the
+five terms values, and the rest is summarised the way they are:
+
+```
+q=(title^10|subtitle^5|content|+3 more:~?)
+```
+
+`Options::withMaxFields()` sets it, `null` lifts it, and `--max-fields=N` is the
+CLI spelling. The value renderer — and through it a redactor — is still handed
+the fields the query named, never the shortened display of them: whether a value
+may be logged is not a question to answer from a truncated string.
+
 ## v0.14.0 — 2026-08-28
 
 _what kind of work a search is, the report the CLI was keeping to itself, and

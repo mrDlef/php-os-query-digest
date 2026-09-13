@@ -31,6 +31,7 @@ final class FingerprintFlags
         '-n', '--normalization',
         '--max-clauses',
         '--max-values',
+        '--max-fields',
         '--max-length',
         '--hash-version',
         '--hash-length',
@@ -58,6 +59,9 @@ final class FingerprintFlags
                 break;
             case '--max-values':
                 $spec['maxValues'] = self::cap($name, $value);
+                break;
+            case '--max-fields':
+                $spec['maxFields'] = self::cap($name, $value);
                 break;
             case '--max-length':
                 $spec['maxLength'] = self::cap($name, $value);
@@ -106,6 +110,7 @@ Fingerprint:
   -n, --normalization=L    {$levels} (default: values)
       --max-clauses=N      sibling clauses rendered per level, or `none`
       --max-values=N       values rendered inside a terms clause, or `none`
+      --max-fields=N       fields rendered in a multi-field clause, or `none`
       --max-length=N       hard cap on the rendered lines, or `none`
       --agg-names          keep user-given aggregation names
       --raw-index          do not collapse logs-2026.08.13 to logs-*
