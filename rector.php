@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Rector\CodeQuality\Rector\ClassMethod\LocallyCalledStaticMethodToNonStaticRector;
+use Rector\CodeQuality\Rector\Concat\DirnameDirConcatStringToDirectStringPathRector;
 use Rector\CodeQuality\Rector\Identical\FlipTypeControlToUseExclusiveTypeRector;
 use Rector\Config\RectorConfig;
 use Rector\DeadCode\Rector\Switch_\RemoveDuplicatedCaseInSwitchRector;
@@ -63,6 +64,12 @@ return RectorConfig::configure()
         // method touches no state. Demoting it to an instance method throws
         // that away to satisfy a metric nobody asked for.
         LocallyCalledStaticMethodToNonStaticRector::class,
+
+        // `dirname(__DIR__) . '/src'` names the directory it means. Rewriting
+        // it to `__DIR__ . '/../src'` hands the reader a `..` to resolve, in
+        // test helpers whose whole job is to point at a path — and buys a
+        // function call that runs once per test run.
+        DirnameDirConcatStringToDirectStringPathRector::class,
 
         // The `switch` in QueryParser is organised by DSL family, and reads as
         // the list of types the library understands. Merging `fuzzy` into the
