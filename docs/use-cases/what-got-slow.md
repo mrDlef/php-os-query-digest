@@ -14,10 +14,10 @@ Rank the shapes by p95 and take the worst:
   "size": 0,
   "aggs": {
     "shapes": {
-      "terms": { "field": "os.hash", "size": 3, "order": { "slow.95": "desc" } },
+      "terms": { "field": "dsl.hash", "size": 3, "order": { "slow.95": "desc" } },
       "aggs": {
         "slow": { "percentiles": { "field": "took", "percents": [95] } },
-        "shape": { "terms": { "field": "os.sig", "size": 1 } }
+        "shape": { "terms": { "field": "dsl.sig", "size": 1 } }
       }
     }
   }
@@ -49,7 +49,7 @@ Split each shape's own history into two windows and compare it to itself:
   "size": 0,
   "aggs": {
     "shapes": {
-      "terms": { "field": "os.hash", "size": 50 },
+      "terms": { "field": "dsl.hash", "size": 50 },
       "aggs": {
         "before": {
           "filter": { "range": { "@timestamp": { "lt": "2026-08-19T14:00:00Z" } } },
@@ -74,7 +74,7 @@ Split each shape's own history into two windows and compare it to itself:
         "worst": {
           "bucket_sort": { "sort": [ { "slowdown": { "order": "desc" } } ], "size": 3 }
         },
-        "shape": { "terms": { "field": "os.sig", "size": 1 } }
+        "shape": { "terms": { "field": "dsl.sig", "size": 1 } }
       }
     }
   }
@@ -128,11 +128,11 @@ a more surprising answer. Rank by the total time each shape spent:
   "size": 0,
   "aggs": {
     "shapes": {
-      "terms": { "field": "os.hash", "size": 5, "order": { "total_ms": "desc" } },
+      "terms": { "field": "dsl.hash", "size": 5, "order": { "total_ms": "desc" } },
       "aggs": {
         "total_ms": { "sum": { "field": "took" } },
         "median": { "percentiles": { "field": "took", "percents": [50] } },
-        "shape": { "terms": { "field": "os.sig", "size": 1 } }
+        "shape": { "terms": { "field": "dsl.sig", "size": 1 } }
       }
     }
   }
@@ -159,7 +159,7 @@ cluster's afternoon actually go".
 ## Then read it, or run it
 
 You have a signature, which is usually enough to recognise the query. When it is
-not, `os.q` is the same line with the real values still in it — paste the `q=(…)`
+not, `dsl.q` is the same line with the real values still in it — paste the `q=(…)`
 segment into the Dashboards search bar and you are looking at the query itself.
 
 ```

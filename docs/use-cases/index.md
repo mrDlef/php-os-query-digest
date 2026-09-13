@@ -4,7 +4,7 @@ Everything on these pages comes from one habit: **log the hash next to `took`**.
 
 ```php
 $logger->info('opensearch.search', [
-    'os'   => $formatter->lazy($request, $index),
+    'dsl'  => $formatter->lazy($request, $index),
     'took' => $response['took'],
 ]);
 ```
@@ -36,9 +36,9 @@ curl -XPUT localhost:9200/_index_template/os-query-digest \
 your own field, not the digest's — drop it if you do not log one. Everything
 else on these pages needs the four `os.*` fields and `took`.
 
-`os.hash` and `os.sig` are **`keyword`**, not `text`. A `text` field is analysed,
+`dsl.hash` and `dsl.sig` are **`keyword`**, not `text`. A `text` field is analysed,
 so a `terms` aggregation on it returns `logs`, `timestamp`, `service` — the words
-in your signature rather than the signature. `os.q` is the one field that *should*
+in your signature rather than the signature. `dsl.q` is the one field that *should*
 be `text`: it holds real values, and searching it is the point.
 
 `ignore_above` on the signature is a safety valve, not a limit you should hit. A
@@ -46,7 +46,7 @@ signature longer than a kilobyte would stop being indexed rather than fail the
 document, which is the right way round for a log record.
 
 !!! warning "The `q` field keeps your literal values"
-    `os.q` is the line with real values in it, so a `term` on an email address
+    `dsl.q` is the line with real values in it, so a `term` on an email address
     puts that address in your log index. The signature and the hash never do.
     If that matters, log `sig` and `hash` and drop `q` — every page here works
     without it. See [the threat model](https://github.com/mrDlef/php-os-query-digest/blob/main/SECURITY.md).

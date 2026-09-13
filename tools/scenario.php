@@ -69,7 +69,7 @@ function osQueryDigestScenario(string $index): array
                     '@timestamp' => gmdate('c', $base + $hour * 3600 + intdiv($i * 3600, $rate)),
                     'release' => $hour >= SCENARIO_RELEASE_HOUR ? 'v2.31.0' : 'v2.30.1',
                     'took' => (int) round($took * $jitter),
-                    'os' => $digest,
+                    'dsl' => $digest,
                 ]);
             }
         }

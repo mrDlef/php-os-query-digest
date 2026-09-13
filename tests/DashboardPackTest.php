@@ -126,7 +126,7 @@ final class DashboardPackTest extends TestCase
         self::assertSame(
             ['hash', 'idx', 'kind', 'q', 'sig'],
             self::digestFields(),
-            'The digest no longer emits the five fields the template maps under `os`.',
+            'The digest no longer emits the five fields the template maps under `dsl`.',
         );
 
         foreach (array_keys(self::VARIANTS) as $variant) {
@@ -233,7 +233,7 @@ final class DashboardPackTest extends TestCase
                     self::assertStringContainsString('"' . $needle . '"', $body, $id . ' lost its ' . $needle);
                 }
 
-                self::assertStringContainsString('"os.hash"', $body, $id . ' no longer groups by fingerprint.');
+                self::assertStringContainsString('"dsl.hash"', $body, $id . ' no longer groups by fingerprint.');
             }
         }
     }

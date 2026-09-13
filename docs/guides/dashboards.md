@@ -5,7 +5,7 @@ into the console. This is the same four questions as a dashboard you import
 once.
 
 ```bash
-# 1. the mapping, so os.hash aggregates instead of falling apart into words
+# 1. the mapping, so dsl.hash aggregates instead of falling apart into words
 curl -XPUT localhost:9200/_index_template/os-query-digest \
      -H 'Content-Type: application/json' \
      --data-binary @resources/dashboards/index-template.json
@@ -23,6 +23,18 @@ Both files live in
 in the package you already installed, so `vendor/mr-dlef/os-query-digest/resources/dashboards/`
 is the path on a real project.
 
+!!! warning "The fields moved in v0.15.0"
+    They were `os.*` and are now **`dsl.*`**. The key is something you type into
+    queries and panels every day, so it has to stay true for as long as you keep
+    them — and the library digests Query DSL, which OpenSearch, Elasticsearch and
+    every API compatible with them speak, rather than one named engine.
+
+    Coming from an earlier version: re-apply the index template, re-import the
+    pack, and either re-index or keep the old field mapped alongside. Nothing
+    about your **fingerprints** changed — `q5:` is untouched, so a hash stored
+    under `os.hash` and one stored under `dsl.hash` are the same hash and can be
+    compared across the move.
+
 !!! warning "Two files, and it is not a mistake"
     Dashboards **2.x bundles vega-lite 4** and **3.x bundles vega-lite 6**, and
     the plugin refuses a specification whose `$schema` names the other one. The
@@ -34,19 +46,19 @@ is the path on a real project.
 
 | Panel | The question | How |
 |---|---|---|
-| **Where the time goes** | which shape costs the cluster most | `terms` on `os.hash`, ordered by `sum(took)` |
+| **Where the time goes** | which shape costs the cluster most | `terms` on `dsl.hash`, ordered by `sum(took)` |
 | **p95 by shape over time** | when a shape got slow | `date_histogram`, split by shape |
 | **What regressed** | which shape got worse, against itself | `bucket_script` over two windows |
 | **Shapes the release added** | what is new since an hour ago | `bucket_selector` on an empty before-window |
 
-No panel reads `os.q`. All four group on `os.hash` and label with `os.sig`, so
+No panel reads `dsl.q`. All four group on `dsl.hash` and label with `dsl.sig`, so
 the pack works unchanged under
 [`withText(false)`](logging.md#when-the-values-may-not-leave-the-building) — the
 field is then simply absent from the records, and it appears in the pack only in
 the index pattern's field list.
 
-`os.kind` is mapped as a keyword and no shipped panel groups on it either. It is
-there so that a filter — `os.kind: suggest` — narrows all four panels at once to
+`dsl.kind` is mapped as a keyword and no shipped panel groups on it either. It is
+there so that a filter — `dsl.kind: suggest` — narrows all four panels at once to
 one kind of work, which is the question the shipped ones cannot ask on their
 own. See [Kinds](../reference/kinds.md).
 
@@ -81,7 +93,7 @@ of that:
 - **the aggregation each Vega panel sends is executed** against live OpenSearch
   2.19.6 and 3.8.0 nodes, on the scenario those pages describe, and has to come
   back with the shape the page says it should;
-- **the shipped index template is applied by a real cluster**, and `os.hash` is
+- **the shipped index template is applied by a real cluster**, and `dsl.hash` is
   checked to come out a `keyword`;
 - every field the pack names is checked against that template *and* against
   what the digest actually emits, so a panel cannot aggregate on a field this

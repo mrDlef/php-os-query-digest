@@ -27,11 +27,31 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 
 ## v0.15.0 — unreleased
 
-_the field list of a `multi_match` stops eating the line_
+_the field list of a `multi_match` stops eating the line, and the logged fields
+stop being named after one engine_
 
-**Fingerprints:** `q5:` unchanged. The new cap is a display limit, and display
+**Fingerprints:** `q5:` unchanged. The cap is a display limit, and display
 limits are lifted before the hash input is rendered, so every pinned fixture
-kept its twelve hex characters.
+kept its twelve hex characters. The renamed log fields are the record's
+envelope, never the hash input — **a hash stored under `os.hash` and one stored
+under `dsl.hash` are the same hash.**
+
+### Breaking: the logged fields are `dsl.*`, not `os.*`
+
+`LoggingObserver` writes its digest under `dsl` and the shipped index template
+maps it there. `os` was named after OpenSearch, and the library digests **Query
+DSL** — what OpenSearch, Elasticsearch and every API compatible with them speak.
+A key people type into queries and panels every day has to stay true for as long
+as they keep them, and this one would have gone stale the day a second engine
+was supported. The package keeps its own name: that is a brand, not a field
+anyone greps.
+
+Coming from an earlier version: re-apply
+`resources/dashboards/index-template.json`, re-import the pack, and either
+re-index or keep the old field mapped beside the new one. Because the
+fingerprints did not move, the two spellings can be compared across the change —
+a `terms` aggregation on the old field and one on the new return the same
+buckets for the same searches.
 
 ### A field list is not what tells two searches apart
 

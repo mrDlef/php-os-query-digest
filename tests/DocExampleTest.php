@@ -322,8 +322,8 @@ final class DocExampleTest extends TestCase
 
             $printed = self::decode(self::oneBlock($page, $marker));
 
-            // A record is the digest, or carries it under an "os" key.
-            $actual = is_array($printed['os'] ?? null) ? $printed['os'] : $printed;
+            // A record is the digest, or carries it under a "dsl" key.
+            $actual = is_array($printed['dsl'] ?? null) ? $printed['dsl'] : $printed;
 
             self::assertSame(
                 $digest->toArray(),

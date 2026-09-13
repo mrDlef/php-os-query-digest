@@ -315,7 +315,7 @@ batch, and when the response body could not be read without disturbing it.
 __construct(LoggerInterface $logger, string $level = LogLevel::INFO, string $message = 'opensearch.search')
 ```
 
-Writes one PSR-3 record per search, with `os` and `took` in the shape the
+Writes one PSR-3 record per search, with `dsl` and `took` in the shape the
 [dashboard pack](../guides/dashboards.md) maps.
 
 ---
