@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace MrDlef\OsQueryDigest\Cli;
 
 use MrDlef\OsQueryDigest\Analysis\Report;
-use MrDlef\OsQueryDigest\Analysis\Shape;
 use MrDlef\OsQueryDigest\Exception\InvalidOptionException;
 use MrDlef\OsQueryDigest\Exception\InvalidQueryException;
 use MrDlef\OsQueryDigest\Formatter;
@@ -304,7 +303,7 @@ final class SlowlogCommand
         if ($report->count() === 0) {
             $this->write(
                 $this->stderr,
-                $this->name . ': no search record in ' . self::plural($lines, 'line') . ".\n"
+                $this->name . ': no search record in ' . ReportPrinter::plural($lines, 'line') . ".\n"
                 . "Expected a slow log: plain `… source[{…}] …` lines, or the JSON appender's `source` field.\n"
                 . 'A file of bare query bodies is `' . $this->base . " --ndjson` instead.\n",
             );
@@ -316,19 +315,19 @@ final class SlowlogCommand
         $kept = $top === null ? $ranked : $report->top($top, $sort);
 
         if ($json) {
-            $encoded = json_encode($kept, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-            if ($encoded === false) {
+            $encoded = ReportPrinter::json($kept);
+            if ($encoded === null) {
                 $this->write($this->stderr, $this->name . ": the report is not valid UTF-8, so it cannot be encoded as JSON\n");
 
                 return Command::INVALID_INPUT;
             }
-            $this->write($this->stdout, $encoded . "\n");
+            $this->write($this->stdout, $encoded);
         } else {
             $this->write(
                 $this->stdout,
-                self::summary($lines, $records, $failed, $otherPhase, $report)
-                . self::table($kept, $sort)
-                . self::footer(count($ranked), count($kept)),
+                ReportPrinter::summary($lines, $records, $report, self::notes($failed, $otherPhase))
+                . ReportPrinter::table($kept, $sort)
+                . ReportPrinter::footer(count($ranked), count($kept)),
             );
         }
 
@@ -341,125 +340,22 @@ final class SlowlogCommand
         return ($labelled && $file !== '-' ? $file . ' ' : '') . 'line ' . $number;
     }
 
-    private static function summary(
-        int $lines,
-        int $records,
-        int $failed,
-        int $otherPhase,
-        Report $report
-    ): string {
-        $summary = sprintf(
-            '%s, %s, %s, %s ms total',
-            self::plural($lines, 'line'),
-            self::plural($records, 'record'),
-            self::plural($report->count(), 'shape'),
-            self::thousands($report->total()),
-        );
-
+    /**
+     * What this file made of its own input, for the header line.
+     *
+     * @return array<int,string>
+     */
+    private static function notes(int $failed, int $otherPhase): array
+    {
         $notes = [];
         if ($otherPhase > 0) {
-            $notes[] = sprintf('%s from another phase, see --phase', self::plural($otherPhase, 'record'));
+            $notes[] = sprintf('%s from another phase, see --phase', ReportPrinter::plural($otherPhase, 'record'));
         }
         if ($failed > 0) {
-            $notes[] = sprintf('%s unreadable, reported above', self::thousands((float) $failed));
-        }
-        if ($notes !== []) {
-            $summary .= ' (' . implode('; ', $notes) . ')';
+            $notes[] = sprintf('%s unreadable, reported above', ReportPrinter::thousands((float) $failed));
         }
 
-        return $summary . "\n\n";
-    }
-
-    /**
-     * @param array<int,Shape> $shapes
-     */
-    private static function table(array $shapes, string $sort): string
-    {
-        $headers = ['count', 'total ms', 'mean', 'p95', 'max'];
-        $rows = [];
-
-        foreach ($shapes as $shape) {
-            $rows[] = [
-                self::thousands((float) $shape->count()),
-                self::duration($shape->measured() === 0 ? null : $shape->total()),
-                self::duration($shape->mean()),
-                self::duration($shape->p95()),
-                self::duration($shape->max()),
-            ];
-        }
-
-        // The column the ranking used is starred, so a table pasted into a
-        // ticket still says what it was ordered by.
-        $ranked = $sort === 'total' ? 'total ms' : $sort;
-        foreach ($headers as $column => $header) {
-            if ($header === $ranked) {
-                $headers[$column] = $header . '*';
-            }
-        }
-
-        $widths = [];
-        foreach ($headers as $column => $header) {
-            $width = strlen($header);
-            foreach ($rows as $row) {
-                $width = max($width, strlen($row[$column]));
-            }
-            $widths[$column] = $width;
-        }
-
-        $out = '  ' . self::row($headers, $widths) . "  shape\n";
-        $indent = 2 + array_sum($widths) + 2 * count($widths);
-
-        foreach ($shapes as $position => $shape) {
-            $out .= '  ' . self::row($rows[$position], $widths) . '  ' . $shape->hash() . "\n"
-                . str_repeat(' ', $indent) . $shape->signature() . "\n";
-        }
-
-        return $out;
-    }
-
-    /**
-     * @param array<int,string> $cells
-     * @param array<int,int>    $widths
-     */
-    private static function row(array $cells, array $widths): string
-    {
-        $padded = [];
-        foreach ($cells as $column => $cell) {
-            $padded[] = str_pad($cell, $widths[$column], ' ', STR_PAD_LEFT);
-        }
-
-        return implode('  ', $padded);
-    }
-
-    private static function footer(int $total, int $kept): string
-    {
-        if ($kept >= $total) {
-            return '';
-        }
-
-        $hidden = $total - $kept;
-
-        return sprintf(
-            "\n%s more %s (--top none for all)\n",
-            self::thousands((float) $hidden),
-            $hidden === 1 ? 'shape' : 'shapes',
-        );
-    }
-
-    private static function plural(int $count, string $noun): string
-    {
-        return self::thousands((float) $count) . ' ' . $noun . ($count === 1 ? '' : 's');
-    }
-
-    private static function duration(?float $millis): string
-    {
-        return $millis === null ? '-' : self::thousands($millis);
-    }
-
-    /** Milliseconds, whole: the appenders report them whole. */
-    private static function thousands(float $value): string
-    {
-        return number_format(round($value), 0, '.', ',');
+        return $notes;
     }
 
     /**

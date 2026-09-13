@@ -1901,11 +1901,26 @@ namespace MrDlef\OsQueryDigest {
         }
 
         /**
-         * Reading a stored record back is a string comparison against the constants
-         * above — there is deliberately no `named()` here. A kind is minted by this
-         * library, and a constructor taking a name would have to decide what a name
-         * from an older release means, which is a promise nothing needs yet.
+         * A kind read back from a record this library wrote.
+         *
+         * This used to be refused: a name-taking constructor has to decide what a
+         * name from another release means, and nothing needed that promise. The
+         * `report` sub-command needs it — it ranks digests it did not mint, and
+         * dropping their kind would throw away the one field that says where the
+         * load goes.
+         *
+         * **An unrecognised name is {@see unknown()}, not an error**, which is the
+         * difference between this and {@see Normalization::fromLevel()} or
+         * {@see IndexNormalizer::fromMode()}. Those read *configuration*, where a
+         * typo must be loud. This reads *data*, where a kind minted by a newer
+         * release must not stop a report about the shapes beside it — and `unknown`
+         * is the honest answer to a name this version cannot place.
          */
+        public static function fromName(string $name): self
+        {
+            return in_array($name, self::KINDS, true) ? new self($name) : self::unknown();
+        }
+
         public function is(string $name): bool
         {
             return $this->name === $name;

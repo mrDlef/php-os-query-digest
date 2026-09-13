@@ -28,13 +28,51 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 ## v0.15.0 — unreleased
 
 _the field list of a `multi_match` stops eating the line, the logged fields stop
-being named after one engine, and a record can be flat_
+being named after one engine, a record can be flat, and the digests you already
+log can be ranked without writing any code_
 
 **Fingerprints:** `q5:` unchanged. The cap is a display limit, and display
 limits are lifted before the hash input is rendered, so every pinned fixture
 kept its twelve hex characters. The renamed log fields are the record's
 envelope, never the hash input — **a hash stored under `os.hash` and one stored
 under `dsl.hash` are the same hash.**
+
+### `report` — rank the digests your application already logs
+
+`slowlog` reads what the cluster wrote. This reads what *you* wrote:
+
+```bash
+os-query-digest report /var/log/app/*.log
+os-query-digest report --key-prefix=q_ --text-key=q --took-key=duration_ms app.log
+```
+
+One JSON object per line, grouped by the fingerprint each record already
+carries. `Analysis\Report` was public and documented for exactly this stream,
+and the only way to feed it was to write PHP; now there is a front for it.
+
+**Nothing is re-parsed**, and that is the design rather than an optimisation.
+The log has no request body left, and re-deriving hashes under today's rules
+would group a year of records by a rule they were never grouped by. It also
+makes it quick — 875 MB and 603,544 lines in under four seconds.
+
+The defaults read what `RecordLayout::flat()` writes. Everything else is a
+matter of naming keys — `--hash-key`, `--sig-key`, `--text-key`, `--kind-key`,
+`--index-key`, `--took-key`, `--time-key` — and **a dotted key walks into a
+nested object**, so `--key-prefix=dsl.` reads the nested spelling with the same
+reader. Only the fingerprint is required: a file with no durations is ranked by
+count, with a note in the header rather than a column of zeroes.
+
+Two things came with it:
+
+- **`Kind::fromName()`**, which the class previously refused on the grounds that
+  nothing needed to read a kind back. The report does, and dropping it would
+  throw away the field that says where the load goes. An unrecognised name is
+  `unknown` rather than an error — this reads data, not configuration, and a
+  kind minted by a newer release must not stop a report about the shapes beside
+  it.
+- The ranking table moved to a `Cli\ReportPrinter` shared with `slowlog`, so the
+  two sub-commands cannot drift into rounding differently or starring different
+  columns.
 
 ### A log record can be flat
 

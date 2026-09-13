@@ -180,3 +180,30 @@ One more, in the same spirit of not deducing: **OpenSearch 3 escapes the body
 twice in the JSON layout**, from the same configuration file 2.19.6 escapes it
 once with. The extra layer comes off through the JSON decoder rather than by
 stripping backslashes, so a query holding an escaped quote survives it.
+
+## From the log your application already writes
+
+Once the digests are in your own log lines, `report` ranks them without minting
+anything: the fingerprint each record already carries is the one it is grouped
+by.
+
+```bash
+$ os-query-digest report --key-prefix=q_ --text-key=q --took-key=duration_ms app.log
+603,544 lines, 603,544 records, 21,132 shapes, 23,072,760 ms total
+
+   count  total ms*  mean  p95    max  shape
+  15,512  1,350,476    87  698  1,598  q5:06d176a67841
+                                       af_*_content | q=(content_type:? and geo_location_point:geo_bbox() …
+```
+
+The defaults read what
+[`RecordLayout::flat()`](logging.md#when-your-collector-cannot-read-a-nested-field)
+writes; `--key-prefix=dsl.` reads the nested spelling, a dotted key walking into
+the object. Every field but the fingerprint is optional, and a file with no
+durations is ranked by count with a note saying so.
+
+**Nothing is re-parsed**, which is the point rather than an optimisation: the
+log no longer carries the request body, and re-deriving hashes under today's
+rules would group a year of records by a rule they were never grouped by. That
+also makes it fast — 875 MB and 603,544 lines in under four seconds, because
+each line is one `json_decode` and a lookup.

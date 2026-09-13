@@ -190,6 +190,38 @@ cluster's slow log — same class, fed from the other end. It holds one object p
 *shape*, so a long-running worker accumulating a million searches over forty
 shapes holds forty of them.
 
+## Ranking the log you already have
+
+The third way needs no code at all. Point `report` at the file your application
+is already writing and it ranks what is in it:
+
+```bash
+os-query-digest report /var/log/app/*.log
+```
+
+It reads one JSON object per line, ignores anything before the `{`, skips every
+line carrying no fingerprint, and **re-parses nothing** — the hash stored when
+each search ran is the one records are grouped by, so a year of them stays
+comparable however the rules have moved since.
+
+The defaults read what
+[`RecordLayout::flat()`](#when-your-collector-cannot-read-a-nested-field)
+writes. Anything else is a matter of naming keys, and a dotted name walks into a
+nested object:
+
+```bash
+# the nested spelling this library writes by default
+os-query-digest report --key-prefix=dsl. app.log
+
+# a record your application flattened itself
+os-query-digest report --key-prefix=q_ --text-key=q --took-key=duration_ms app.log
+```
+
+Only `--hash-key` is required in practice: a record with a fingerprint and
+nothing else still counts and still groups. Without a duration the ranking falls
+back to counts, and says so in its header rather than showing a column of
+zeroes.
+
 It is the natural place to answer "what does this page actually search for":
 group the top by [`kind()`](../reference/kinds.md) and a request that fires
 eleven searches turns into two autocompletes, one lookup and eight browses.
