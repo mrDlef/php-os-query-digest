@@ -145,6 +145,152 @@ final class ReportCommandTest extends TestCase
         self::assertSame('unknown', $decoded[0]['kind'] ?? null);
     }
 
+    /**
+     * The value forms an option can take. `--sort p95` walks the argument list
+     * forward, and a step in the wrong direction reads the flag's own name back
+     * as its value.
+     */
+    public function testAnOptionTakesItsValueAsASeparateArgument(): void
+    {
+        [$status, $out] = $this->invoke(['--sort', 'count'], self::FLAT . "\n" . self::OTHER . "\n");
+
+        self::assertSame(Command::OK, $status);
+        self::assertStringContainsString('count*', $out, 'The starred column says what the ranking used.');
+    }
+
+    /** `--` ends the options, and `-` is stdin rather than a file called `-`. */
+    public function testTheSeparatorAndStdinAreNotMistakenForOptions(): void
+    {
+        [$status, $out] = $this->invoke(['--', '-'], self::FLAT . "\n");
+
+        self::assertSame(Command::OK, $status);
+        self::assertStringContainsString('1 record, 1 shape', $out);
+    }
+
+    public function testAFileIsReadAndClosed(): void
+    {
+        $file = tempnam(sys_get_temp_dir(), 'report');
+        self::assertIsString($file);
+        file_put_contents($file, self::FLAT . "\n" . self::OTHER . "\n");
+
+        [$status, $out] = $this->invoke([$file]);
+        unlink($file);
+
+        self::assertSame(Command::OK, $status);
+        self::assertStringContainsString('2 lines, 2 records, 2 shapes', $out);
+    }
+
+    public function testAnUnreadableFileIsAUsageError(): void
+    {
+        [$status, , $err] = $this->invoke([__DIR__ . '/no-such-file.log']);
+
+        self::assertSame(Command::USAGE, $status);
+        self::assertStringContainsString('cannot read', $err);
+    }
+
+    /**
+     * A duration is whatever the collector's JSON encoder made of it. Ignoring
+     * `"took": "12"` would rank a whole file at zero without saying why, and
+     * taking `"took": "soon"` would rank it at nonsense.
+     */
+    public function testADurationIsReadFromANumberOrANumericString(): void
+    {
+        $records = [
+            '{"dsl_hash":"q5:aaaa0000aaaa","dsl_sig":"q=(a:?)","took":"12"}',
+            '{"dsl_hash":"q5:bbbb0000bbbb","dsl_sig":"q=(b:?)","took":8.5}',
+            '{"dsl_hash":"q5:cccc0000cccc","dsl_sig":"q=(c:?)","took":"soon"}',
+            '{"dsl_hash":"q5:dddd0000dddd","dsl_sig":"q=(d:?)","took":true}',
+        ];
+
+        [$status, $out] = $this->invoke(['--json'], implode("\n", $records) . "\n");
+        self::assertSame(Command::OK, $status);
+
+        $decoded = json_decode($out, true);
+        self::assertIsArray($decoded);
+
+        $totals = [];
+        $measured = [];
+        foreach ($decoded as $shape) {
+            self::assertIsArray($shape);
+            $hash = $shape['hash'] ?? null;
+            self::assertIsString($hash);
+            $totals[$hash] = $shape['total_ms'] ?? null;
+            $measured[$hash] = $shape['measured'] ?? null;
+        }
+
+        // JSON has one number type, so a whole total comes back as an int.
+        self::assertEquals(12.0, $totals['q5:aaaa0000aaaa'] ?? null);
+        self::assertSame(8.5, $totals['q5:bbbb0000bbbb'] ?? null);
+
+        // Counted, and timed by nothing: `measured` is what says so.
+        self::assertSame(1, $measured['q5:aaaa0000aaaa'] ?? null);
+        self::assertSame(0, $measured['q5:cccc0000cccc'] ?? null, 'A duration that is not a number is no duration.');
+        self::assertSame(0, $measured['q5:dddd0000dddd'] ?? null, 'A boolean is not a duration.');
+    }
+
+    /** An empty key is a missing field, not a field whose value is `""`. */
+    public function testAnEmptyValueIsTreatedAsAbsent(): void
+    {
+        $record = '{"dsl_hash":"q5:eeee0000eeee","dsl_sig":"","dsl_q":"q=(a:prod)","dsl_kind":""}';
+
+        [, $out] = $this->invoke(['--json'], $record . "\n");
+
+        $decoded = json_decode($out, true);
+        self::assertIsArray($decoded);
+        self::assertIsArray($decoded[0]);
+        // No signature, so the readable line stands in for it rather than an
+        // empty column — and an empty kind is no kind at all.
+        self::assertSame('q=(a:prod)', $decoded[0]['sig'] ?? null);
+        self::assertSame('unknown', $decoded[0]['kind'] ?? null);
+    }
+
+    /**
+     * With neither, the hash is the only thing left that identifies the shape,
+     * and an empty column would say less than repeating it.
+     */
+    public function testARecordWithNeitherSignatureNorLineFallsBackToItsHash(): void
+    {
+        [, $out] = $this->invoke(['--json'], '{"dsl_hash":"q5:ffff0000ffff"}' . "\n");
+
+        $decoded = json_decode($out, true);
+        self::assertIsArray($decoded);
+        self::assertIsArray($decoded[0]);
+        self::assertSame('q5:ffff0000ffff', $decoded[0]['sig'] ?? null);
+    }
+
+    /** The default text key is the digest's own name for it, not the flag's. */
+    public function testTheReadableLineIsReadFromThePrefixedDigestField(): void
+    {
+        [, $out] = $this->invoke(['--json'], self::FLAT . "\n");
+
+        $decoded = json_decode($out, true);
+        self::assertIsArray($decoded);
+        self::assertIsArray($decoded[0]);
+        $slowest = $decoded[0]['slowest'] ?? null;
+        self::assertIsArray($slowest);
+        self::assertSame('logs-* | q=(service:api)', $slowest['text'] ?? null);
+    }
+
+    /** A literal key wins over the same name read as a path. */
+    public function testAKeyIsTriedLiterallyBeforeItIsWalked(): void
+    {
+        $record = '{"dsl.hash":"q5:1111ffff1111","dsl.sig":"q=(z:?)"}';
+
+        [$status, $out] = $this->invoke(['--key-prefix=dsl.'], $record . "\n");
+
+        self::assertSame(Command::OK, $status);
+        self::assertStringContainsString('q5:1111ffff1111', $out);
+    }
+
+    public function testTopKeepsExactlyWhatWasAskedFor(): void
+    {
+        [, $one] = $this->invoke(['--top=1'], self::FLAT . "\n" . self::OTHER . "\n");
+
+        self::assertStringContainsString('q5:aaaabbbbcccc', $one);
+        self::assertStringNotContainsString('q5:ddddeeeeffff', $one);
+        self::assertStringContainsString('1 more shape', $one);
+    }
+
     public function testSortAndTopAreValidated(): void
     {
         [$sorted] = $this->invoke(['--sort=nope'], self::FLAT . "\n");
