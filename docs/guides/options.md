@@ -9,6 +9,7 @@ $formatter = Formatter::create(
         ->withNormalization(Normalization::structural())
         ->withMaxValues(5)          // status:(500 or 502 or 503 or +8)
         ->withMaxClauses(12)        // a and b and … +4 more
+        ->withMaxFields(3)          // title^10|content|tags|+3 more
         ->withMaxLength(512)        // hard cap on the line, never on the hash
         ->withIndexNormalizer(IndexNormalizer::datePatterns())
         ->withRedactor(fn ($field, $value) => $field === 'email' ? '<redacted>' : $value)
@@ -46,6 +47,28 @@ when the question is latency, and the wrong grouping when it is volume:
 row. [Which level answers which
 question](../explanation/how-it-works.md#which-level-answers-which-question)
 compares the two on the same search.
+
+## Why the field list is capped hardest
+
+A `multi_match` — and `query_string`, and `more_like_this` — carries the list of
+fields it searches, boosts included. On a real search built over one, that list
+is more than half of the rendered line, and it is the half that says nothing:
+the fields are the schema, near enough the same on every search the application
+makes, while the filters beside them are what actually vary.
+
+So it is capped at three, tighter than the twelve clauses and the five terms
+values, and the rest is summarised the same way:
+
+<!-- verified: options-max-fields -->
+```
+q=(title^10|subtitle^5|content|+3 more:~?)
+q=(title^10|subtitle^5|content|tags|author|isbn:~?)
+```
+
+The second line is the same search under `withMaxFields(null)`. **Both have the
+same hash** — like every limit on this page, this one is spent on the line, and
+the fingerprint is computed before any of them apply. Two searches over
+different field lists stay two fingerprints even when they print identically.
 
 ## `withText(false)`, and what it does not promise
 

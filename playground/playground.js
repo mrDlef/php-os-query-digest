@@ -79,6 +79,7 @@ const elements = () => ({
     levels: el('levels'),
     maxClauses: el('maxClauses'),
     maxValues: el('maxValues'),
+    maxFields: el('maxFields'),
     maxLength: el('maxLength'),
     aggNames: el('aggNames'),
     rawIndex: el('rawIndex'),
@@ -154,7 +155,7 @@ function optionsSpec() {
         spec.normalization = level.value;
     }
 
-    for (const key of ['maxClauses', 'maxValues', 'maxLength']) {
+    for (const key of ['maxClauses', 'maxValues', 'maxFields', 'maxLength']) {
         const raw = ui[key].value.trim();
         if (raw === '') {
             continue;
@@ -188,7 +189,7 @@ function applyOptions(spec) {
     for (const input of ui.levels.querySelectorAll('input')) {
         input.checked = input.value === level;
     }
-    for (const key of ['maxClauses', 'maxValues', 'maxLength']) {
+    for (const key of ['maxClauses', 'maxValues', 'maxFields', 'maxLength']) {
         const value = key in spec ? spec[key] : defaults[key];
         ui[key].value = value === null ? 'none' : String(value);
     }
@@ -535,7 +536,7 @@ async function start() {
         return chip;
     }));
 
-    for (const input of [ui.body, ui.index, ui.maxClauses, ui.maxValues, ui.maxLength]) {
+    for (const input of [ui.body, ui.index, ui.maxClauses, ui.maxValues, ui.maxFields, ui.maxLength]) {
         input.addEventListener('input', () => { writeFragment(); schedule(); });
     }
     for (const input of [ui.aggNames, ui.rawIndex, ui.omitText]) {

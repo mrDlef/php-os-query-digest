@@ -129,6 +129,28 @@ final class CliTest extends TestCase
         self::assertSame($fullDecoded['hash'] ?? null, $shortDecoded['hash'] ?? null);
     }
 
+    public function testMaxFieldsShortensTheFieldListButNotTheHash(): void
+    {
+        $body = '{"query":{"multi_match":{"query":"shoes","fields":["title^10","content","tags","isbn"]}}}';
+
+        [, $capped] = $this->invoke(['--json'], $body);
+        [, $lifted] = $this->invoke(['--json', '--max-fields=none'], $body);
+
+        $cappedDecoded = json_decode($capped, true);
+        $liftedDecoded = json_decode($lifted, true);
+        self::assertIsArray($cappedDecoded);
+        self::assertIsArray($liftedDecoded);
+
+        $cappedSig = $cappedDecoded['sig'] ?? null;
+        $liftedSig = $liftedDecoded['sig'] ?? null;
+        self::assertIsString($cappedSig);
+        self::assertIsString($liftedSig);
+
+        self::assertStringContainsString('+1 more', $cappedSig);
+        self::assertStringContainsString('isbn', $liftedSig);
+        self::assertSame($cappedDecoded['hash'] ?? null, $liftedDecoded['hash'] ?? null);
+    }
+
     public function testAFileIsReadWhenGivenAsAnArgument(): void
     {
         $file = __DIR__ . '/fixtures/01-error-rate-filter/input.json';

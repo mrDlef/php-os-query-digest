@@ -301,6 +301,7 @@ function meta(): array
             'normalization' => $defaults->normalization()->level(),
             'maxClauses' => $defaults->maxClauses(),
             'maxValues' => $defaults->maxValues(),
+            'maxFields' => $defaults->maxFields(),
             'maxLength' => $defaults->maxLength(),
             'indexNormalizer' => IndexNormalizer::DATE_PATTERNS,
             'aggNames' => $defaults->includeAggNames(),

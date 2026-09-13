@@ -26,6 +26,7 @@ final class Options
         'normalization',
         'maxClauses',
         'maxValues',
+        'maxFields',
         'maxLength',
         'indexNormalizer',
         'aggNames',
@@ -42,6 +43,8 @@ final class Options
     private ?int $maxClauses = 12;
 
     private ?int $maxValues = 5;
+
+    private ?int $maxFields = 3;
 
     private ?int $maxLength = 512;
 
@@ -125,6 +128,26 @@ final class Options
     {
         $clone = clone $this;
         $clone->maxValues = $maxValues;
+
+        return $clone;
+    }
+
+    /**
+     * Maximum fields rendered in the field list of a `multi_match`,
+     * `query_string` or `more_like_this`, before the rest is summarised as
+     * `+N more`. Null disables the limit.
+     *
+     * Capped tighter than the other limits because a field list is the least
+     * discriminating part of a search: it is the schema, near-constant across
+     * an application's queries, while the filters beside it are what vary. Left
+     * uncapped it takes the display budget from them — on a search built over a
+     * boosted field list, more than half the rendered signature, which is
+     * exactly the half that says nothing.
+     */
+    public function withMaxFields(?int $maxFields): self
+    {
+        $clone = clone $this;
+        $clone->maxFields = $maxFields;
 
         return $clone;
     }
@@ -234,6 +257,11 @@ final class Options
         return $this->maxValues;
     }
 
+    public function maxFields(): ?int
+    {
+        return $this->maxFields;
+    }
+
     public function maxLength(): ?int
     {
         return $this->maxLength;
@@ -310,6 +338,8 @@ final class Options
                 return $this->withMaxClauses(self::asIntOrNull($key, $value));
             case 'maxValues':
                 return $this->withMaxValues(self::asIntOrNull($key, $value));
+            case 'maxFields':
+                return $this->withMaxFields(self::asIntOrNull($key, $value));
             case 'maxLength':
                 return $this->withMaxLength(self::asIntOrNull($key, $value));
             case 'indexNormalizer':
