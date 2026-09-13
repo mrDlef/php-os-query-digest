@@ -197,6 +197,25 @@ final class ExtensionTest extends TestCase
         self::assertArrayHasKey('sltr', $extended->clauseRenderers());
     }
 
+    /**
+     * And so is the clause a renderer hands back. It is the natural thing to
+     * build once and derive from — a base clause, then one variant per knob the
+     * body turned — and without the copy every variant would collect the
+     * parameters of the ones before it.
+     */
+    public function testAddingAParameterLeavesTheClauseItCameFromAlone(): void
+    {
+        $base = RenderedClause::on('model_id', 'sltr');
+
+        $window = $base->withParam('window', 100);
+        $model = $base->withParam('model', 'linear');
+
+        self::assertNotSame($base, $window);
+        self::assertSame([], $base->params(), 'The clause withParam() was called on gained a parameter.');
+        self::assertSame(['window' => 100], $window->params());
+        self::assertSame(['model' => 'linear'], $model->params(), 'Two variants of one base clause bled into each other.');
+    }
+
     private function formatterWithSltr(): Formatter
     {
         return Formatter::create(
