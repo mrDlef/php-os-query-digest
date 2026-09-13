@@ -33,7 +33,7 @@ final class RecordFields
 
     private ?Digest $digest = null;
 
-    private ?string $error = null;
+    private string $error = '';
 
     public function __construct(LazyDigest $lazy)
     {
@@ -50,7 +50,7 @@ final class RecordFields
     {
         $this->resolve();
 
-        return $this->digest !== null ? $this->digest->toArray() : [self::ERROR => (string) $this->error];
+        return $this->digest !== null ? $this->digest->toArray() : [self::ERROR => $this->error];
     }
 
     /**
@@ -75,7 +75,7 @@ final class RecordFields
     {
         $this->resolve();
 
-        return $this->digest !== null ? $this->digest->text() : (string) $this->error;
+        return $this->digest !== null ? $this->digest->text() : $this->error;
     }
 
     private static function describe(\Throwable $error): string
