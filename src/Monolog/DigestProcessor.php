@@ -6,6 +6,7 @@ namespace MrDlef\OsQueryDigest\Monolog;
 
 use Monolog\LogRecord;
 use MrDlef\OsQueryDigest\Formatter;
+use MrDlef\OsQueryDigest\RecordLayout;
 
 /**
  * Replaces a raw OpenSearch request in a log record's context with its digest.
@@ -39,21 +40,31 @@ final class DigestProcessor
 
     private string $indexKey;
 
+    private ?RecordLayout $layout;
+
     /**
-     * @param string $requestKey the context key holding the search request: a
-     *                           body, an `['index' => …, 'body' => …]` envelope,
-     *                           or the JSON of either
-     * @param string $indexKey   the context key holding the index name, if the
-     *                           request does not carry one
+     * @param string            $requestKey the context key holding the search request: a
+     *                                      body, an `['index' => …, 'body' => …]` envelope,
+     *                                      or the JSON of either
+     * @param string            $indexKey   the context key holding the index name, if the
+     *                                      request does not carry one
+     * @param RecordLayout|null $layout     where the digest's fields go. By default the
+     *                                      digest simply takes the request's place, which
+     *                                      is what makes this a one-line change at no call
+     *                                      site; {@see RecordLayout::flat()} spreads it over
+     *                                      sibling keys instead, for a collector that cannot
+     *                                      query a nested object
      */
     public function __construct(
         ?Formatter $formatter = null,
         string $requestKey = 'query',
-        string $indexKey = 'index'
+        string $indexKey = 'index',
+        ?RecordLayout $layout = null
     ) {
         $this->formatter = $formatter ?? Formatter::create();
         $this->requestKey = $requestKey;
         $this->indexKey = $indexKey;
+        $this->layout = $layout;
     }
 
     /**
@@ -111,9 +122,17 @@ final class DigestProcessor
 
         // Lazy: processors run before the handlers decide what to keep, so a
         // record dropped by a FingersCrossed or a level filter must not have
-        // cost a parse.
-        $context[$this->requestKey] = new SafeDigest($this->formatter->lazy($request, $index));
+        // cost a parse. Every layout keeps that property.
+        $digest = $this->formatter->lazy($request, $index);
 
-        return $context;
+        // The request's own key by default: the digest lands where the body
+        // was, and nothing else in the record moves. A flat layout replaces it
+        // with siblings, so the key it occupied has to go.
+        $layout = $this->layout ?? RecordLayout::nested($this->requestKey);
+        if ($layout->isFlat()) {
+            unset($context[$this->requestKey]);
+        }
+
+        return $layout->apply($context, $digest);
     }
 }

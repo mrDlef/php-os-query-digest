@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MrDlef\OsQueryDigest\Monolog;
 
 use MrDlef\OsQueryDigest\LazyDigest;
+use MrDlef\OsQueryDigest\Support\RecordFields;
 
 /**
  * A {@see LazyDigest} that cannot take the log line down with it.
@@ -27,11 +28,11 @@ use MrDlef\OsQueryDigest\LazyDigest;
  */
 final class SafeDigest implements \JsonSerializable
 {
-    private LazyDigest $digest;
+    private RecordFields $fields;
 
     public function __construct(LazyDigest $digest)
     {
-        $this->digest = $digest;
+        $this->fields = new RecordFields($digest);
     }
 
     /**
@@ -40,24 +41,11 @@ final class SafeDigest implements \JsonSerializable
     #[\ReturnTypeWillChange]
     public function jsonSerialize()
     {
-        try {
-            return $this->digest->jsonSerialize();
-        } catch (\Throwable $error) {
-            return ['error' => self::describe($error)];
-        }
+        return $this->fields->all();
     }
 
     public function __toString(): string
     {
-        try {
-            return $this->digest->__toString();
-        } catch (\Throwable $error) {
-            return self::describe($error);
-        }
-    }
-
-    private static function describe(\Throwable $error): string
-    {
-        return 'os-query-digest could not read this request: ' . $error->getMessage();
+        return $this->fields->text();
     }
 }

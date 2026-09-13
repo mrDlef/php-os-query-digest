@@ -15,12 +15,14 @@ use MrDlef\OsQueryDigest\Http\ObservedSearch;
 use MrDlef\OsQueryDigest\Http\SearchObserver;
 use MrDlef\OsQueryDigest\IndexNormalizer;
 use MrDlef\OsQueryDigest\Options;
+use MrDlef\OsQueryDigest\RecordLayout;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\AbstractLogger;
+use Psr\Log\LogLevel;
 
 /**
  * Digesting at the transport, where nothing in the application had to change.
@@ -329,6 +331,31 @@ final class DigestingClientTest extends TestCase
 
         self::assertIsArray($decoded);
         self::assertSame(['idx', 'kind', 'sig', 'hash'], array_keys($decoded));
+    }
+
+    /**
+     * The same record for a collector that cannot group on a node below the top
+     * level. Same values, spelled flat, and `took` still beside them.
+     */
+    public function testTheLoggingObserverCanWriteAFlatRecord(): void
+    {
+        $logger = self::logger();
+
+        (new DigestingClient(
+            self::client(new Response(200, [], '{"took":7}')),
+            new LoggingObserver($logger, LogLevel::INFO, 'opensearch.search', RecordLayout::flat()),
+        ))->sendRequest(new Request('POST', '/logs-2026.08.21/_search', [], self::BODY));
+
+        $encoded = json_encode($logger->records[0][2]);
+        self::assertIsString($encoded);
+        $decoded = json_decode($encoded, true);
+        self::assertIsArray($decoded);
+
+        self::assertArrayNotHasKey('dsl', $decoded, 'A flat record keeps no sub-object.');
+        self::assertSame('logs-*', $decoded['dsl_idx']);
+        self::assertIsString($decoded['dsl_hash']);
+        self::assertStringStartsWith('q5:', $decoded['dsl_hash']);
+        self::assertSame(7, $decoded['took']);
     }
 
     public function testTheLoggingObserverKeepsTheLineWhenTheDigestFails(): void

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace MrDlef\OsQueryDigest\Http;
 
-use MrDlef\OsQueryDigest\Monolog\SafeDigest;
+use MrDlef\OsQueryDigest\RecordLayout;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
@@ -33,7 +33,7 @@ use Psr\Log\LogLevel;
  * a microsecond tail on one of them says nothing about the other.
  *
  * The digest is wrapped so that a request it cannot read costs the digest and
- * not the log line — the same trade {@see SafeDigest} exists for.
+ * not the log line — the same trade {@see \MrDlef\OsQueryDigest\Monolog\SafeDigest} exists for.
  *
  * @api
  */
@@ -45,24 +45,33 @@ final class LoggingObserver implements SearchObserver
 
     private string $message;
 
+    private RecordLayout $layout;
+
+    /**
+     * @param RecordLayout|null $layout where the digest's fields go — nested
+     *                                  under `dsl` by default, which is what the
+     *                                  shipped dashboard pack maps
+     */
     public function __construct(
         LoggerInterface $logger,
         string $level = LogLevel::INFO,
-        string $message = 'opensearch.search'
+        string $message = 'opensearch.search',
+        ?RecordLayout $layout = null
     ) {
         $this->logger = $logger;
         $this->level = $level;
         $this->message = $message;
+        $this->layout = $layout ?? RecordLayout::nested();
     }
 
     public function observe(ObservedSearch $search): void
     {
-        $context = [
-            'dsl' => new SafeDigest($search->digest()),
-            'took' => $search->tookMillis(),
-            'elapsed_ms' => (int) $search->elapsedMillis(),
-            'status' => $search->statusCode(),
-        ];
+        // The digest first, so a record reads the way the guides print it
+        // whichever layout wrote it.
+        $context = $this->layout->apply([], $search->digest());
+        $context['took'] = $search->tookMillis();
+        $context['elapsed_ms'] = (int) $search->elapsedMillis();
+        $context['status'] = $search->statusCode();
 
         // Only on a batch, where it says which line this was. On a plain search
         // it would be a null in every record for no information.

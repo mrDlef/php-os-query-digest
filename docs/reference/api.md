@@ -187,6 +187,32 @@ array form and is not a `MODES` entry — a callable cannot come out of a
 configuration file, the same line `withRedactor()` sits on. See
 [an index name only you can read](../guides/options.md#an-index-name-only-you-can-read).
 
+### `RecordLayout`
+
+```php
+static nested(string $key = 'dsl'): RecordLayout   // the default
+static flat(string $prefix = 'dsl_'): RecordLayout
+
+isFlat(): bool
+apply(array $context, LazyDigest $digest): array
+```
+
+Constant: `FIELDS`, every key a flat record writes. Where a digest's fields go
+in a log record — under one key, or beside it:
+
+```
+nested   {"dsl": {"idx": "…", "kind": "…", "hash": "q5:…"}, "took": 12}
+flat     {"dsl_idx": "…", "dsl_kind": "…", "dsl_hash": "q5:…", "took": 12}
+```
+
+Both spellings carry the same fields under the same names, so `dsl.hash` and
+`dsl_hash` hold the same value. Passed to `Http\LoggingObserver` or
+`Monolog\DigestProcessor`; the shipped dashboard pack maps the nested one. A
+flat record is still lazy — its keys share one parse — and turns `notes` into a
+`; `-joined string, a nested object being exactly what its reader cannot query.
+See [when your collector cannot read a nested
+field](../guides/logging.md#when-your-collector-cannot-read-a-nested-field).
+
 ---
 
 ## Extension
@@ -317,6 +343,8 @@ __construct(LoggerInterface $logger, string $level = LogLevel::INFO, string $mes
 
 Writes one PSR-3 record per search, with `dsl` and `took` in the shape the
 [dashboard pack](../guides/dashboards.md) maps.
+
+A fourth argument, `RecordLayout`, chooses where the digest's fields go.
 
 ---
 
