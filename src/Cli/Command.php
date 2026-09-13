@@ -41,8 +41,10 @@ final class Command
      */
     private const VALUED = ['-i', '--index'];
 
-    /** The one sub-command, dispatched before anything is parsed. */
+    /** The sub-commands, dispatched before anything is parsed. */
     private const SLOWLOG = 'slowlog';
+
+    private const REPORT = 'report';
 
     private string $name;
 
@@ -99,6 +101,11 @@ final class Command
         // A file actually named `slowlog` is `./slowlog` or `-- slowlog`.
         if (($args[0] ?? null) === self::SLOWLOG) {
             return (new SlowlogCommand($this->stdin, $this->stdout, $this->stderr, $this->name))
+                ->run(array_slice($args, 1));
+        }
+
+        if (($args[0] ?? null) === self::REPORT) {
+            return (new ReportCommand($this->stdin, $this->stdout, $this->stderr, $this->name))
                 ->run(array_slice($args, 1));
         }
 

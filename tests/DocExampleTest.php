@@ -143,14 +143,19 @@ final class DocExampleTest extends TestCase
     private const LEVELS_INDEX = 'catalog-2026.08';
 
     /**
-     * The one fingerprint in the docs that is not meant to be real: the page
-     * about hash stability shows the *shape* of a hash. Anything else the pages
-     * print has to be recomputed here.
+     * The fingerprints in the docs that are not meant to be reproducible here.
+     * Anything else the pages print has to be recomputed by this class.
      *
      * @var array<string,string> hash => why it is not checked
      */
     private const ILLUSTRATIVE = [
         'q5:8f3ac1d2b901' => 'docs/explanation/hash-stability.md — the shape of a hash, not one of ours',
+        // The `report` block is a run against a real week of production logs,
+        // which is the only thing that can show what the command is for: 21,132
+        // shapes, and the top one costing twenty minutes of cluster time. The
+        // request behind it is not ours to publish, so the hash cannot be
+        // recomputed — but it was minted by this library, from that file.
+        'q5:06d176a67841' => 'docs/guides/cli.md — a real run, whose request the page does not carry',
     ];
 
     /**
