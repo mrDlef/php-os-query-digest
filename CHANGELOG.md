@@ -29,7 +29,7 @@ characters are genuinely new. Every other query kept them. See
 | `q6:` | v0.16.0 | a `nested` clause stops repeating its path inside its own braces, which was not valid DQL |
 | `q6x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
-## v0.16.0 — unreleased
+## v0.16.0 — 2026-09-28
 
 _the line a `nested` clause renders is DQL again_
 
