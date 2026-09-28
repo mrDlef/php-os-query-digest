@@ -35,7 +35,7 @@ nothing on the left:
 ```
 
 ```
-q5:4dde138a2ad7   n=90   first seen 2026-08-19T15:00:00.000Z
+q6:4dde138a2ad7   n=90   first seen 2026-08-19T15:00:00.000Z
     products-v3 | q=(image_embedding:knn(k=?) and in_stock:? or text_embedding:neural(query=?,k=?)) | size=20
 ```
 
@@ -54,8 +54,8 @@ disappeared is either a feature you removed or a feature that broke.
 The afternoon on these pages has two events in it, an hour apart:
 
 ```
-14:00  q5:63a1ca5c80b9 goes from 50ms to 1074ms
-15:00  the deploy — q5:4dde138a2ad7 appears
+14:00  q6:63a1ca5c80b9 goes from 50ms to 1074ms
+15:00  the deploy — q6:4dde138a2ad7 appears
 ```
 
 **The deploy did not cause the slowdown.** It landed an hour after the latency
@@ -107,12 +107,12 @@ survives a rollback, an overlapping canary, and a deploy nobody wrote down:
 
 ```
 1 shape seen under exactly one release
-    q5:4dde138a2ad7   v2.31.0   n=90
+    q6:4dde138a2ad7   v2.31.0   n=90
 ```
 
 ```
 1 shape seen under exactly one release
-    q5:4dde138a2ad7   v2.31.0   n=90
+    q6:4dde138a2ad7   v2.31.0   n=90
 ```
 
 Every shape that has only ever been seen under a single release: new arrivals and
@@ -138,6 +138,7 @@ you check your code. A library upgrade that changes a normalisation rule bumps
 The prefix exists to make that visible rather than silent, and a signature that
 did not change keeps its twelve hex characters — so `q5:abc…` and `q6:abc…` are
 the same shape under different rules. Comparing across an upgrade means comparing
-the hex, not the hash. [Hash stability](../explanation/hash-stability.md) is the
+the hex, not the hash. Mind the one exception: the `q6:` bump also changed how a
+`nested` clause renders, so those shapes have new hex as well as a new prefix. [Hash stability](../explanation/hash-stability.md) is the
 contract, and `CHANGELOG.md` says for every release whether your fingerprints
 moved.

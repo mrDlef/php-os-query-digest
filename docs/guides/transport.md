@@ -26,7 +26,7 @@ That is the whole integration. Every search now produces one log record:
     "kind": "browse",
     "q": "logs-* | q=(not status:200 and service:api) | size=5",
     "sig": "logs-* | q=(not status:? and service:?) | size=5",
-    "hash": "q5:b87b162b2b4e"
+    "hash": "q6:b87b162b2b4e"
   },
   "took": 6,
   "elapsed_ms": 9,

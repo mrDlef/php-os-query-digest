@@ -17,13 +17,13 @@ use PHPUnit\Framework\TestCase;
 final class ReportCommandTest extends TestCase
 {
     private const FLAT = '{"dsl_idx":"logs-*","dsl_kind":"browse","dsl_q":"logs-* | q=(service:api)",'
-        . '"dsl_sig":"logs-* | q=(service:?)","dsl_hash":"q5:aaaabbbbcccc","took":12}';
+        . '"dsl_sig":"logs-* | q=(service:?)","dsl_hash":"q6:aaaabbbbcccc","took":12}';
 
     private const FLAT_SLOWER = '{"dsl_idx":"logs-*","dsl_kind":"browse","dsl_q":"logs-* | q=(service:worker)",'
-        . '"dsl_sig":"logs-* | q=(service:?)","dsl_hash":"q5:aaaabbbbcccc","took":30}';
+        . '"dsl_sig":"logs-* | q=(service:?)","dsl_hash":"q6:aaaabbbbcccc","took":30}';
 
     private const OTHER = '{"dsl_idx":"logs-*","dsl_kind":"aggregate","dsl_sig":"logs-* | q=(host:?)",'
-        . '"dsl_hash":"q5:ddddeeeeffff","took":5}';
+        . '"dsl_hash":"q6:ddddeeeeffff","took":5}';
 
     public function testItGroupsByTheFingerprintTheRecordsAlreadyCarry(): void
     {
@@ -31,7 +31,7 @@ final class ReportCommandTest extends TestCase
 
         self::assertSame(Command::OK, $status);
         self::assertStringContainsString('3 lines, 3 records, 2 shapes, 47 ms total', $out);
-        self::assertStringContainsString('q5:aaaabbbbcccc', $out);
+        self::assertStringContainsString('q6:aaaabbbbcccc', $out);
         self::assertStringContainsString('logs-* | q=(service:?)', $out);
     }
 
@@ -66,19 +66,19 @@ final class ReportCommandTest extends TestCase
     public function testADottedPrefixReadsTheNestedRecord(): void
     {
         $nested = '{"dsl":{"idx":"logs-*","kind":"browse","sig":"logs-* | q=(service:?)",'
-            . '"hash":"q5:111122223333"},"took":9}';
+            . '"hash":"q6:111122223333"},"took":9}';
 
         [$status, $out] = $this->invoke(['--key-prefix=dsl.'], $nested . "\n");
 
         self::assertSame(Command::OK, $status);
-        self::assertStringContainsString('q5:111122223333', $out);
+        self::assertStringContainsString('q6:111122223333', $out);
         self::assertStringContainsString('9', $out);
     }
 
     /** An application that flattened the digest itself named its own keys. */
     public function testEveryKeyCanBeNamedOneAtATime(): void
     {
-        $record = '{"q_hash":"q5:999988887777","q_sig":"q=(env:?)","q":"q=(env:prod)","duration_ms":42}';
+        $record = '{"q_hash":"q6:999988887777","q_sig":"q=(env:?)","q":"q=(env:prod)","duration_ms":42}';
 
         [$status, $out] = $this->invoke(
             ['--key-prefix=q_', '--text-key=q', '--took-key=duration_ms'],
@@ -86,7 +86,7 @@ final class ReportCommandTest extends TestCase
         );
 
         self::assertSame(Command::OK, $status);
-        self::assertStringContainsString('q5:999988887777', $out);
+        self::assertStringContainsString('q6:999988887777', $out);
         self::assertStringContainsString('42', $out);
     }
 
@@ -96,7 +96,7 @@ final class ReportCommandTest extends TestCase
      */
     public function testAFileWithoutDurationsSaysSoRatherThanRankingEverythingAtZero(): void
     {
-        [$status, $out] = $this->invoke([], '{"dsl_hash":"q5:aaaa1111bbbb","dsl_sig":"q=(a:?)"}' . "\n");
+        [$status, $out] = $this->invoke([], '{"dsl_hash":"q6:aaaa1111bbbb","dsl_sig":"q=(a:?)"}' . "\n");
 
         self::assertSame(Command::OK, $status);
         self::assertStringContainsString('no durations', $out);
@@ -125,7 +125,7 @@ final class ReportCommandTest extends TestCase
 
         $first = $decoded[0];
         self::assertIsArray($first);
-        self::assertSame('q5:aaaabbbbcccc', $first['hash'] ?? null);
+        self::assertSame('q6:aaaabbbbcccc', $first['hash'] ?? null);
         self::assertSame('browse', $first['kind'] ?? null, 'The logged kind must survive into the report.');
         self::assertSame('logs-*', $first['idx'] ?? null, 'So must the index it was logged against.');
     }
@@ -136,7 +136,7 @@ final class ReportCommandTest extends TestCase
      */
     public function testAnUnknownKindIsReadAsUnknown(): void
     {
-        $record = '{"dsl_hash":"q5:cccc2222dddd","dsl_sig":"q=(a:?)","dsl_kind":"telepathy"}';
+        $record = '{"dsl_hash":"q6:cccc2222dddd","dsl_sig":"q=(a:?)","dsl_kind":"telepathy"}';
 
         [, $out] = $this->invoke(['--json'], $record . "\n");
 
@@ -197,10 +197,10 @@ final class ReportCommandTest extends TestCase
     public function testADurationIsReadFromANumberOrANumericString(): void
     {
         $records = [
-            '{"dsl_hash":"q5:aaaa0000aaaa","dsl_sig":"q=(a:?)","took":"12"}',
-            '{"dsl_hash":"q5:bbbb0000bbbb","dsl_sig":"q=(b:?)","took":8.5}',
-            '{"dsl_hash":"q5:cccc0000cccc","dsl_sig":"q=(c:?)","took":"soon"}',
-            '{"dsl_hash":"q5:dddd0000dddd","dsl_sig":"q=(d:?)","took":true}',
+            '{"dsl_hash":"q6:aaaa0000aaaa","dsl_sig":"q=(a:?)","took":"12"}',
+            '{"dsl_hash":"q6:bbbb0000bbbb","dsl_sig":"q=(b:?)","took":8.5}',
+            '{"dsl_hash":"q6:cccc0000cccc","dsl_sig":"q=(c:?)","took":"soon"}',
+            '{"dsl_hash":"q6:dddd0000dddd","dsl_sig":"q=(d:?)","took":true}',
         ];
 
         [$status, $out] = $this->invoke(['--json'], implode("\n", $records) . "\n");
@@ -220,19 +220,19 @@ final class ReportCommandTest extends TestCase
         }
 
         // JSON has one number type, so a whole total comes back as an int.
-        self::assertEquals(12.0, $totals['q5:aaaa0000aaaa'] ?? null);
-        self::assertSame(8.5, $totals['q5:bbbb0000bbbb'] ?? null);
+        self::assertEquals(12.0, $totals['q6:aaaa0000aaaa'] ?? null);
+        self::assertSame(8.5, $totals['q6:bbbb0000bbbb'] ?? null);
 
         // Counted, and timed by nothing: `measured` is what says so.
-        self::assertSame(1, $measured['q5:aaaa0000aaaa'] ?? null);
-        self::assertSame(0, $measured['q5:cccc0000cccc'] ?? null, 'A duration that is not a number is no duration.');
-        self::assertSame(0, $measured['q5:dddd0000dddd'] ?? null, 'A boolean is not a duration.');
+        self::assertSame(1, $measured['q6:aaaa0000aaaa'] ?? null);
+        self::assertSame(0, $measured['q6:cccc0000cccc'] ?? null, 'A duration that is not a number is no duration.');
+        self::assertSame(0, $measured['q6:dddd0000dddd'] ?? null, 'A boolean is not a duration.');
     }
 
     /** An empty key is a missing field, not a field whose value is `""`. */
     public function testAnEmptyValueIsTreatedAsAbsent(): void
     {
-        $record = '{"dsl_hash":"q5:eeee0000eeee","dsl_sig":"","dsl_q":"q=(a:prod)","dsl_kind":""}';
+        $record = '{"dsl_hash":"q6:eeee0000eeee","dsl_sig":"","dsl_q":"q=(a:prod)","dsl_kind":""}';
 
         [, $out] = $this->invoke(['--json'], $record . "\n");
 
@@ -251,12 +251,12 @@ final class ReportCommandTest extends TestCase
      */
     public function testARecordWithNeitherSignatureNorLineFallsBackToItsHash(): void
     {
-        [, $out] = $this->invoke(['--json'], '{"dsl_hash":"q5:ffff0000ffff"}' . "\n");
+        [, $out] = $this->invoke(['--json'], '{"dsl_hash":"q6:ffff0000ffff"}' . "\n");
 
         $decoded = json_decode($out, true);
         self::assertIsArray($decoded);
         self::assertIsArray($decoded[0]);
-        self::assertSame('q5:ffff0000ffff', $decoded[0]['sig'] ?? null);
+        self::assertSame('q6:ffff0000ffff', $decoded[0]['sig'] ?? null);
     }
 
     /** The default text key is the digest's own name for it, not the flag's. */
@@ -275,20 +275,20 @@ final class ReportCommandTest extends TestCase
     /** A literal key wins over the same name read as a path. */
     public function testAKeyIsTriedLiterallyBeforeItIsWalked(): void
     {
-        $record = '{"dsl.hash":"q5:1111ffff1111","dsl.sig":"q=(z:?)"}';
+        $record = '{"dsl.hash":"q6:1111ffff1111","dsl.sig":"q=(z:?)"}';
 
         [$status, $out] = $this->invoke(['--key-prefix=dsl.'], $record . "\n");
 
         self::assertSame(Command::OK, $status);
-        self::assertStringContainsString('q5:1111ffff1111', $out);
+        self::assertStringContainsString('q6:1111ffff1111', $out);
     }
 
     public function testTopKeepsExactlyWhatWasAskedFor(): void
     {
         [, $one] = $this->invoke(['--top=1'], self::FLAT . "\n" . self::OTHER . "\n");
 
-        self::assertStringContainsString('q5:aaaabbbbcccc', $one);
-        self::assertStringNotContainsString('q5:ddddeeeeffff', $one);
+        self::assertStringContainsString('q6:aaaabbbbcccc', $one);
+        self::assertStringNotContainsString('q6:ddddeeeeffff', $one);
         self::assertStringContainsString('1 more shape', $one);
     }
 

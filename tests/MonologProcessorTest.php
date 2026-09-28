@@ -51,7 +51,7 @@ final class MonologProcessorTest extends TestCase
         self::assertSame('logs-*', $digest['idx']);
         self::assertSame('logs-* | q=(env:prod) | size=10', $digest['q']);
         self::assertSame('logs-* | q=(env:?) | size=10', $digest['sig']);
-        self::assertMatchesRegularExpression('/^q5:[0-9a-f]{12}$/', self::text($digest, 'hash'));
+        self::assertMatchesRegularExpression('/^q6:[0-9a-f]{12}$/', self::text($digest, 'hash'));
     }
 
     /**
@@ -216,7 +216,7 @@ final class MonologProcessorTest extends TestCase
         self::assertArrayNotHasKey('query', $context, 'The request key must not survive a flat layout.');
         self::assertSame('logs-*', $context['dsl_idx']);
         self::assertIsString($context['dsl_hash']);
-        self::assertStringStartsWith('q5:', $context['dsl_hash']);
+        self::assertStringStartsWith('q6:', $context['dsl_hash']);
         self::assertSame('logs-2026.09.13', $context['index'], 'Nothing else in the context moves.');
     }
 

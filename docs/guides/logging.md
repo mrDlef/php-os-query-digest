@@ -26,7 +26,7 @@ The digest serialises to a compact object:
   "kind": "aggregate",
   "q": "logs-* | q=(@timestamp >= now-15m and service:api) | size=0",
   "sig": "logs-* | q=(@timestamp >= ? and service:?) | size=0",
-  "hash": "q5:b7cc218cda09"
+  "hash": "q6:b7cc218cda09"
 }
 ```
 
@@ -86,7 +86,7 @@ $logger->pushProcessor(new DigestProcessor(null, 'query', 'index', RecordLayout:
     "dsl_kind": "aggregate",
     "dsl_q": "logs-* | q=(@timestamp >= now-15m and service:api) | size=0",
     "dsl_sig": "logs-* | q=(@timestamp >= ? and service:?) | size=0",
-    "dsl_hash": "q5:b7cc218cda09",
+    "dsl_hash": "q6:b7cc218cda09",
     "dsl_notes": null,
     "dsl_error": null
 }
@@ -136,7 +136,7 @@ The record is then three fields:
   "idx": "logs-*",
   "kind": "aggregate",
   "sig": "logs-* | q=(@timestamp >= ? and service:?) | size=0",
-  "hash": "q5:b7cc218cda09"
+  "hash": "q6:b7cc218cda09"
 }
 ```
 

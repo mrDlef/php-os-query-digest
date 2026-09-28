@@ -729,7 +729,7 @@ namespace MrDlef\OsQueryDigest {
             return $this->signature;
         }
 
-        /** Versioned fingerprint of the signature, e.g. `q5:8f3ac1d2b901`. */
+        /** Versioned fingerprint of the signature, e.g. `q6:8f3ac1d2b901`. */
         public function hash(): string
         {
             return $this->hash;
@@ -1368,7 +1368,7 @@ namespace MrDlef\OsQueryDigest\Fingerprint {
      * sha256, truncated, and prefixed with the algorithm version.
      *
      * The prefix is not decoration: when the normalisation rules change, every
-     * hash changes. Carrying `q1:` / `q2:` / `q3:` / `q4:` / `q5:` in the value makes that break visible in
+     * hash changes. Carrying `q1:` / `q2:` / `q3:` / `q4:` / `q5:` / `q6:` in the value makes that break visible in
      * the data rather than silently invalidating existing dashboards.
      *
      * xxh3 would be faster but only exists from PHP 8.1, and this library targets
@@ -1460,8 +1460,8 @@ namespace MrDlef\OsQueryDigest {
          * A registered {@see ClauseRenderer} is a local normalisation rule: it
          * changes the fingerprint of every query using its type. That is exactly
          * what a prefix bump exists to make visible — `q1:` → `q2:` → `q3:` →
-         * `q4:` → `q5:`
-         * says "an older set of rules minted this", and `q5x:` says "someone's
+         * `q4:` → `q5:` → `q6:`
+         * says "an older set of rules minted this", and `q6x:` says "someone's
          * plugin code took part in minting this, so do not expect it to match a
          * stock digest of the same query".
          *
@@ -2384,7 +2384,7 @@ namespace MrDlef\OsQueryDigest {
          * Bumped whenever the normalisation rules change, so an algorithm change is
          * visible in the data instead of silently rewriting every dashboard.
          */
-        private string $hashVersion = 'q5';
+        private string $hashVersion = 'q6';
 
         private function __construct()
         {
@@ -4190,8 +4190,8 @@ namespace MrDlef\OsQueryDigest {
      *
      *     new LoggingObserver($logger, RecordLayout::flat());
      *
-     *     nested   {"dsl": {"idx": "…", "kind": "…", "hash": "q5:…"}, "took": 12}
-     *     flat     {"dsl_idx": "…", "dsl_kind": "…", "dsl_hash": "q5:…", "took": 12}
+     *     nested   {"dsl": {"idx": "…", "kind": "…", "hash": "q6:…"}, "took": 12}
+     *     flat     {"dsl_idx": "…", "dsl_kind": "…", "dsl_hash": "q6:…", "took": 12}
      *
      * Nested is the default and what the shipped dashboard pack maps. Flat exists
      * because **the shape belongs to the collector, not to this library**: some log
@@ -4373,6 +4373,9 @@ namespace MrDlef\OsQueryDigest\Render {
         private const PREC_NOT = 3;
         private const PREC_ATOM = 4;
 
+        /** @var string[] paths of the nested clauses currently being rendered */
+        private array $paths = [];
+
         public function render(Node $node, RenderProfile $profile): string
         {
             return $this->node($node, $profile, 0);
@@ -4407,7 +4410,7 @@ namespace MrDlef\OsQueryDigest\Render {
             }
 
             if ($node instanceof NestedNode) {
-                return $node->path() . ':{ ' . $this->node($node->child(), $profile, 0) . ' }';
+                return $this->nested($node, $profile);
             }
 
             if ($node instanceof JoinNode) {
@@ -4434,6 +4437,27 @@ namespace MrDlef\OsQueryDigest\Render {
             }
 
             return '?';
+        }
+
+        /**
+         * `path:{ inner }`, with the inner fields written *relative* to the path.
+         *
+         * DQL prepends the path itself, so spelling it again inside the braces asks
+         * for `path.path.sub` — a field that does not exist. Dashboards rejects it
+         * outright once an index pattern is loaded.
+         */
+        private function nested(NestedNode $node, RenderProfile $profile): string
+        {
+            // Shown against the enclosing paths, stacked in full: a nested clause
+            // inside another writes its path relative too, `a:{ b:{ c:? } }`.
+            $shown = $this->relativeToNestedPath($node->path());
+            $this->paths[] = $node->path();
+
+            try {
+                return $shown . ':{ ' . $this->node($node->child(), $profile, 0) . ' }';
+            } finally {
+                array_pop($this->paths);
+            }
         }
 
         /**
@@ -4473,7 +4497,7 @@ namespace MrDlef\OsQueryDigest\Render {
             // redactor — is keyed on. A redactor deciding whether a value may be
             // logged must see the fields the query named, never a shortened display
             // of them.
-            $shown = self::shownField($field, $profile);
+            $shown = $this->shownField($field, $profile);
 
             switch ($leaf->op()) {
                 case LeafNode::OP_EXISTS:
@@ -4584,23 +4608,43 @@ namespace MrDlef\OsQueryDigest\Render {
          * A field name holding a `|` would be split by this, which is why nothing
          * but the display is allowed to depend on it.
          */
-        private static function shownField(string $field, RenderProfile $profile): string
+        private function shownField(string $field, RenderProfile $profile): string
         {
             $max = $profile->maxFields();
 
             if ($max === null || strpos($field, '|') === false) {
-                return $field;
+                return $this->relativeToNestedPath($field);
             }
 
             $fields = explode('|', $field);
+            foreach ($fields as $index => $name) {
+                $fields[$index] = $this->relativeToNestedPath($name);
+            }
+
             if (count($fields) <= $max) {
-                return $field;
+                return implode('|', $fields);
             }
 
             $kept = array_slice($fields, 0, max(0, $max));
             $kept[] = '+' . (count($fields) - count($kept)) . ' more';
 
             return implode('|', $kept);
+        }
+
+        /**
+         * Inside `path:{ … }`, drop the path the field repeats — see {@see nested()}.
+         */
+        private function relativeToNestedPath(string $field): string
+        {
+            // Deepest path first, so `a.b.c` under `a` inside `a.b` loses `a.b.`.
+            foreach (array_reverse($this->paths) as $path) {
+                $prefix = $path . '.';
+                if (strpos($field, $prefix) === 0) {
+                    return substr($field, strlen($prefix));
+                }
+            }
+
+            return $field;
         }
 
         /**
@@ -4656,12 +4700,15 @@ namespace MrDlef\OsQueryDigest\Render {
         private function range(LeafNode $leaf, RenderProfile $profile, int $parentPrecedence): string
         {
             $field = $leaf->field();
+            // Same split as leaf(): the display may be shortened, the value
+            // renderer is always keyed on the field the query named.
+            $shown = $this->shownField($field, $profile);
             $renderer = $profile->values();
             $parts = [];
 
             foreach ($leaf->values() as $bound => $value) {
                 $symbol = self::RANGE_SYMBOLS[$bound] ?? '=';
-                $parts[] = $field . ' ' . $symbol . ' ' . $renderer->scalar($field, $value);
+                $parts[] = $shown . ' ' . $symbol . ' ' . $renderer->scalar($field, $value);
             }
 
             if (count($parts) === 1) {

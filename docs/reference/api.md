@@ -201,8 +201,8 @@ Constant: `FIELDS`, every key a flat record writes. Where a digest's fields go
 in a log record — under one key, or beside it:
 
 ```
-nested   {"dsl": {"idx": "…", "kind": "…", "hash": "q5:…"}, "took": 12}
-flat     {"dsl_idx": "…", "dsl_kind": "…", "dsl_hash": "q5:…", "took": 12}
+nested   {"dsl": {"idx": "…", "kind": "…", "hash": "q6:…"}, "took": 12}
+flat     {"dsl_idx": "…", "dsl_kind": "…", "dsl_hash": "q6:…", "took": 12}
 ```
 
 Both spellings carry the same fields under the same names, so `dsl.hash` and

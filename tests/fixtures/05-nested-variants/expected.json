@@ -1,7 +1,7 @@
 {
     "idx": "catalog-v2",
     "kind": "browse",
-    "q": "catalog-v2 | q=(variants:{ variants.color:red and variants.price <= 100 })",
-    "sig": "catalog-v2 | q=(variants:{ variants.color:? and variants.price <= ? })",
-    "hash": "q5:24d5e6929ac3"
+    "q": "catalog-v2 | q=(variants:{ color:red and price <= 100 })",
+    "sig": "catalog-v2 | q=(variants:{ color:? and price <= ? })",
+    "hash": "q6:14f18bcae209"
 }

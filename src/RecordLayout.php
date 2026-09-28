@@ -13,8 +13,8 @@ use MrDlef\OsQueryDigest\Support\RecordFields;
  *
  *     new LoggingObserver($logger, RecordLayout::flat());
  *
- *     nested   {"dsl": {"idx": "…", "kind": "…", "hash": "q5:…"}, "took": 12}
- *     flat     {"dsl_idx": "…", "dsl_kind": "…", "dsl_hash": "q5:…", "took": 12}
+ *     nested   {"dsl": {"idx": "…", "kind": "…", "hash": "q6:…"}, "took": 12}
+ *     flat     {"dsl_idx": "…", "dsl_kind": "…", "dsl_hash": "q6:…", "took": 12}
  *
  * Nested is the default and what the shipped dashboard pack maps. Flat exists
  * because **the shape belongs to the collector, not to this library**: some log

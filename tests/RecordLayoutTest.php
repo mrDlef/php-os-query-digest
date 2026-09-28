@@ -143,7 +143,7 @@ final class RecordLayoutTest extends TestCase
         self::assertStringContainsString('service:api', self::text($nested['dsl']));
 
         $flat = RecordLayout::flat()->apply([], self::digest());
-        self::assertStringStartsWith('q5:', self::text($flat['dsl_hash']));
+        self::assertStringStartsWith('q6:', self::text($flat['dsl_hash']));
     }
 
     /**

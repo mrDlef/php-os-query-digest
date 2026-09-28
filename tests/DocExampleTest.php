@@ -149,13 +149,13 @@ final class DocExampleTest extends TestCase
      * @var array<string,string> hash => why it is not checked
      */
     private const ILLUSTRATIVE = [
-        'q5:8f3ac1d2b901' => 'docs/explanation/hash-stability.md — the shape of a hash, not one of ours',
+        'q6:8f3ac1d2b901' => 'docs/explanation/hash-stability.md — the shape of a hash, not one of ours',
         // The `report` block is a run against a real week of production logs,
         // which is the only thing that can show what the command is for: 21,132
         // shapes, and the top one costing twenty minutes of cluster time. The
         // request behind it is not ours to publish, so the hash cannot be
         // recomputed — but it was minted by this library, from that file.
-        'q5:06d176a67841' => 'docs/guides/cli.md — a real run, whose request the page does not carry',
+        'q6:06d176a67841' => 'docs/guides/cli.md — a real run, whose request the page does not carry',
     ];
 
     /**
@@ -744,7 +744,7 @@ final class DocExampleTest extends TestCase
 
         $found = false;
         foreach (self::PAGES as $page) {
-            preg_match_all('/\bq5x?:[0-9a-f]{12}\b/', self::read($page), $matches);
+            preg_match_all('/\bq6x?:[0-9a-f]{12}\b/', self::read($page), $matches);
 
             foreach (array_unique($matches[0]) as $hash) {
                 $found = true;
@@ -797,7 +797,7 @@ final class DocExampleTest extends TestCase
         [, $out] = $this->invoke(['slowlog', $this->file(self::slowlog())]);
         [, $ndjson] = $this->invoke(['--ndjson', '--hash'], implode("\n", self::NDJSON));
 
-        preg_match_all('/\bq5x?:[0-9a-f]{12}\b/', $out . "\n" . $ndjson, $found);
+        preg_match_all('/\bq6x?:[0-9a-f]{12}\b/', $out . "\n" . $ndjson, $found);
 
         return array_unique(array_merge($hashes, $found[0]));
     }

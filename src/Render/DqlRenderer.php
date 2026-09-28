@@ -36,6 +36,9 @@ final class DqlRenderer
     private const PREC_NOT = 3;
     private const PREC_ATOM = 4;
 
+    /** @var string[] paths of the nested clauses currently being rendered */
+    private array $paths = [];
+
     public function render(Node $node, RenderProfile $profile): string
     {
         return $this->node($node, $profile, 0);
@@ -70,7 +73,7 @@ final class DqlRenderer
         }
 
         if ($node instanceof NestedNode) {
-            return $node->path() . ':{ ' . $this->node($node->child(), $profile, 0) . ' }';
+            return $this->nested($node, $profile);
         }
 
         if ($node instanceof JoinNode) {
@@ -97,6 +100,27 @@ final class DqlRenderer
         }
 
         return '?';
+    }
+
+    /**
+     * `path:{ inner }`, with the inner fields written *relative* to the path.
+     *
+     * DQL prepends the path itself, so spelling it again inside the braces asks
+     * for `path.path.sub` — a field that does not exist. Dashboards rejects it
+     * outright once an index pattern is loaded.
+     */
+    private function nested(NestedNode $node, RenderProfile $profile): string
+    {
+        // Shown against the enclosing paths, stacked in full: a nested clause
+        // inside another writes its path relative too, `a:{ b:{ c:? } }`.
+        $shown = $this->relativeToNestedPath($node->path());
+        $this->paths[] = $node->path();
+
+        try {
+            return $shown . ':{ ' . $this->node($node->child(), $profile, 0) . ' }';
+        } finally {
+            array_pop($this->paths);
+        }
     }
 
     /**
@@ -136,7 +160,7 @@ final class DqlRenderer
         // redactor — is keyed on. A redactor deciding whether a value may be
         // logged must see the fields the query named, never a shortened display
         // of them.
-        $shown = self::shownField($field, $profile);
+        $shown = $this->shownField($field, $profile);
 
         switch ($leaf->op()) {
             case LeafNode::OP_EXISTS:
@@ -247,23 +271,43 @@ final class DqlRenderer
      * A field name holding a `|` would be split by this, which is why nothing
      * but the display is allowed to depend on it.
      */
-    private static function shownField(string $field, RenderProfile $profile): string
+    private function shownField(string $field, RenderProfile $profile): string
     {
         $max = $profile->maxFields();
 
         if ($max === null || strpos($field, '|') === false) {
-            return $field;
+            return $this->relativeToNestedPath($field);
         }
 
         $fields = explode('|', $field);
+        foreach ($fields as $index => $name) {
+            $fields[$index] = $this->relativeToNestedPath($name);
+        }
+
         if (count($fields) <= $max) {
-            return $field;
+            return implode('|', $fields);
         }
 
         $kept = array_slice($fields, 0, max(0, $max));
         $kept[] = '+' . (count($fields) - count($kept)) . ' more';
 
         return implode('|', $kept);
+    }
+
+    /**
+     * Inside `path:{ … }`, drop the path the field repeats — see {@see nested()}.
+     */
+    private function relativeToNestedPath(string $field): string
+    {
+        // Deepest path first, so `a.b.c` under `a` inside `a.b` loses `a.b.`.
+        foreach (array_reverse($this->paths) as $path) {
+            $prefix = $path . '.';
+            if (strpos($field, $prefix) === 0) {
+                return substr($field, strlen($prefix));
+            }
+        }
+
+        return $field;
     }
 
     /**
@@ -319,12 +363,15 @@ final class DqlRenderer
     private function range(LeafNode $leaf, RenderProfile $profile, int $parentPrecedence): string
     {
         $field = $leaf->field();
+        // Same split as leaf(): the display may be shortened, the value
+        // renderer is always keyed on the field the query named.
+        $shown = $this->shownField($field, $profile);
         $renderer = $profile->values();
         $parts = [];
 
         foreach ($leaf->values() as $bound => $value) {
             $symbol = self::RANGE_SYMBOLS[$bound] ?? '=';
-            $parts[] = $field . ' ' . $symbol . ' ' . $renderer->scalar($field, $value);
+            $parts[] = $shown . ' ' . $symbol . ' ' . $renderer->scalar($field, $value);
         }
 
         if (count($parts) === 1) {

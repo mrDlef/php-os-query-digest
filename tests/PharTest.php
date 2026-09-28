@@ -165,7 +165,7 @@ final class PharTest extends TestCase
         self::assertSame('#!/usr/bin/env php', strtok($contents, "\n"));
 
         [, $out] = $this->runPhar(['--hash', '--index=logs-2026.08.13'], self::BODY);
-        self::assertStringStartsWith('q5', $out, 'Something is printed before the digest.');
+        self::assertStringStartsWith('q6', $out, 'Something is printed before the digest.');
     }
 
     /**
