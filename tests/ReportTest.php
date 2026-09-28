@@ -179,7 +179,7 @@ final class ReportTest extends TestCase
 
         self::assertNotNull($report->shape($hash));
         self::assertSame($hash, $report->shape($hash)->hash());
-        self::assertNull($report->shape('q5:000000000000'), 'A fingerprint nothing recorded is not a shape.');
+        self::assertNull($report->shape('q6:000000000000'), 'A fingerprint nothing recorded is not a shape.');
     }
 
     /**

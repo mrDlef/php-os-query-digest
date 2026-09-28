@@ -354,7 +354,7 @@ final class DigestingClientTest extends TestCase
         self::assertArrayNotHasKey('dsl', $decoded, 'A flat record keeps no sub-object.');
         self::assertSame('logs-*', $decoded['dsl_idx']);
         self::assertIsString($decoded['dsl_hash']);
-        self::assertStringStartsWith('q5:', $decoded['dsl_hash']);
+        self::assertStringStartsWith('q6:', $decoded['dsl_hash']);
         self::assertSame(7, $decoded['took']);
     }
 

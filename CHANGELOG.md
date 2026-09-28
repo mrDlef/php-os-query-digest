@@ -12,9 +12,12 @@ trusted. `tools/changelog.php check` compares the hashes pinned in
 disagrees with what actually happened — a release cannot claim your dashboards
 survived when they did not, or forget to mention that they did not.
 
-The prefix has moved four times, and every time only the prefix: a signature that
-did not change kept its twelve hex characters, so `q4:abc…` and `q5:abc…`
-describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-query-digest/explanation/hash-stability/).
+The prefix has moved five times, and a signature that did not change kept its
+twelve hex characters, so `q4:abc…` and `q5:abc…` describe the same query. The
+first four moves were *only* the prefix. **`q6:` is the first that is not**: a
+query holding a `nested` clause renders differently now, so its twelve
+characters are genuinely new. Every other query kept them. See
+[Hash stability](https://mrdlef.github.io/php-os-query-digest/explanation/hash-stability/).
 
 | prefix | from | why |
 |---|---|---|
@@ -23,7 +26,73 @@ describe the same query. See [Hash stability](https://mrdlef.github.io/php-os-qu
 | `q3:` | v0.6.0 | eight more promoted |
 | `q4:` | v0.10.0 | the older `from`/`to` spelling of a range is read, and a range left without bounds became an `exists` |
 | `q5:` | v0.13.0 | the search parameters an `['index' => …, 'body' => …]` envelope carries beside `body` are read instead of dropped |
-| `q5x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
+| `q6:` | v0.16.0 | a `nested` clause stops repeating its path inside its own braces, which was not valid DQL |
+| `q6x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
+
+## v0.16.0 — unreleased
+
+_the line a `nested` clause renders is DQL again_
+
+**Fingerprints:** `q5:` → `q6:`. A query with no `nested` clause kept its twelve
+hex characters and only changed prefix, the way the four earlier moves did. **A
+query with one did not** — its line changed, so its fingerprint did. That is the
+whole of the bump: `tests/fixtures/05-nested-variants` is the only pinned
+fixture whose signature moved.
+
+### A nested clause was naming a field that does not exist
+
+`text` promises a line you can paste into the Dashboards search bar. For any
+query holding a `nested` clause, it was not one.
+
+The clause rendered as `path:{ path.sub:? }` — the inner field carrying the path
+it already sits under. DQL prepends the path itself, so what Dashboards actually
+searched was `path.path.sub`:
+
+```
+before   nested_tags:{ nested_tags.fr.keyword:ingenieur }   ->  nested_tags.nested_tags.fr.keyword
+after    nested_tags:{ fr.keyword:ingenieur }               ->  nested_tags.fr.keyword
+```
+
+One line of Dashboards' own parser decides it, and it reads the same on 2.19 and
+3.8. Without an index pattern loaded the doubled field is searched silently and
+matches nothing; with one, Dashboards refuses the query outright — *"Nested
+field … is being queried with the incorrect nested path"*. Neither is a line
+worth logging.
+
+A nested clause inside another was doubling twice over: its own path was written
+in full too, so `order:{ order.lines:{ order.lines.sku:? } }` asked for
+`order.order.lines.order.lines.sku`. Both levels are relative now —
+`order:{ lines:{ sku:? } }`.
+
+The fix is a rendering change, not a normalisation one: the tree is untouched,
+`nested` still parses as it did, and the value renderer — with it, any redactor
+— is still handed the field the query named rather than the shortened display.
+Only what prints is shorter.
+
+Worth what it costs: a week of a real multi-tenant deployment carries a `nested`
+clause on **92 % of its digests**, at 46 characters of repeated path each.
+
+### The line is checked against Dashboards now, not against ourselves
+
+Nothing in the suite could have caught the above. Golden files pin what the code
+produced, so `tests/fixtures/05-nested-variants` had been certifying the broken
+line since the first commit; the doc examples recompute from the same code; the
+certification matrix proves every query type is *read*, never that what is
+*written* can be read back.
+
+Two tests close that, and the second found the nested-inside-nested case after
+the first fix had already landed:
+
+- `NestedPathTest` — no clause repeats the path it sits under. A string check,
+  offline, in the default suite, on every supported PHP version.
+- `Integration\DqlRoundTripTest` — renders `text`, parses it with Dashboards'
+  own parser out of the image, and asserts the fields it resolves to are the
+  fields the request named. `DASHBOARDS_IMAGE=…` runs it; the `round-trip` job
+  in `certification.yml` runs it on both majors, on a schedule and on any pull
+  request touching `src/Render/`.
+
+Only `text` is covered, because only `text` claims to be DQL. The signature
+erases its values and carries sigils no parser accepts, by design.
 
 ## v0.15.0 — 2026-09-14
 

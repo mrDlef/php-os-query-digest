@@ -112,8 +112,8 @@ final class ExtensionTest extends TestCase
         $stock = Formatter::create()->describe($request)->hash();
         $extended = $this->formatterWithSltr()->describe($request)->hash();
 
-        self::assertStringStartsWith('q5:', $stock);
-        self::assertStringStartsWith('q5x:', $extended);
+        self::assertStringStartsWith('q6:', $stock);
+        self::assertStringStartsWith('q6x:', $extended);
 
         // Same shape, same twelve characters — only the marker differs, so the
         // two are still recognisable as the same query.

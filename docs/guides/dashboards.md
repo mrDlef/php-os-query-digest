@@ -31,7 +31,7 @@ is the path on a real project.
 
     Coming from an earlier version: re-apply the index template, re-import the
     pack, and either re-index or keep the old field mapped alongside. Nothing
-    about your **fingerprints** changed — `q5:` is untouched, so a hash stored
+    about your **fingerprints** changed — `q6:` is untouched, so a hash stored
     under `os.hash` and one stored under `dsl.hash` are the same hash and can be
     compared across the move.
 

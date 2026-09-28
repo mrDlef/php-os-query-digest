@@ -32,13 +32,13 @@ eight:
 ```
 values()      page 1, two categories
   sig   catalog-* | q=(category:(? or ?) and shop:?) | size=20 sort=price:asc
-  hash  q5:8fd2dd38ce3a
+  hash  q6:8fd2dd38ce3a
 values()      page 3, eight categories
   sig   catalog-* | q=(category:(? or ? or ? or ? or ? or +3) and shop:?) | size=20 from=40 sort=price:asc
-  hash  q5:3af67be7bbcb
+  hash  q6:3af67be7bbcb
 structural()  either page, either basket
   sig   catalog-* | q=(category:(?) and shop:?) | size=? sort=price:asc
-  hash  q5:b64ab1f3a179
+  hash  q6:b64ab1f3a179
 ```
 
 Ranking a slow log by what it costs is the first question, so the CLI and the
@@ -82,7 +82,7 @@ echo $explanation;
 ```
 text: logs-* | q=(env:prod and msg:timeout and service:api) | size=0 | should=1
 sig:  logs-* | q=(env:? and msg:~? and service:?) | size=0 | should=1
-hash: q5:a5d822c18ab3
+hash: q6:a5d822c18ab3
 kind: aggregate
 notes: should=1
 

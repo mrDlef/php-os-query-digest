@@ -17,14 +17,20 @@ on:
         description: 'OpenSearch 3.x image tag'
         default: '3'
   pull_request:
-    # Only when the certification inputs themselves move.
+    # Only when the certification inputs themselves move — plus the renderer,
+    # whose output the round-trip job is the only check on.
     paths:
       - 'resources/probes.json'
       - 'resources/versions.json'
       - 'tools/certify.php'
       - 'tools/clients/composer.json'
+      - 'tools/kql-probe.js'
+      - 'src/Render/**'
       - 'tests/Integration/**'
       - '.github/workflows/certification.yml'
+
+permissions:
+  contents: read
 
 jobs:
   replay:
@@ -86,3 +92,43 @@ jobs:
         env:
           OPENSEARCH_URL: http://localhost:9200
         run: vendor/bin/phpunit --testsuite=integration
+
+  # The only check on what the renderer *writes*. Everything else in the suite
+  # compares the library against itself, which is how `path:{ path.sub }` — a
+  # field DQL resolves to `path.path.sub` — survived fifteen releases with a
+  # golden file pinning it as correct.
+  round-trip:
+    name: DQL round-trip, Dashboards ${{ matrix.major }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - major: '2.x'
+            tag: '2.19.0'
+          - major: '3.x'
+            tag: '3.8.0'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json
+          coverage: none
+
+      - run: composer update --prefer-dist --no-progress
+
+      # Pulled in its own step so a registry failure reads as one, instead of
+      # arriving as unparseable output in the middle of the test's assertion.
+      - name: Pull Dashboards ${{ matrix.tag }}
+        run: docker pull opensearchproject/opensearch-dashboards:${{ matrix.tag }}
+
+      # No service container: the parser is a node module inside the image, and
+      # Dashboards converts DQL to DSL in the browser, so there is nothing
+      # listening to ask. The image is run per expression instead.
+      - name: Parse every text line back with Dashboards' own parser
+        env:
+          DASHBOARDS_IMAGE: opensearchproject/opensearch-dashboards:${{ matrix.tag }}
+        run: vendor/bin/phpunit --testsuite=integration --filter DqlRoundTripTest

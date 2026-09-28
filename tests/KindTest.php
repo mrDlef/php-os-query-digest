@@ -59,7 +59,7 @@ final class KindTest extends TestCase
      */
     public function testADigestWithNoKindSaysSo(): void
     {
-        $digest = new Digest('idx', 'text', 'sig', 'q5:000000000000');
+        $digest = new Digest('idx', 'text', 'sig', 'q6:000000000000');
 
         self::assertSame(Kind::UNKNOWN, $digest->kind()->name());
         self::assertSame(Kind::UNKNOWN, $digest->toArray()['kind']);

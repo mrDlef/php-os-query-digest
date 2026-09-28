@@ -10,7 +10,7 @@ $ echo '{"query":{"term":{"service":"api"}},"size":50}' \
 idx:  logs-*
 text: logs-* | q=(service:api) | size=50
 sig:  logs-* | q=(service:?) | size=50
-hash: q5:5b2210eb5318
+hash: q6:5b2210eb5318
 kind: browse
 ```
 
@@ -26,8 +26,8 @@ a `uniq -c` away:
 <!-- verified: cli-ndjson -->
 ```bash
 $ os-query-digest --ndjson --hash < slow.ndjson | sort | uniq -c | sort -rn
-      3 q5:5b2210eb5318
-      1 q5:f70c7bc21a0f
+      3 q6:5b2210eb5318
+      1 q6:f70c7bc21a0f
 ```
 
 Those three are not three slow queries to read: they are one shape, hit on two
@@ -76,11 +76,11 @@ $ vendor/bin/os-query-digest slowlog /var/log/opensearch/*_index_search_slowlog.
 60 lines, 59 records, 3 shapes, 13,515 ms total
 
   count  total ms*  mean    p95    max  shape
-     41      6,807   166    246    258  q5:fe168406e702
+     41      6,807   166    246    258  q6:fe168406e702
                                         logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
-      6      5,978   996  1,325  1,325  q5:6b6fb17c6640
+      6      5,978   996  1,325  1,325  q6:6b6fb17c6640
                                         orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)
-     12        730    61     86     86  q5:810928290c12
+     12        730    61     86     86  q6:810928290c12
                                         catalog-* | q=(title:~?) | size=10
 ```
 
@@ -192,7 +192,7 @@ $ os-query-digest report --key-prefix=q_ --text-key=q --took-key=duration_ms app
 603,544 lines, 603,544 records, 21,132 shapes, 23,072,760 ms total
 
    count  total ms*  mean  p95    max  shape
-  15,512  1,350,476    87  698  1,598  q5:06d176a67841
+  15,512  1,350,476    87  698  1,598  q6:06d176a67841
                                        af_*_content | q=(content_type:? and geo_location_point:geo_bbox() …
 ```
 

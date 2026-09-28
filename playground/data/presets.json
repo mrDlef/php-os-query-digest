@@ -30,7 +30,7 @@
             "indexNormalizer": "date-patterns",
             "aggNames": false,
             "text": true,
-            "hashVersion": "q5",
+            "hashVersion": "q6",
             "hashLength": 12
         },
         "rules": {
@@ -71,7 +71,7 @@
                 "kind": "browse",
                 "q": "logs-* | q=(@timestamp >= now-15m and @timestamp < now and not status:200 and service:api) | size=50 sort=@timestamp:desc",
                 "sig": "logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc",
-                "hash": "q5:fe168406e702"
+                "hash": "q6:fe168406e702"
             },
             "rules": [
                 {
@@ -111,7 +111,7 @@
                 "kind": "aggregate",
                 "q": "logs-* | q=(@timestamp >= now-24h and env:prod) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0",
                 "sig": "logs-* | q=(@timestamp >= ? and env:?) | aggs=terms(host,10)>{p95(latency_ms), sum(error_count)} | size=0",
-                "hash": "q5:63a1ca5c80b9"
+                "hash": "q6:63a1ca5c80b9"
             },
             "rules": [
                 {
@@ -151,7 +151,7 @@
                 "kind": "browse",
                 "q": "catalog-v2 | q=(in_stock:true and price >= 20 and price <= 150 and title:\"chaussures de running\") | size=20 from=40 sort=_score:desc,price:asc | should=2",
                 "sig": "catalog-v2 | q=(in_stock:? and price >= ? and price <= ? and title:~?) | size=20 from=40 sort=_score:desc,price:asc | should=2",
-                "hash": "q5:cde7babeb8a7",
+                "hash": "q6:cde7babeb8a7",
                 "notes": [
                     "should=2"
                 ]
@@ -191,7 +191,7 @@
                 "kind": "browse",
                 "q": "orders | q=(country:FR and status:(new or paid or shipped or cancelled or refunded or +3))",
                 "sig": "orders | q=(country:? and status:(? or ? or ? or ? or ? or +3))",
-                "hash": "q5:e9794c1be608"
+                "hash": "q6:e9794c1be608"
             },
             "rules": [
                 {
@@ -213,9 +213,9 @@
             "digest": {
                 "idx": "catalog-v2",
                 "kind": "browse",
-                "q": "catalog-v2 | q=(variants:{ variants.color:red and variants.price <= 100 })",
-                "sig": "catalog-v2 | q=(variants:{ variants.color:? and variants.price <= ? })",
-                "hash": "q5:24d5e6929ac3"
+                "q": "catalog-v2 | q=(variants:{ color:red and price <= 100 })",
+                "sig": "catalog-v2 | q=(variants:{ color:? and price <= ? })",
+                "hash": "q6:14f18bcae209"
             },
             "rules": []
         },
@@ -230,7 +230,7 @@
                 "kind": "browse",
                 "q": "logs-* | q=(message:timeout or message:\"connection reset by peer\") | size=10",
                 "sig": "logs-* | q=(message:~? or message:\"?\") | size=10",
-                "hash": "q5:4f1eaee8e165"
+                "hash": "q6:4f1eaee8e165"
             },
             "rules": [
                 {
@@ -270,7 +270,7 @@
                 "kind": "browse",
                 "q": "metrics-* | q=(host:* and host:web-* and span_near(?)) | +collapse +highlight",
                 "sig": "metrics-* | q=(host:* and host:?* and span_near(?)) | +collapse +highlight",
-                "hash": "q5:a235723d04dc",
+                "hash": "q6:a235723d04dc",
                 "notes": [
                     "+collapse",
                     "+highlight"
@@ -306,7 +306,7 @@
                 "kind": "browse",
                 "q": "docs | q=(lang:fr and (body:alpha or body:beta or body:gamma){msm=2})",
                 "sig": "docs | q=(lang:? and (body:~? or body:~? or body:~?){msm=2})",
-                "hash": "q5:862a058a0f91"
+                "hash": "q6:862a058a0f91"
             },
             "rules": []
         },
@@ -321,7 +321,7 @@
                 "kind": "browse",
                 "q": "logs-* | q=((status:500 AND host:web-*) and path:/api/v1/*) | size=100",
                 "sig": "logs-* | q=(raw(?) and path:*?*) | size=100",
-                "hash": "q5:6fb4a2d9c302"
+                "hash": "q6:6fb4a2d9c302"
             },
             "rules": []
         },
@@ -339,7 +339,7 @@
                 "kind": "aggregate",
                 "q": "logs-* | q=(@timestamp >= \"2026-08-13T00:00:00Z\" and @timestamp < \"2026-08-14T00:00:00Z\" and service:(api or worker or cron)) | aggs=over_time:date_histogram(@timestamp,1h)>unique_users:cardinality(user_id) | size=0",
                 "sig": "logs-* | q=(@timestamp >= ? and @timestamp < ? and service:(?)) | aggs=over_time:date_histogram(@timestamp,1h)>unique_users:cardinality(user_id) | size=0",
-                "hash": "q5:8b4c9e9aebc2"
+                "hash": "q6:8b4c9e9aebc2"
             },
             "rules": [
                 {
@@ -371,7 +371,7 @@
                 "kind": "browse",
                 "q": "shop-catalog | q=(name:\"running shoes\" and price >= 20 and price < 200) | post=(brand:acme and in_stock:true) | aggs=terms(brand,20) | size=24",
                 "sig": "shop-catalog | q=(name:~? and price >= ? and price < ?) | post=(brand:? and in_stock:?) | aggs=terms(brand,20) | size=24",
-                "hash": "q5:ce0146715c07"
+                "hash": "q6:ce0146715c07"
             },
             "rules": []
         },
@@ -386,7 +386,7 @@
                 "kind": "browse",
                 "q": "products-v3 | q=(image_embedding:knn(k=20) and in_stock:true or text_embedding:neural(query=\"waterproof hiking boots\",k=20)) | size=20",
                 "sig": "products-v3 | q=(image_embedding:knn(k=?) and in_stock:? or text_embedding:neural(query=?,k=?)) | size=20",
-                "hash": "q5:4dde138a2ad7"
+                "hash": "q6:4dde138a2ad7"
             },
             "rules": [
                 {
@@ -410,7 +410,7 @@
                 "kind": "browse",
                 "q": "stores | q=(delivery_area:geo_bbox() and has_child(review):{ rating >= 4 } and has_parent(chain):{ active:true } and location:geo_distance(25km)) | size=50",
                 "sig": "stores | q=(delivery_area:geo_bbox() and has_child(review):{ rating >= ? } and has_parent(chain):{ active:? } and location:geo_distance(?)) | size=50",
-                "hash": "q5:ccb4fb77328e"
+                "hash": "q6:ccb4fb77328e"
             },
             "rules": [
                 {
@@ -434,7 +434,7 @@
                 "kind": "browse",
                 "q": "articles | q=(script(doc['word_count'].value > params.floor) and title|body:like(\"distributed consensus algorithms\")) | size=10",
                 "sig": "articles | q=(script(?) and title|body:like(?)) | size=10",
-                "hash": "q5:522066bb4084"
+                "hash": "q6:522066bb4084"
             },
             "rules": [
                 {
@@ -463,7 +463,7 @@
                 "kind": "browse",
                 "q": "forum-* | q=(parent_id(comment):4712 and created_at >= now-7d) | size=20 | script_score:min_score",
                 "sig": "forum-* | q=(parent_id(comment):? and created_at >= ?) | size=20 | script_score:min_score",
-                "hash": "q5:621e3adba249",
+                "hash": "q6:621e3adba249",
                 "notes": [
                     "script_score:min_score"
                 ]
@@ -495,7 +495,7 @@
                 "kind": "browse",
                 "q": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
                 "sig": "deliveries | q=(drop_zone:geo_shape(polygon,within) and restricted_area:geo_shape(indexed,disjoint)) | size=50 | indexed_shape",
-                "hash": "q5:cb5e4609d066",
+                "hash": "q6:cb5e4609d066",
                 "notes": [
                     "indexed_shape"
                 ]
@@ -522,7 +522,7 @@
                 "kind": "browse",
                 "q": "catalog-* | q=(in_stock:true and (embedding:knn(k=20) or title|description:\"waterproof hiking boots\") and popularity:rank_feature() and released_at:distance_feature(pivot=30d)) | size=24",
                 "sig": "catalog-* | q=(in_stock:? and (embedding:knn(k=?) or title|description:~?) and popularity:rank_feature() and released_at:distance_feature(pivot=?)) | size=24",
-                "hash": "q5:b1d9d5875df4"
+                "hash": "q6:b1d9d5875df4"
             },
             "rules": [
                 {
@@ -565,7 +565,7 @@
                 "kind": "browse",
                 "q": "logs-* | q=(@timestamp:* and not status:200 and service:api) | size=50 sort=@timestamp:desc",
                 "sig": "logs-* | q=(@timestamp:* and not status:? and service:?) | size=50 sort=@timestamp:desc",
-                "hash": "q5:a3cd3114b946"
+                "hash": "q6:a3cd3114b946"
             },
             "rules": [
                 {
@@ -611,7 +611,7 @@
                 "kind": "browse",
                 "q": "members | q=(status:active) | size=20 from=40 sort=joined_at:asc,last_name:desc",
                 "sig": "members | q=(status:?) | size=20 from=40 sort=joined_at:asc,last_name:desc",
-                "hash": "q5:e46fa944258c"
+                "hash": "q6:e46fa944258c"
             },
             "rules": [
                 {
@@ -635,7 +635,7 @@
                 "kind": "suggest",
                 "q": "members-* | q=(full_name:\"ada lov\" and tenant:178) | size=8",
                 "sig": "members-* | q=(full_name:\"?\" and tenant:?) | size=8",
-                "hash": "q5:cdef5f164a58"
+                "hash": "q6:cdef5f164a58"
             },
             "rules": [
                 {
@@ -672,7 +672,7 @@
                 "kind": "scan",
                 "q": "orders-* | q=(status:shipped) | size=1000 sort=created:asc,_id:asc | +search_after",
                 "sig": "orders-* | q=(status:?) | size=1000 sort=created:asc,_id:asc | +search_after",
-                "hash": "q5:ef281565e43c",
+                "hash": "q6:ef281565e43c",
                 "notes": [
                     "+search_after"
                 ]
