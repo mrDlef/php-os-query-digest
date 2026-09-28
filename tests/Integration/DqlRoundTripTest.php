@@ -166,22 +166,32 @@ final class DqlRoundTripTest extends TestCase
         $input = tempnam(sys_get_temp_dir(), 'kql');
         self::assertIsString($input);
         self::assertNotFalse(file_put_contents($input, (string) json_encode($probes)));
+        // tempnam() writes 0600, and the container runs as another user.
+        self::assertTrue(chmod($input, 0644));
 
+        $errors = tempnam(sys_get_temp_dir(), 'kqlerr');
+        self::assertIsString($errors);
+
+        // stderr kept apart rather than merged: a cold `docker pull` writes its
+        // progress there, and merged it would land in front of the JSON.
         $command = sprintf(
             'docker run --rm -v %s:/kql-probe.js:ro -v %s:/cases.json:ro '
-            . '--entrypoint /usr/share/opensearch-dashboards/node/bin/node %s /kql-probe.js /cases.json 2>&1',
+            . '--entrypoint /usr/share/opensearch-dashboards/node/bin/node %s /kql-probe.js /cases.json 2>%s',
             escapeshellarg((string) realpath(self::PROBE)),
             escapeshellarg($input),
             escapeshellarg($this->image),
+            escapeshellarg($errors),
         );
 
         $output = shell_exec($command);
+        $stderr = (string) file_get_contents($errors);
         unlink($input);
+        unlink($errors);
 
-        self::assertIsString($output, 'The probe produced nothing.');
+        self::assertIsString($output, 'The probe produced nothing. stderr: ' . $stderr);
 
         $decoded = json_decode(trim($output), true);
-        self::assertIsArray($decoded, 'The probe did not answer JSON: ' . $output);
+        self::assertIsArray($decoded, 'The probe did not answer JSON: ' . $output . "\nstderr: " . $stderr);
         self::assertCount(count($probes), $decoded, 'The probe skipped a case.');
 
         return array_values($decoded);

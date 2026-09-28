@@ -117,6 +117,11 @@ jobs:
 
       - run: composer update --prefer-dist --no-progress
 
+      # Pulled in its own step so a registry failure reads as one, instead of
+      # arriving as unparseable output in the middle of the test's assertion.
+      - name: Pull Dashboards ${{ matrix.tag }}
+        run: docker pull opensearchproject/opensearch-dashboards:${{ matrix.tag }}
+
       # No service container: the parser is a node module inside the image, and
       # Dashboards converts DQL to DSL in the browser, so there is nothing
       # listening to ask. The image is run per expression instead.
