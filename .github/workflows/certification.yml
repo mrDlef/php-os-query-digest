@@ -29,6 +29,9 @@ on:
       - 'tests/Integration/**'
       - '.github/workflows/certification.yml'
 
+permissions:
+  contents: read
+
 jobs:
   replay:
     name: OpenSearch ${{ matrix.major }}
