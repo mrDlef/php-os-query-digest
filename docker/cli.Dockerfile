@@ -49,6 +49,8 @@ USER nobody
 
 ENTRYPOINT ["os-query-digest"]
 
-# So that `docker run <image>` with no arguments is useful rather than a usage
-# error — the first thing anyone does with an unfamiliar image.
-CMD ["--help"]
+# No CMD. `docker run <image>` with no arguments still prints the usage, but the
+# CLI decides that from stdin rather than from a default argument: a `--help`
+# here was appended to an empty argument list, so `… | docker run -i <image>`
+# printed the usage instead of digesting what was piped in. The phar had no such
+# default and read the pipe, which is how the two drifted apart.
