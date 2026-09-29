@@ -385,6 +385,47 @@ final class CliTest extends TestCase
     }
 
     /**
+     * No arguments and a stdin nothing was piped into: the usage, not a block on
+     * the terminal and not an empty-input error.
+     *
+     * `/dev/null` is what Docker hands a container run without `-i`, and the
+     * image used to paper over it with a `CMD ["--help"]` — which was then
+     * appended to an empty argument list, so a piped query printed the usage
+     * instead of being digested. The phar read the pipe, and the two drifted.
+     */
+    public function testNoArgumentsAndNothingPipedPrintsTheUsage(): void
+    {
+        $in = fopen('/dev/null', 'r');
+        $out = fopen('php://memory', 'r+');
+        $err = fopen('php://memory', 'r+');
+        self::assertIsResource($in);
+        self::assertIsResource($out);
+        self::assertIsResource($err);
+
+        $status = (new Command($in, $out, $err))->run(['os-query-digest']);
+
+        rewind($out);
+        rewind($err);
+        $printed = (string) stream_get_contents($out);
+
+        self::assertSame(Command::OK, $status);
+        self::assertStringContainsString('Usage:', $printed);
+        self::assertSame('', (string) stream_get_contents($err));
+    }
+
+    /**
+     * The other half of the same rule: a stream that carries something is read,
+     * whatever the argument list looks like.
+     */
+    public function testAStreamThatCarriesInputIsStillRead(): void
+    {
+        [$status, $out] = $this->invoke(['--index=logs-2026.08.13'], self::BODY);
+
+        self::assertSame(Command::OK, $status);
+        self::assertStringContainsString('hash: ' . self::HASH, $out);
+    }
+
+    /**
      * @param array<int,string> $argv the options only; the program name is added
      *
      * @return array{0:int,1:string,2:string} status, stdout, stderr

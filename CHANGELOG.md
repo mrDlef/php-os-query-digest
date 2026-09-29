@@ -29,6 +29,42 @@ characters are genuinely new. Every other query kept them. See
 | `q6:` | v0.16.0 | a `nested` clause stops repeating its path inside its own braces, which was not valid DQL |
 | `q6x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
+## v0.17.0 — unreleased
+
+_the image reads a pipe, the way the phar always did_
+
+**Fingerprints:** `q6:` unchanged. Nothing in the rendering or the normalisation
+moved — this is the CLI deciding when to read standard input.
+
+### The phar and the image disagreed about stdin
+
+```bash
+cat query.json | docker run -i --rm ghcr.io/mrdlef/os-query-digest
+```
+
+printed the usage instead of digesting anything. The same pipe into the phar
+worked. Two artefacts built from one source, answering differently.
+
+The image carried `CMD ["--help"]`, so that `docker run <image>` with no
+arguments met a new reader with the usage rather than an error. Docker appends
+that default to an *empty* argument list — which a piped invocation also has —
+so the pipe was read as "no arguments" and the usage won.
+
+The CLI decides from the stream itself now, and the `CMD` is gone:
+
+| stdin                        | before                 | now      |
+|------------------------------|------------------------|----------|
+| a pipe, or a redirected file | image: usage           | digested |
+| `/dev/null`, or a terminal   | phar: `no input` error | usage    |
+
+It is the stream's *type* that decides — a pipe and a regular file carry
+something, the `/dev/null` a container is given without `-i` does not — so it
+costs no read and cannot swallow the input it is asked about. `docker run
+<image>` with no arguments still prints the usage; it now gets there the same
+way the phar does.
+
+`--help` and every sub-command are untouched.
+
 ## v0.16.0 — 2026-09-28
 
 _the line a `nested` clause renders is DQL again_

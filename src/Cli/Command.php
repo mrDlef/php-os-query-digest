@@ -109,6 +109,14 @@ final class Command
                 ->run(array_slice($args, 1));
         }
 
+        // No arguments and nothing on stdin is somebody meeting the tool, not
+        // somebody feeding it: show the usage rather than block on a terminal.
+        if ($args === [] && !self::hasInput($this->stdin)) {
+            $this->write($this->stdout, $this->usage());
+
+            return self::OK;
+        }
+
         $count = count($args);
         $i = 0;
 
@@ -462,6 +470,27 @@ final class Command
         }
 
         return $line . "\n";
+    }
+
+    /**
+     * Whether stdin carries something to read.
+     *
+     * A pipe and a redirected file do; a terminal and the `/dev/null` a
+     * container is given without `-i` do not. The distinction is the stream's
+     * type, not its contents, so it costs no read and cannot consume input.
+     *
+     * @param resource $stdin
+     */
+    private static function hasInput($stdin): bool
+    {
+        $stat = @fstat($stdin);
+        if (!is_array($stat)) {
+            return false;
+        }
+
+        $type = $stat['mode'] & 0170000;
+
+        return $type === 0010000 || $type === 0100000;
     }
 
     private function usage(): string

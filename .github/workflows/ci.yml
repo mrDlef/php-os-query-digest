@@ -102,6 +102,21 @@ jobs:
           php bin/os-query-digest --hash --index=logs-2026.08.13 < query.json > local.txt
           cmp image.txt local.txt
 
+      # With no arguments at all, which the step above never exercises because
+      # it always passes some. That is the gap a `CMD ["--help"]` lived in: a
+      # default argument is appended to an *empty* argument list, so the image
+      # answered a piped query with its usage while the phar digested it.
+      - name: It reads a pipe given no arguments, like the phar
+        run: |
+          docker run -i --rm os-query-digest:ci < query.json > image-piped.txt
+          php bin/os-query-digest < query.json > local-piped.txt
+          cmp image-piped.txt local-piped.txt
+
+      # And the reason that CMD existed in the first place, kept working: an
+      # image run with nothing at all still greets its reader.
+      - name: It still prints the usage when nothing is piped
+        run: docker run --rm os-query-digest:ci | grep -q '^Usage:'
+
   mutation-testing:
     name: Mutation testing
     runs-on: ubuntu-latest
