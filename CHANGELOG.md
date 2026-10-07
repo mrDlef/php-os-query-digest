@@ -29,7 +29,7 @@ characters are genuinely new. Every other query kept them. See
 | `q6:` | v0.16.0 | a `nested` clause stops repeating its path inside its own braces, which was not valid DQL |
 | `q6x:` | — | not a release: any digest minted with a registered `ClauseRenderer` carries the `x`, because the rules are then no longer this library's alone |
 
-## v0.17.0 — unreleased
+## v0.17.0 — 2026-10-07
 
 _the image reads a pipe, the way the phar always did, a capped line ends where a
 clause does, a facet list stops eating the rest of it, and a report can say
