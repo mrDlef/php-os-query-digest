@@ -7,6 +7,7 @@ namespace MrDlef\OsQueryDigest\Cli;
 use MrDlef\OsQueryDigest\Analysis\Report;
 use MrDlef\OsQueryDigest\Analysis\Shape;
 use MrDlef\OsQueryDigest\Analysis\Tenant;
+use MrDlef\OsQueryDigest\Kind;
 
 /**
  * A ranking, as a terminal reads it.
@@ -49,34 +50,44 @@ final class ReportPrinter
      */
     public static function table(array $shapes, string $sort): string
     {
-        // The column is there only when the records named a tenant at all —
-        // on the stream this library writes by default they do not, and a
-        // column of zeroes would read as "nobody played this".
+        // Two columns that are there only when the stream has them. A tenant
+        // the records never named would be a column of zeroes reading as
+        // "nobody played this"; a kind nothing classified would be a column of
+        // `unknown` — which is a fact about the input, not about the query.
         $named = false;
+        $classified = false;
         foreach ($shapes as $shape) {
-            if ($shape->tenants() > 0) {
-                $named = true;
-                break;
-            }
+            $named = $named || $shape->tenants() > 0;
+            $classified = $classified || $shape->kind()->name() !== Kind::UNKNOWN;
         }
 
-        $headers = $named
-            ? ['count', 'tenants', 'total ms', 'mean', 'p95', 'max']
-            : ['count', 'total ms', 'mean', 'p95', 'max'];
-        $rows = [];
+        $headers = ['count'];
+        if ($named) {
+            $headers[] = 'tenants';
+        }
+        $headers = array_merge($headers, ['total ms', 'mean', 'p95', 'max']);
+        if ($classified) {
+            $headers[] = 'kind';
+        }
 
+        $rows = [];
         foreach ($shapes as $shape) {
             $row = [self::thousands((float) $shape->count())];
             if ($named) {
                 $row[] = self::thousands((float) $shape->tenants());
             }
 
-            $rows[] = array_merge($row, [
+            $row = array_merge($row, [
                 self::duration($shape->measured() === 0 ? null : $shape->total()),
                 self::duration($shape->mean()),
                 self::duration($shape->p95()),
                 self::duration($shape->max()),
             ]);
+            if ($classified) {
+                $row[] = $shape->kind()->name();
+            }
+
+            $rows[] = $row;
         }
 
         // The column the ranking used is starred, so a table pasted into a

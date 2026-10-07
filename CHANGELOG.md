@@ -33,14 +33,65 @@ characters are genuinely new. Every other query kept them. See
 
 _the image reads a pipe, the way the phar always did, a capped line ends where a
 clause does, a facet list stops eating the rest of it, and a report can say
-whose searches these are_
+whose searches these are, what kind they are, and nothing a user typed_
 
 **Fingerprints:** `q6:` unchanged. Nothing in the rendering or the normalisation
 moved — this is the CLI deciding when to read standard input, two display caps
-applied after the hash input has been rendered, and a report counting a field it
-reads rather than mints. `maxAggs` is a new option with a default of 3, so a
+applied after the hash input has been rendered, a report counting two fields it
+reads rather than mints, and a flag that drops a rendering rather than an input
+to the fingerprint. `maxAggs` is a new option with a default of 3, so a
 faceted search **prints** differently from v0.16.0 while keeping the twelve hex
 characters it already had.
+
+### `--no-text`, the flag the option never had
+
+`Options::withText(false)` has always been able to drop the readable line — the
+one output that can carry something a user typed — and from PHP only. So a
+`--json` run over a production request, or a `slowlog --json` over what a
+cluster's users actually searched for, was not shareable as it stood: you had to
+write a scratch PHP file to get the same thing without the values.
+
+Every sub-command that mints a digest takes `--no-text` now:
+
+```
+$ echo '{"query":{"term":{"email":"ada@example.com"}},"size":20}' \
+    | os-query-digest --json --no-text --index members-2026.08
+{
+    "idx": "members-*",
+    "kind": "browse",
+    "sig": "members-* | q=(email:?) | size=20",
+    "hash": "q6:9a9c717520ca"
+}
+```
+
+**The fingerprint does not move**: what is dropped is a rendering, not an input
+to it. In a `slowlog` report it also takes the sample line each shape keeps —
+the slowest record's query, and the one field in that whole output that can hold
+a literal — which becomes the shape's signature instead.
+
+The human output still prints a `text:` line, holding the signature: that is
+`Digest::text()`'s documented fallback, which shows the shape rather than
+nothing, and no caller of it can hand out a value.
+
+### The `kind` is in the table a human reads
+
+Every digest has carried a kind since v0.14.0 — suggest, aggregate, scan,
+lookup, browse, unknown — and the ranking table printed every column but that
+one. It was in the JSON, so the one word saying *what* a shape is was missing
+from the only view most people ever open.
+
+```
+  count  tenants  total ms*  mean  p95    max       kind  shape
+    195       13     22,248   114  908  2,761  aggregate  q6:…
+     43        4      5,300   123  714    941     browse  q6:…
+```
+
+It is read off the parsed request, so it costs nothing and holds no literal.
+`slowlog` mints it and always shows it; `report` shows it once `--kind-key`
+names the field that carries it, and leaves the column out otherwise — a report
+whose records never said would otherwise grow a column of `unknown`, and
+`unknown` is a verdict about a query rather than a way of saying the field was
+never read.
 
 ### `report --tenant-key` — whose searches these are
 

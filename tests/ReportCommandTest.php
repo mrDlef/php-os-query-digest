@@ -25,6 +25,9 @@ final class ReportCommandTest extends TestCase
     private const OTHER = '{"dsl_idx":"logs-*","dsl_kind":"aggregate","dsl_sig":"logs-* | q=(host:?)",'
         . '"dsl_hash":"q6:ddddeeeeffff","took":5}';
 
+    private const OTHER_WITHOUT_KIND = '{"dsl_idx":"logs-*","dsl_sig":"logs-* | q=(host:?)",'
+        . '"dsl_hash":"q6:ddddeeeeffff","took":5}';
+
     public function testItGroupsByTheFingerprintTheRecordsAlreadyCarry(): void
     {
         [$status, $out] = $this->invoke([], self::FLAT . "\n" . self::FLAT_SLOWER . "\n" . self::OTHER . "\n");
@@ -129,6 +132,30 @@ final class ReportCommandTest extends TestCase
             'By tenants, the shape they all play comes first.',
         );
         self::assertStringContainsString('tenants*', $byTenants, 'The ranked column is starred.');
+    }
+
+    /**
+     * The kind was in the JSON output and nowhere in the table a human reads,
+     * which left the one word that says *what* a shape is out of the only view
+     * most people ever see.
+     *
+     * It shows when the stream has one. A report whose records carry no kind
+     * would otherwise grow a column of `unknown` — and `unknown` is a verdict
+     * about a query, not a way of saying the field was never read.
+     */
+    public function testTheKindShowsInTheTableOnceTheRecordsCarryOne(): void
+    {
+        $classified = '{"dsl_sig":"logs-* | q=(service:?)","dsl_hash":"q6:aaaabbbbcccc","dsl_kind":"aggregate","took":12}';
+
+        [, $without] = $this->invoke([], self::OTHER_WITHOUT_KIND . "\n");
+        self::assertStringNotContainsString('kind', $without);
+        self::assertStringNotContainsString('unknown', $without);
+
+        [$status, $with] = $this->invoke([], $classified . "\n");
+
+        self::assertSame(Command::OK, $status);
+        self::assertStringContainsString('max       kind  shape', $with);
+        self::assertStringContainsString('aggregate  q6:aaaabbbbcccc', $with);
     }
 
     /** Whatever the collector wrote in front of the JSON is not ours to model. */
