@@ -38,6 +38,7 @@ final class Report implements \JsonSerializable
     public const MEAN = 'mean';
     public const P95 = 'p95';
     public const MAX = 'max';
+    public const TENANTS = 'tenants';
 
     /**
      * Every ranking key. Public because a configuration front — a CLI flag, a
@@ -46,10 +47,13 @@ final class Report implements \JsonSerializable
      *
      * @var array<int,string>
      */
-    public const KEYS = [self::TOTAL, self::COUNT, self::P95, self::MAX, self::MEAN];
+    public const KEYS = [self::TOTAL, self::COUNT, self::P95, self::MAX, self::MEAN, self::TENANTS];
 
     /** @var array<string,Shape> keyed by fingerprint */
     private array $shapes = [];
+
+    /** @var array<string,Tenant> keyed by name */
+    private array $tenants = [];
 
     private int $records = 0;
 
@@ -62,13 +66,28 @@ final class Report implements \JsonSerializable
      *                               field first format sorts correctly —
      *                               `2026-08-28T14:01:02,003` and an ISO 8601
      *                               both do
+     * @param string|null $tenant    whose search it was — the second axis a
+     *                               multi-tenant deployment reads a report
+     *                               along. Nothing is minted from it: it is
+     *                               read off the record beside the fingerprint
      */
-    public function record(Digest $digest, ?float $millis = null, ?string $timestamp = null): void
-    {
+    public function record(
+        Digest $digest,
+        ?float $millis = null,
+        ?string $timestamp = null,
+        ?string $tenant = null
+    ): void {
         $hash = $digest->hash();
         $this->shapes[$hash] ??= new Shape($digest);
-        $this->shapes[$hash]->record($digest, $millis, $timestamp);
+        $this->shapes[$hash]->record($digest, $millis, $timestamp, $tenant);
         $this->records++;
+
+        if ($tenant === null || $tenant === '') {
+            return;
+        }
+
+        $this->tenants[$tenant] ??= new Tenant($tenant);
+        $this->tenants[$tenant]->record($hash, $millis);
     }
 
     /** How many searches went in. */
@@ -97,6 +116,33 @@ final class Report implements \JsonSerializable
     public function shape(string $hash): ?Shape
     {
         return $this->shapes[$hash] ?? null;
+    }
+
+    /**
+     * Every tenant the records named, costliest first — the same stream read
+     * along its other axis. Empty when no record carried a name, which is the
+     * default: the library never writes one, and a report asks for the key it
+     * lives under.
+     *
+     * Ties are broken by count and then by name, for the same reason the shape
+     * ranking is: a report you cannot diff cannot say what a deploy changed.
+     *
+     * @return array<int,Tenant>
+     */
+    public function tenants(): array
+    {
+        $ranked = array_values($this->tenants);
+
+        usort($ranked, static function (Tenant $a, Tenant $b): int {
+            $first = $b->total() <=> $a->total();
+            if ($first !== 0) {
+                return $first;
+            }
+
+            return [$b->count(), $a->name()] <=> [$a->count(), $b->name()];
+        });
+
+        return $ranked;
     }
 
     /**
@@ -165,6 +211,8 @@ final class Report implements \JsonSerializable
                 return $shape->p95() ?? 0.0;
             case self::MAX:
                 return $shape->max() ?? 0.0;
+            case self::TENANTS:
+                return (float) $shape->tenants();
             default:
                 return $shape->total();
         }

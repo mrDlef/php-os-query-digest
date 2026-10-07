@@ -207,3 +207,41 @@ log no longer carries the request body, and re-deriving hashes under today's
 rules would group a year of records by a rule they were never grouped by. That
 also makes it fast — 875 MB and 603,544 lines in under four seconds, because
 each line is one `json_decode` and a lookup.
+
+## The other axis: whose searches these are
+
+A shape totalling twenty seconds across a hundred customers is the
+application's. The same twenty seconds under one customer is that customer's
+data. The table cannot tell them apart until a record says who it belonged to,
+so `--tenant-key` names the field that does:
+
+```bash
+$ os-query-digest report --key-prefix=q_ --took-key=duration_ms --tenant-key=instanceRef app.log
+1,406 lines, 1,406 records, 386 shapes, 69,171 ms total
+
+  count  tenants  total ms*  mean  p95    max  shape
+    195       13     22,248   114  908  2,761  q6:1d12de1cbcfd
+                                               idx-* | aggs=terms(content_type,20) | size=0
+     14        1      2,379   170  888    888  q6:acb885eb365f
+                                               idx-* | q=(content_type:?) | aggs=nested()>terms(…
+
+  calls  shapes  total ms  mean  tenant
+    339     157    19,021    56  tenant-a
+     90       1      8,796    98  tenant-b
+```
+
+Two readings of one stream. The `tenants` column says how many distinct names
+played a shape — the first line is every customer's, the second is one
+customer's, and only the second is worth a conversation with that customer. The
+table under it turns the question around: `tenant-a` spreads nineteen seconds
+over 157 shapes, `tenant-b` spends nine on **one**, and before this they were
+the same rows of the same table.
+
+`--sort=tenants` ranks the shapes by how many tenants play them, which is the
+question "what is everybody doing" rather than "what is slow".
+
+The key holds whatever your records call it — customer, site, instance,
+service. Nothing is minted from it and nothing is validated: it is read beside
+the fingerprint, exactly as stored. Both views respect `--top`, and the
+`--json` output stays what it was, an array of shapes — each one now carrying
+its `tenants` count.

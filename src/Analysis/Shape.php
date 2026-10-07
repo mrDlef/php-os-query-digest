@@ -38,6 +38,9 @@ final class Shape implements \JsonSerializable
 
     private string $slowestText;
 
+    /** @var array<string,true> the tenants this shape was seen under */
+    private array $tenants = [];
+
     private ?string $first = null;
 
     private ?string $last = null;
@@ -57,10 +60,22 @@ final class Shape implements \JsonSerializable
      *
      * @param float|null  $millis    what it cost, when that is known
      * @param string|null $timestamp when it happened, compared as text
+     * @param string|null $tenant    whose search it was, when the records say.
+     *                               Only the distinct names are kept — one more
+     *                               bound by how many tenants a stream has, not
+     *                               by how many searches
      */
-    public function record(Digest $digest, ?float $millis = null, ?string $timestamp = null): void
-    {
+    public function record(
+        Digest $digest,
+        ?float $millis = null,
+        ?string $timestamp = null,
+        ?string $tenant = null
+    ): void {
         $this->count++;
+
+        if ($tenant !== null && $tenant !== '') {
+            $this->tenants[$tenant] = true;
+        }
 
         if ($millis !== null) {
             $this->durations[] = $millis;
@@ -114,6 +129,17 @@ final class Shape implements \JsonSerializable
     public function count(): int
     {
         return $this->count;
+    }
+
+    /**
+     * How many distinct tenants played this shape, zero when the records carry
+     * none. The number that tells an application's own query from one
+     * customer's: both can total twenty seconds, and only one of them is a bug
+     * in the product.
+     */
+    public function tenants(): int
+    {
+        return count($this->tenants);
     }
 
     /** How many of them carried a duration at all. */
@@ -172,6 +198,7 @@ final class Shape implements \JsonSerializable
             'idx' => $this->digest->index(),
             'kind' => $this->digest->kind()->name(),
             'count' => $this->count,
+            'tenants' => count($this->tenants),
             'measured' => count($this->durations),
             'total_ms' => $this->durations === [] ? null : round($this->total(), 3),
             'mean_ms' => self::rounded($this->mean()),

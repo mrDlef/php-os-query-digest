@@ -6,6 +6,7 @@ namespace MrDlef\OsQueryDigest\Cli;
 
 use MrDlef\OsQueryDigest\Analysis\Report;
 use MrDlef\OsQueryDigest\Analysis\Shape;
+use MrDlef\OsQueryDigest\Analysis\Tenant;
 
 /**
  * A ranking, as a terminal reads it.
@@ -48,17 +49,34 @@ final class ReportPrinter
      */
     public static function table(array $shapes, string $sort): string
     {
-        $headers = ['count', 'total ms', 'mean', 'p95', 'max'];
+        // The column is there only when the records named a tenant at all —
+        // on the stream this library writes by default they do not, and a
+        // column of zeroes would read as "nobody played this".
+        $named = false;
+        foreach ($shapes as $shape) {
+            if ($shape->tenants() > 0) {
+                $named = true;
+                break;
+            }
+        }
+
+        $headers = $named
+            ? ['count', 'tenants', 'total ms', 'mean', 'p95', 'max']
+            : ['count', 'total ms', 'mean', 'p95', 'max'];
         $rows = [];
 
         foreach ($shapes as $shape) {
-            $rows[] = [
-                self::thousands((float) $shape->count()),
+            $row = [self::thousands((float) $shape->count())];
+            if ($named) {
+                $row[] = self::thousands((float) $shape->tenants());
+            }
+
+            $rows[] = array_merge($row, [
                 self::duration($shape->measured() === 0 ? null : $shape->total()),
                 self::duration($shape->mean()),
                 self::duration($shape->p95()),
                 self::duration($shape->max()),
-            ];
+            ]);
         }
 
         // The column the ranking used is starred, so a table pasted into a
@@ -70,14 +88,7 @@ final class ReportPrinter
             }
         }
 
-        $widths = [];
-        foreach ($headers as $column => $header) {
-            $width = strlen($header);
-            foreach ($rows as $row) {
-                $width = max($width, strlen($row[$column]));
-            }
-            $widths[$column] = $width;
-        }
+        $widths = self::widths($headers, $rows);
 
         $out = '  ' . self::row($headers, $widths) . "  shape\n";
         $indent = 2 + array_sum($widths) + 2 * count($widths);
@@ -90,7 +101,7 @@ final class ReportPrinter
         return $out;
     }
 
-    public static function footer(int $total, int $kept): string
+    public static function footer(int $total, int $kept, string $noun = 'shape'): string
     {
         if ($kept >= $total) {
             return '';
@@ -101,8 +112,41 @@ final class ReportPrinter
         return sprintf(
             "\n%s more %s (--top none for all)\n",
             self::thousands((float) $hidden),
-            $hidden === 1 ? 'shape' : 'shapes',
+            $hidden === 1 ? $noun : $noun . 's',
         );
+    }
+
+    /**
+     * The same stream along its other axis: who played it, and what that cost.
+     *
+     * Printed under the shapes rather than instead of them — the two answer
+     * different questions, and the second one only exists because the records
+     * carried a name for it.
+     *
+     * @param array<int,Tenant> $tenants
+     */
+    public static function tenantTable(array $tenants): string
+    {
+        $headers = ['calls', 'shapes', 'total ms', 'mean'];
+        $rows = [];
+
+        foreach ($tenants as $tenant) {
+            $rows[] = [
+                self::thousands((float) $tenant->count()),
+                self::thousands((float) $tenant->shapes()),
+                self::duration($tenant->measured() === 0 ? null : $tenant->total()),
+                self::duration($tenant->mean()),
+            ];
+        }
+
+        $widths = self::widths($headers, $rows);
+
+        $out = "\n  " . self::row($headers, $widths) . "  tenant\n";
+        foreach ($tenants as $position => $tenant) {
+            $out .= '  ' . self::row($rows[$position], $widths) . '  ' . $tenant->name() . "\n";
+        }
+
+        return $out;
     }
 
     /**
@@ -133,6 +177,32 @@ final class ReportPrinter
     public static function thousands(float $value): string
     {
         return number_format(round($value), 0, '.', ',');
+    }
+
+    /**
+     * Widest cell per column, the header included — read off the rows rather
+     * than looked up in them, because the shape table has one column more when
+     * the records named a tenant.
+     *
+     * @param array<int,string>            $headers
+     * @param array<int,array<int,string>> $rows
+     *
+     * @return array<int,int>
+     */
+    private static function widths(array $headers, array $rows): array
+    {
+        $widths = [];
+        foreach ($headers as $column => $header) {
+            $widths[$column] = strlen($header);
+        }
+
+        foreach ($rows as $row) {
+            foreach ($row as $column => $cell) {
+                $widths[$column] = max($widths[$column] ?? 0, strlen($cell));
+            }
+        }
+
+        return $widths;
     }
 
     /**

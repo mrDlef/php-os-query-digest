@@ -156,6 +156,8 @@ final class DocExampleTest extends TestCase
         // request behind it is not ours to publish, so the hash cannot be
         // recomputed — but it was minted by this library, from that file.
         'q6:06d176a67841' => 'docs/guides/cli.md — a real run, whose request the page does not carry',
+        'q6:1d12de1cbcfd' => 'docs/guides/cli.md — idem, the tenant axis over a day of the same logs',
+        'q6:acb885eb365f' => 'docs/guides/cli.md — idem, the shape only one tenant plays',
     ];
 
     /**

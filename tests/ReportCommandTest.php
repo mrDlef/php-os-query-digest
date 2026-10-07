@@ -51,6 +51,86 @@ final class ReportCommandTest extends TestCase
         self::assertSame('', $err);
     }
 
+    /**
+     * `--tenant-key` names the field saying whose search a record was, and the
+     * report then reads the same stream twice: how many names play each shape,
+     * and what each name costs. Both are absent until the key is named, which
+     * is why this asserts the column is not there by default.
+     */
+    public function testTheTenantKeyAddsBothTheColumnAndTheTenantTable(): void
+    {
+        $stdin = '{"dsl_sig":"logs-* | q=(service:?)","dsl_hash":"q6:aaaabbbbcccc","took":12,"site":"acme"}' . "\n"
+            . '{"dsl_sig":"logs-* | q=(service:?)","dsl_hash":"q6:aaaabbbbcccc","took":30,"site":"globex"}' . "\n"
+            . '{"dsl_sig":"logs-* | q=(host:?)","dsl_hash":"q6:ddddeeeeffff","took":500,"site":"globex"}' . "\n";
+
+        [, $plain] = $this->invoke([], $stdin);
+        self::assertStringNotContainsString('tenants', $plain);
+        self::assertStringNotContainsString('acme', $plain);
+
+        [$status, $out] = $this->invoke(['--tenant-key=site'], $stdin);
+
+        self::assertSame(Command::OK, $status);
+        self::assertStringContainsString('tenants', $out);
+        self::assertStringContainsString('tenant', $out);
+
+        // globex spends most of it, over two shapes; acme plays one of them.
+        self::assertMatchesRegularExpression('/\s2\s+2\s+530\s+265\s+globex\b/', $out);
+        self::assertMatchesRegularExpression('/\s1\s+1\s+12\s+12\s+acme\b/', $out);
+    }
+
+    /**
+     * The two tables as a terminal shows them, byte for byte — the columns, the
+     * order, the padding and the footer that says what `--top` hid. Pinned
+     * whole rather than probed: a table is read by eye, and a column silently
+     * dropped or renamed is exactly the kind of change nothing else notices.
+     */
+    public function testBothTablesArePrintedAsTheyAre(): void
+    {
+        $stdin = '{"dsl_sig":"logs-* | q=(service:?)","dsl_hash":"q6:aaaabbbbcccc","took":12,"site":"acme"}' . "\n"
+            . '{"dsl_sig":"logs-* | q=(service:?)","dsl_hash":"q6:aaaabbbbcccc","took":30,"site":"globex"}' . "\n"
+            . '{"dsl_sig":"logs-* | q=(host:?)","dsl_hash":"q6:ddddeeeeffff","took":500,"site":"globex"}' . "\n";
+
+        [, $out] = $this->invoke(['--tenant-key=site', '--top=1'], $stdin);
+
+        self::assertSame(
+            "3 lines, 3 records, 2 shapes, 542 ms total\n"
+            . "\n"
+            . "  count  tenants  total ms*  mean  p95  max  shape\n"
+            . "      1        1        500   500  500  500  q6:ddddeeeeffff\n"
+            . "                                             logs-* | q=(host:?)\n"
+            . "\n"
+            . "1 more shape (--top none for all)\n"
+            . "\n"
+            . "  calls  shapes  total ms  mean  tenant\n"
+            . "      2       2       530   265  globex\n"
+            . "\n"
+            . "1 more tenant (--top none for all)\n",
+            $out,
+        );
+    }
+
+    public function testASortByTenantsRanksTheShapeEverybodyPlaysFirst(): void
+    {
+        $stdin = '{"dsl_sig":"logs-* | q=(service:?)","dsl_hash":"q6:aaaabbbbcccc","took":1,"site":"acme"}' . "\n"
+            . '{"dsl_sig":"logs-* | q=(service:?)","dsl_hash":"q6:aaaabbbbcccc","took":1,"site":"globex"}' . "\n"
+            . '{"dsl_sig":"logs-* | q=(host:?)","dsl_hash":"q6:ddddeeeeffff","took":900,"site":"globex"}' . "\n";
+
+        [, $byTime] = $this->invoke(['--tenant-key=site'], $stdin);
+        [, $byTenants] = $this->invoke(['--tenant-key=site', '--sort=tenants'], $stdin);
+
+        self::assertLessThan(
+            strpos($byTime, 'q6:aaaabbbbcccc'),
+            (int) strpos($byTime, 'q6:ddddeeeeffff'),
+            'By time, the shape one tenant plays comes first.',
+        );
+        self::assertLessThan(
+            strpos($byTenants, 'q6:ddddeeeeffff'),
+            (int) strpos($byTenants, 'q6:aaaabbbbcccc'),
+            'By tenants, the shape they all play comes first.',
+        );
+        self::assertStringContainsString('tenants*', $byTenants, 'The ranked column is starred.');
+    }
+
     /** Whatever the collector wrote in front of the JSON is not ours to model. */
     public function testAPrefixBeforeTheJsonIsIgnored(): void
     {
