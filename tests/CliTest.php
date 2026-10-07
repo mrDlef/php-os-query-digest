@@ -151,6 +151,29 @@ final class CliTest extends TestCase
         self::assertSame($cappedDecoded['hash'] ?? null, $liftedDecoded['hash'] ?? null);
     }
 
+    public function testMaxAggsShortensTheFacetListButNotTheHash(): void
+    {
+        $body = '{"size":0,"aggs":{"a":{"terms":{"field":"brand"}},"b":{"terms":{"field":"colour"}},'
+            . '"c":{"terms":{"field":"country"}},"d":{"terms":{"field":"material"}}}}';
+
+        [, $capped] = $this->invoke(['--json'], $body);
+        [, $lifted] = $this->invoke(['--json', '--max-aggs=none'], $body);
+
+        $cappedDecoded = json_decode($capped, true);
+        $liftedDecoded = json_decode($lifted, true);
+        self::assertIsArray($cappedDecoded);
+        self::assertIsArray($liftedDecoded);
+
+        $cappedSig = $cappedDecoded['sig'] ?? null;
+        $liftedSig = $liftedDecoded['sig'] ?? null;
+        self::assertIsString($cappedSig);
+        self::assertIsString($liftedSig);
+
+        self::assertStringContainsString('+1 more', $cappedSig);
+        self::assertStringContainsString('material', $liftedSig);
+        self::assertSame($cappedDecoded['hash'] ?? null, $liftedDecoded['hash'] ?? null);
+    }
+
     public function testAFileIsReadWhenGivenAsAnArgument(): void
     {
         $file = __DIR__ . '/fixtures/01-error-rate-filter/input.json';

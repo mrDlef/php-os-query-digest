@@ -248,6 +248,7 @@ final class DocExampleTest extends TestCase
         'options-index-partial',
         'options-max-fields',
         'options-max-length',
+        'options-max-aggs',
         'logging-line',
         'transport-record',
         'explain-output',
@@ -332,6 +333,31 @@ final class DocExampleTest extends TestCase
         self::assertSame(
             [$capped->signature(), $lifted->signature()],
             self::lines(self::oneBlock('docs/guides/options.md', 'options-max-fields')),
+        );
+        self::assertSame($capped->hash(), $lifted->hash());
+    }
+
+    /**
+     * The facet list in the options guide, capped and lifted. Same pair as the
+     * field list above it, and the same claim: the lines differ, the hash does
+     * not.
+     */
+    public function testTheFacetListLinesAreWhatTheCapProduces(): void
+    {
+        $facets = ['brand', 'colour', 'country', 'material', 'size_label'];
+
+        $aggs = [];
+        foreach ($facets as $facet) {
+            $aggs[$facet] = ['terms' => ['field' => $facet, 'size' => 20]];
+        }
+        $search = ['size' => 0, 'aggs' => $aggs];
+
+        $capped = Formatter::create()->describe($search);
+        $lifted = Formatter::create(Options::create()->withMaxAggs(null))->describe($search);
+
+        self::assertSame(
+            [$capped->signature(), $lifted->signature()],
+            self::lines(self::oneBlock('docs/guides/options.md', 'options-max-aggs')),
         );
         self::assertSame($capped->hash(), $lifted->hash());
     }

@@ -27,6 +27,7 @@ final class Options
         'maxClauses',
         'maxValues',
         'maxFields',
+        'maxAggs',
         'maxLength',
         'indexNormalizer',
         'aggNames',
@@ -45,6 +46,8 @@ final class Options
     private ?int $maxValues = 5;
 
     private ?int $maxFields = 3;
+
+    private ?int $maxAggs = 3;
 
     private ?int $maxLength = 512;
 
@@ -148,6 +151,25 @@ final class Options
     {
         $clone = clone $this;
         $clone->maxFields = $maxFields;
+
+        return $clone;
+    }
+
+    /**
+     * Maximum sibling aggregations rendered per level — the top-level list and
+     * each `>{…}` list below it — before the rest is summarised as `+N more`.
+     * Null disables the limit.
+     *
+     * Capped as tight as the field list, and for the same reason sharpened by
+     * what one costs: a rendered aggregation runs 78 characters at the median
+     * against a clause's 54, and a faceted page sends one per facet. Left
+     * uncapped, a dozen of them is the whole line, and the filters that say
+     * what the page was actually asking never make it into the budget.
+     */
+    public function withMaxAggs(?int $maxAggs): self
+    {
+        $clone = clone $this;
+        $clone->maxAggs = $maxAggs;
 
         return $clone;
     }
@@ -262,6 +284,11 @@ final class Options
         return $this->maxFields;
     }
 
+    public function maxAggs(): ?int
+    {
+        return $this->maxAggs;
+    }
+
     public function maxLength(): ?int
     {
         return $this->maxLength;
@@ -340,6 +367,8 @@ final class Options
                 return $this->withMaxValues(self::asIntOrNull($key, $value));
             case 'maxFields':
                 return $this->withMaxFields(self::asIntOrNull($key, $value));
+            case 'maxAggs':
+                return $this->withMaxAggs(self::asIntOrNull($key, $value));
             case 'maxLength':
                 return $this->withMaxLength(self::asIntOrNull($key, $value));
             case 'indexNormalizer':

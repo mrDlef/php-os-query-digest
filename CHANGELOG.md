@@ -31,12 +31,49 @@ characters are genuinely new. Every other query kept them. See
 
 ## v0.17.0 — unreleased
 
-_the image reads a pipe, the way the phar always did, and a capped line ends
-where a clause does_
+_the image reads a pipe, the way the phar always did, a capped line ends where a
+clause does, and a facet list stops eating the rest of it_
 
 **Fingerprints:** `q6:` unchanged. Nothing in the rendering or the normalisation
-moved — this is the CLI deciding when to read standard input, and a display cap
-that already applied after the hash input was rendered.
+moved — this is the CLI deciding when to read standard input, and two display
+caps, both applied after the hash input has been rendered. `maxAggs` is a new
+option with a default of 3, so a faceted search **prints** differently from
+v0.16.0 while keeping the twelve hex characters it already had.
+
+### `withMaxAggs()` — a facet list is a list, and nothing capped it
+
+Three limits priced the line in whole things: clauses, values, fields. The
+aggregations had none, and `Render\AggRenderer` simply unrolled every sibling,
+recursively. A faceted page sends one aggregation per facet, so what came out
+was this, over and over:
+
+```
+aggs=nested()>terms(nested_taxon_i18n_tags.taxon_id,20)>{reverse_nested(), terms(…
+```
+
+On a day of real traffic, **240 records carried an `aggs=` section that took 64%
+of the line at the median and 93% at the worst** — and a rendered aggregation is
+the most expensive thing that can go there: 78 characters at the median, against
+54 for a clause. The filters that say what the page was asking for were the part
+that did not fit.
+
+So the sibling list is capped like the others, summarised the same way:
+
+```
+aggs=terms(brand,20), terms(colour,20), terms(country,20), +2 more | size=0
+```
+
+**The cap holds at every level, not only the outer one.** The sub-aggregations
+hanging off a facet are a sibling list too — `terms(brand,20)>{avg(price), +3
+more}` — and on a faceted page that is where the line grows first: each facet
+asks for its own label and its own extremes. A cap the children escaped would be
+a cap on nothing in particular.
+
+The default is **3**, the same as the field list, and it comes from the same
+measurement: at 78 characters each, three aggregations and a marker leave room
+for a query beside them inside a 512-character line, and four do not. Set it
+with `withMaxAggs()`, the `maxAggs` key, or `--max-aggs=N` — `none` lifts it, as
+with every other cap.
 
 ### A capped line ends where a clause does
 

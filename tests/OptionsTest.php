@@ -40,6 +40,7 @@ final class OptionsTest extends TestCase
             'withMaxClauses' => static fn(Options $o): Options => $o->withMaxClauses(3),
             'withMaxValues' => static fn(Options $o): Options => $o->withMaxValues(2),
             'withMaxFields' => static fn(Options $o): Options => $o->withMaxFields(1),
+            'withMaxAggs' => static fn(Options $o): Options => $o->withMaxAggs(1),
             'withMaxLength' => static fn(Options $o): Options => $o->withMaxLength(80),
             'withIndexNormalizer' => static fn(Options $o): Options => $o->withIndexNormalizer(IndexNormalizer::identity()),
             'withRedactor' => static fn(Options $o): Options => $o->withRedactor(static fn(string $field, $value) => $value),

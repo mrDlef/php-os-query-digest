@@ -302,6 +302,7 @@ function meta(): array
             'maxClauses' => $defaults->maxClauses(),
             'maxValues' => $defaults->maxValues(),
             'maxFields' => $defaults->maxFields(),
+            'maxAggs' => $defaults->maxAggs(),
             'maxLength' => $defaults->maxLength(),
             'indexNormalizer' => IndexNormalizer::DATE_PATTERNS,
             'aggNames' => $defaults->includeAggNames(),
