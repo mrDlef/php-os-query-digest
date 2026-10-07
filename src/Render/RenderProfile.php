@@ -26,6 +26,9 @@ final class RenderProfile
     /** @var int|null max fields in a multi-field clause, null = unlimited */
     private ?int $maxFields;
 
+    /** @var int|null max sibling aggregations per level, null = unlimited */
+    private ?int $maxAggs;
+
     /** @var bool collapse a terms list to a single placeholder */
     private bool $eraseCardinality;
 
@@ -40,6 +43,7 @@ final class RenderProfile
         ?int $maxClauses = null,
         ?int $maxValues = null,
         ?int $maxFields = null,
+        ?int $maxAggs = null,
         bool $eraseCardinality = false,
         bool $erasePagination = false,
         bool $includeAggNames = false
@@ -49,6 +53,7 @@ final class RenderProfile
         $this->maxClauses = $maxClauses;
         $this->maxValues = $maxValues;
         $this->maxFields = $maxFields;
+        $this->maxAggs = $maxAggs;
         $this->eraseCardinality = $eraseCardinality;
         $this->erasePagination = $erasePagination;
         $this->includeAggNames = $includeAggNames;
@@ -79,6 +84,11 @@ final class RenderProfile
         return $this->maxFields;
     }
 
+    public function maxAggs(): ?int
+    {
+        return $this->maxAggs;
+    }
+
     public function eraseCardinality(): bool
     {
         return $this->eraseCardinality;
@@ -103,6 +113,7 @@ final class RenderProfile
         return new self(
             $this->values,
             $this->distinguishTypes,
+            null,
             null,
             null,
             null,

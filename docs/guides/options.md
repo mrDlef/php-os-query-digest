@@ -10,6 +10,7 @@ $formatter = Formatter::create(
         ->withMaxValues(5)          // status:(500 or 502 or 503 or +8)
         ->withMaxClauses(12)        // a and b and … +4 more
         ->withMaxFields(3)          // title^10|content|tags|+3 more
+        ->withMaxAggs(3)            // terms(brand,20), terms(colour,20), +4 more
         ->withMaxLength(512)        // hard cap on the line, never on the hash
         ->withIndexNormalizer(IndexNormalizer::datePatterns())
         ->withRedactor(fn ($field, $value) => $field === 'email' ? '<redacted>' : $value)
@@ -48,7 +49,7 @@ row. [Which level answers which
 question](../explanation/how-it-works.md#which-level-answers-which-question)
 compares the two on the same search.
 
-## Why the field list is capped hardest
+## Why the field list is capped so hard
 
 A `multi_match` — and `query_string`, and `more_like_this` — carries the list of
 fields it searches, boosts included. On a real search built over one, that list
@@ -69,6 +70,28 @@ The second line is the same search under `withMaxFields(null)`. **Both have the
 same hash** — like every limit on this page, this one is spent on the line, and
 the fingerprint is computed before any of them apply. Two searches over
 different field lists stay two fingerprints even when they print identically.
+
+## A facet list is capped as hard, and for a sharper reason
+
+A faceted page sends one aggregation per facet, and a rendered aggregation is
+the most expensive thing that can go on the line — 78 characters at the median
+against a clause's 54, measured over a day of real traffic. Ten facets is the
+whole line, and the filters that say what the page was actually asking for never
+reach the budget.
+
+<!-- verified: options-max-aggs -->
+```
+aggs=terms(brand,20), terms(colour,20), terms(country,20), +2 more | size=0
+aggs=terms(brand,20), terms(colour,20), terms(country,20), terms(material,20), terms(size_label,20) | size=0
+```
+
+The second line is the same request under `withMaxAggs(null)`, and both have the
+same hash.
+
+The cap holds at **every level, not just the outer one**: the sub-aggregations
+hanging off a facet are a sibling list too — `terms(brand,20)>{avg(price), +3
+more}` — and that is where a facet page grows first. A cap the children escaped
+would be a cap on nothing in particular.
 
 ## Where the character cap lands
 

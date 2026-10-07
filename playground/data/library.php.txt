@@ -1525,6 +1525,7 @@ namespace MrDlef\OsQueryDigest {
                 $this->options->maxClauses(),
                 $this->options->maxValues(),
                 $this->options->maxFields(),
+                $this->options->maxAggs(),
                 $normalization->erasesCardinality(),
                 $normalization->erasesPagination(),
                 $this->options->includeAggNames(),
@@ -1540,6 +1541,7 @@ namespace MrDlef\OsQueryDigest {
                     $this->options->maxClauses(),
                     $this->options->maxValues(),
                     $this->options->maxFields(),
+                    $this->options->maxAggs(),
                     false,
                     false,
                     $this->options->includeAggNames(),
@@ -2348,6 +2350,7 @@ namespace MrDlef\OsQueryDigest {
             'maxClauses',
             'maxValues',
             'maxFields',
+            'maxAggs',
             'maxLength',
             'indexNormalizer',
             'aggNames',
@@ -2366,6 +2369,8 @@ namespace MrDlef\OsQueryDigest {
         private ?int $maxValues = 5;
 
         private ?int $maxFields = 3;
+
+        private ?int $maxAggs = 3;
 
         private ?int $maxLength = 512;
 
@@ -2469,6 +2474,25 @@ namespace MrDlef\OsQueryDigest {
         {
             $clone = clone $this;
             $clone->maxFields = $maxFields;
+
+            return $clone;
+        }
+
+        /**
+         * Maximum sibling aggregations rendered per level — the top-level list and
+         * each `>{…}` list below it — before the rest is summarised as `+N more`.
+         * Null disables the limit.
+         *
+         * Capped as tight as the field list, and for the same reason sharpened by
+         * what one costs: a rendered aggregation runs 78 characters at the median
+         * against a clause's 54, and a faceted page sends one per facet. Left
+         * uncapped, a dozen of them is the whole line, and the filters that say
+         * what the page was actually asking never make it into the budget.
+         */
+        public function withMaxAggs(?int $maxAggs): self
+        {
+            $clone = clone $this;
+            $clone->maxAggs = $maxAggs;
 
             return $clone;
         }
@@ -2583,6 +2607,11 @@ namespace MrDlef\OsQueryDigest {
             return $this->maxFields;
         }
 
+        public function maxAggs(): ?int
+        {
+            return $this->maxAggs;
+        }
+
         public function maxLength(): ?int
         {
             return $this->maxLength;
@@ -2661,6 +2690,8 @@ namespace MrDlef\OsQueryDigest {
                     return $this->withMaxValues(self::asIntOrNull($key, $value));
                 case 'maxFields':
                     return $this->withMaxFields(self::asIntOrNull($key, $value));
+                case 'maxAggs':
+                    return $this->withMaxAggs(self::asIntOrNull($key, $value));
                 case 'maxLength':
                     return $this->withMaxLength(self::asIntOrNull($key, $value));
                 case 'indexNormalizer':
@@ -4300,13 +4331,31 @@ namespace MrDlef\OsQueryDigest\Render {
     final class AggRenderer
     {
         /**
+         * One list of sibling aggregations: the request's own, and every `>{…}`
+         * below it, which is why the cap is applied here rather than on the way in.
+         * A facet page nests a list per level, and capping only the outer one would
+         * let the line back out through the children.
+         *
          * @param AggNode[] $aggs
          */
         public function render(array $aggs, RenderProfile $profile): string
         {
+            $max = $profile->maxAggs();
+            $dropped = 0;
+
+            if ($max !== null && count($aggs) > $max) {
+                $kept = array_slice($aggs, 0, max(0, $max));
+                $dropped = count($aggs) - count($kept);
+                $aggs = $kept;
+            }
+
             $parts = [];
             foreach ($aggs as $agg) {
                 $parts[] = $this->one($agg, $profile);
+            }
+
+            if ($dropped > 0) {
+                $parts[] = '+' . $dropped . ' more';
             }
 
             return implode(', ', $parts);
@@ -4972,6 +5021,9 @@ namespace MrDlef\OsQueryDigest\Render {
         /** @var int|null max fields in a multi-field clause, null = unlimited */
         private ?int $maxFields;
 
+        /** @var int|null max sibling aggregations per level, null = unlimited */
+        private ?int $maxAggs;
+
         /** @var bool collapse a terms list to a single placeholder */
         private bool $eraseCardinality;
 
@@ -4986,6 +5038,7 @@ namespace MrDlef\OsQueryDigest\Render {
             ?int $maxClauses = null,
             ?int $maxValues = null,
             ?int $maxFields = null,
+            ?int $maxAggs = null,
             bool $eraseCardinality = false,
             bool $erasePagination = false,
             bool $includeAggNames = false
@@ -4995,6 +5048,7 @@ namespace MrDlef\OsQueryDigest\Render {
             $this->maxClauses = $maxClauses;
             $this->maxValues = $maxValues;
             $this->maxFields = $maxFields;
+            $this->maxAggs = $maxAggs;
             $this->eraseCardinality = $eraseCardinality;
             $this->erasePagination = $erasePagination;
             $this->includeAggNames = $includeAggNames;
@@ -5025,6 +5079,11 @@ namespace MrDlef\OsQueryDigest\Render {
             return $this->maxFields;
         }
 
+        public function maxAggs(): ?int
+        {
+            return $this->maxAggs;
+        }
+
         public function eraseCardinality(): bool
         {
             return $this->eraseCardinality;
@@ -5049,6 +5108,7 @@ namespace MrDlef\OsQueryDigest\Render {
             return new self(
                 $this->values,
                 $this->distinguishTypes,
+                null,
                 null,
                 null,
                 null,

@@ -15,13 +15,31 @@ use MrDlef\OsQueryDigest\Tree\AggNode;
 final class AggRenderer
 {
     /**
+     * One list of sibling aggregations: the request's own, and every `>{…}`
+     * below it, which is why the cap is applied here rather than on the way in.
+     * A facet page nests a list per level, and capping only the outer one would
+     * let the line back out through the children.
+     *
      * @param AggNode[] $aggs
      */
     public function render(array $aggs, RenderProfile $profile): string
     {
+        $max = $profile->maxAggs();
+        $dropped = 0;
+
+        if ($max !== null && count($aggs) > $max) {
+            $kept = array_slice($aggs, 0, max(0, $max));
+            $dropped = count($aggs) - count($kept);
+            $aggs = $kept;
+        }
+
         $parts = [];
         foreach ($aggs as $agg) {
             $parts[] = $this->one($agg, $profile);
+        }
+
+        if ($dropped > 0) {
+            $parts[] = '+' . $dropped . ' more';
         }
 
         return implode(', ', $parts);

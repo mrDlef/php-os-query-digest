@@ -126,6 +126,7 @@ withNormalization(Normalization $normalization): Options
 withMaxClauses(?int $maxClauses): Options
 withMaxValues(?int $maxValues): Options
 withMaxFields(?int $maxFields): Options
+withMaxAggs(?int $maxAggs): Options
 withMaxLength(?int $maxLength): Options
 withIndexNormalizer(IndexNormalizer $indexNormalizer): Options
 withRedactor(?callable $redactor): Options
@@ -136,7 +137,7 @@ withHashVersion(string $hashVersion): Options
 withClauseRenderer(string $type, ClauseRenderer $renderer): Options
 ```
 
-Each has a matching getter. `fromArray()` accepts the ten keys in
+Each has a matching getter. `fromArray()` accepts the eleven keys in
 `Options::KEYS` and throws `InvalidOptionException` on an unknown key or a wrong
 type — the redactor and clause renderers have no array form, being callables and
 objects.
