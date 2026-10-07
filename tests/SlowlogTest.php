@@ -105,6 +105,35 @@ final class SlowlogTest extends TestCase
         self::assertStringContainsString(self::HASH, $out);
     }
 
+    /**
+     * A slow log is full of what users typed, and the report over one keeps the
+     * slowest record's line per shape — the one field in the whole output that
+     * can hold a literal. `--no-text` is what makes the report shareable: the
+     * line is never rendered, so every field falls back to the shape.
+     */
+    public function testNoTextLeavesNoLiteralAnywhereInTheReport(): void
+    {
+        $body = '{"query":{"term":{"email":"ada@example.com"}},"size":20}';
+        $log = self::plain($body, 'members-2026.08.20', 145);
+
+        [, $full] = $this->invoke(['--json'], $log);
+        [$status, $quiet, $err] = $this->invoke(['--json', '--no-text'], $log);
+
+        self::assertSame(Command::OK, $status, $err);
+        self::assertStringContainsString('ada@example.com', $full);
+        self::assertStringNotContainsString('ada@example.com', $quiet);
+
+        $decoded = json_decode($quiet, true);
+        self::assertIsArray($decoded);
+
+        $shape = $decoded[0] ?? null;
+        self::assertIsArray($shape);
+        $slowest = $shape['slowest'] ?? null;
+        self::assertIsArray($slowest);
+
+        self::assertSame($shape['sig'], $slowest['text']);
+    }
+
     public function testABracketInsideTheQueryDoesNotEndTheSource(): void
     {
         $body = '{"query":{"terms":{"sku":["a[1]","b]c","d"]}}}';
@@ -371,7 +400,7 @@ final class SlowlogTest extends TestCase
 
         self::assertSame(Command::OK, $status, $err);
         self::assertStringContainsString('1 record, 1 shape, 0 ms total', $out);
-        self::assertMatchesRegularExpression('/\s1\s+-\s+-\s+-\s+-\s+q6:/', $out);
+        self::assertMatchesRegularExpression('/\s1\s+-\s+-\s+-\s+-\s+browse\s+q6:/', $out);
     }
 
     public function testTheFingerprintFlagsReachTheDigest(): void

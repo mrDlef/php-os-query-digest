@@ -62,11 +62,11 @@ log your cluster is already writing, and ranks what is in it by what it costs.
 $ vendor/bin/os-query-digest slowlog /var/log/opensearch/*_index_search_slowlog.log
 60 lines, 59 records, 3 shapes, 13,515 ms total
 
-  count  total ms*  mean    p95    max  shape
-     41      6,807   166    246    258  q6:fe168406e702
-                                        logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
-      6      5,978   996  1,325  1,325  q6:6b6fb17c6640
-                                        orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)
+  count  total ms*  mean    p95    max    kind  shape
+     41      6,807   166    246    258  browse  q6:fe168406e702
+                                                logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
+      6      5,978   996  1,325  1,325  browse  q6:6b6fb17c6640
+                                                orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)
 ```
 
 Two minutes, no code change, nothing deployed — and if that table is not

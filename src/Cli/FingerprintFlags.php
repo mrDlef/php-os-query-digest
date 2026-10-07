@@ -97,6 +97,9 @@ final class FingerprintFlags
             case '--raw-index':
                 $spec['indexNormalizer'] = IndexNormalizer::IDENTITY;
                 break;
+            case '--no-text':
+                $spec['text'] = false;
+                break;
             default:
                 return null;
         }
@@ -119,6 +122,8 @@ Fingerprint:
       --max-length=N       hard cap on the rendered lines, or `none`
       --agg-names          keep user-given aggregation names
       --raw-index          do not collapse logs-2026.08.13 to logs-*
+      --no-text            drop the readable line, the one output that can
+                           hold a value a user typed
       --hash-version=V     prefix marking which rules produced the hash
       --hash-length=N      hex characters kept from the sha256
 TXT;

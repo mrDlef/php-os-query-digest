@@ -239,6 +239,7 @@ final class DocExampleTest extends TestCase
         'getting-started-slowlog',
         'getting-started-digest',
         'cli-describe',
+        'cli-no-text',
         'cli-ndjson',
         'cli-slowlog',
         'cli-slowlog-json',
@@ -524,28 +525,30 @@ final class DocExampleTest extends TestCase
     }
 
     /**
-     * The CLI transcript that carries its own input: the request is in the
-     * `echo`, so the block is run rather than trusted.
+     * The CLI transcripts that carry their own input: the request is in the
+     * `echo`, so each block is run rather than trusted.
      */
-    public function testTheCliTranscriptIsARealRun(): void
+    public function testTheCliTranscriptsAreRealRuns(): void
     {
-        $block = self::lines(self::oneBlock('docs/guides/cli.md', 'cli-describe'));
+        foreach (['cli-describe', 'cli-no-text'] as $marker) {
+            $block = self::lines(self::oneBlock('docs/guides/cli.md', $marker));
 
-        [$command, $expected] = self::splitTranscript($block);
+            [$command, $expected] = self::splitTranscript($block);
 
-        if (preg_match("/echo '([^']*)'/", $command, $echoed) !== 1) {
-            self::fail('The transcript pipes no request into the command: ' . $command);
+            if (preg_match("/echo '([^']*)'/", $command, $echoed) !== 1) {
+                self::fail('The transcript pipes no request into the command: ' . $command);
+            }
+
+            [$status, $out, $err] = $this->invoke(self::argumentsOf($command), $echoed[1]);
+
+            self::assertSame(Command::OK, $status, $err);
+            self::assertSame('', $err);
+            self::assertSame(
+                $expected,
+                self::lines($out),
+                $marker . ': the command line guide prints output the command does not produce.',
+            );
         }
-
-        [$status, $out, $err] = $this->invoke(self::argumentsOf($command), $echoed[1]);
-
-        self::assertSame(Command::OK, $status, $err);
-        self::assertSame('', $err);
-        self::assertSame(
-            $expected,
-            self::lines($out),
-            'The command line guide prints output the command does not produce.',
-        );
     }
 
     /**
@@ -854,7 +857,18 @@ final class DocExampleTest extends TestCase
         [, $out] = $this->invoke(['slowlog', $this->file(self::slowlog())]);
         [, $ndjson] = $this->invoke(['--ndjson', '--hash'], implode("\n", self::NDJSON));
 
-        preg_match_all('/\bq6x?:[0-9a-f]{12}\b/', $out . "\n" . $ndjson, $found);
+        // The transcripts carry their own request, so they answer for their own
+        // fingerprints rather than needing a copy of the request up here.
+        $transcripts = '';
+        foreach (['cli-describe', 'cli-no-text'] as $marker) {
+            [$command] = self::splitTranscript(self::lines(self::oneBlock('docs/guides/cli.md', $marker)));
+            if (preg_match("/echo '([^']*)'/", $command, $echoed) === 1) {
+                [, $printed] = $this->invoke(self::argumentsOf($command), $echoed[1]);
+                $transcripts .= "\n" . $printed;
+            }
+        }
+
+        preg_match_all('/\bq6x?:[0-9a-f]{12}\b/', $out . "\n" . $ndjson . $transcripts, $found);
 
         return array_unique(array_merge($hashes, $found[0]));
     }

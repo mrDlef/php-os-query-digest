@@ -151,6 +151,35 @@ final class CliTest extends TestCase
         self::assertSame($cappedDecoded['hash'] ?? null, $liftedDecoded['hash'] ?? null);
     }
 
+    /**
+     * The one output that can carry something a user typed is the readable
+     * line, and `Options::withText(false)` has always been able to drop it —
+     * from PHP. Without a flag, a `--json` run against a production request was
+     * not shareable as it stood, which is the case the option exists for.
+     *
+     * The hash is untouched: what is dropped is a rendering, not an input to
+     * the fingerprint.
+     */
+    public function testNoTextDropsTheOnlyLineThatCanHoldAValue(): void
+    {
+        $body = '{"query":{"term":{"email":"ada@example.com"}},"size":20}';
+
+        [, $full] = $this->invoke(['--json'], $body);
+        [$status, $quiet] = $this->invoke(['--json', '--no-text'], $body);
+
+        self::assertSame(Command::OK, $status);
+        self::assertStringContainsString('ada@example.com', $full);
+        self::assertStringNotContainsString('ada@example.com', $quiet);
+
+        $decoded = json_decode($quiet, true);
+        self::assertIsArray($decoded);
+        self::assertSame(['idx', 'kind', 'sig', 'hash'], array_keys($decoded));
+
+        $fullDecoded = json_decode($full, true);
+        self::assertIsArray($fullDecoded);
+        self::assertSame($fullDecoded['hash'] ?? null, $decoded['hash'] ?? null);
+    }
+
     public function testMaxAggsShortensTheFacetListButNotTheHash(): void
     {
         $body = '{"size":0,"aggs":{"a":{"terms":{"field":"brand"}},"b":{"terms":{"field":"colour"}},'

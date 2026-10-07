@@ -123,6 +123,10 @@ the object can hand out a value, and `toArray()` emits `idx` / `sig` / `hash`.
 building](logging.md#when-the-values-may-not-leave-the-building) is the case it
 exists for.
 
+On the command line it is `--no-text`, which every sub-command takes: it is what
+makes a `--json` run over production requests, or a `slowlog` report of what
+users actually typed, shareable as it stands.
+
 It is not, on its own, a guarantee that no literal is emitted.
 `Normalization::none()` makes the signature *equal* the readable line, values
 included, so the pair that emits none is `withText(false)` with any normalization

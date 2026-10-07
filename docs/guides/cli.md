@@ -64,6 +64,31 @@ Only two things differ from `vendor/bin/os-query-digest`:
 The fingerprints are the same: CI digests one query with the image and with the
 checkout it was built from, and compares the two.
 
+## Nothing a user typed
+
+Every sub-command takes `--no-text`, which drops the readable line — the one
+output that can carry a value somebody typed. The fingerprint does not move:
+what is dropped is a rendering, not an input to it.
+
+<!-- verified: cli-no-text -->
+```bash
+$ echo '{"query":{"term":{"email":"ada@example.com"}},"size":20}' \
+    | os-query-digest --json --no-text --index members-2026.08
+{
+    "idx": "members-*",
+    "kind": "browse",
+    "sig": "members-* | q=(email:?) | size=20",
+    "hash": "q6:9a9c717520ca"
+}
+```
+
+It matters most where the values are not yours: `slowlog --json --no-text` over
+a cluster's slow log keeps the ranking and the durations, and the sample line
+each shape carries becomes its signature instead of the slowest user's query.
+See [when the values may not leave the
+building](logging.md#when-the-values-may-not-leave-the-building) for the same
+switch from PHP.
+
 ## From the log your cluster already writes
 
 `--ndjson` still asks you for a file of query bodies, which you probably do not
@@ -75,17 +100,24 @@ have yet. Your cluster does: `index.search.slowlog` is on in most of them, and
 $ vendor/bin/os-query-digest slowlog /var/log/opensearch/*_index_search_slowlog.log
 60 lines, 59 records, 3 shapes, 13,515 ms total
 
-  count  total ms*  mean    p95    max  shape
-     41      6,807   166    246    258  q6:fe168406e702
-                                        logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
-      6      5,978   996  1,325  1,325  q6:6b6fb17c6640
-                                        orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)
-     12        730    61     86     86  q6:810928290c12
-                                        catalog-* | q=(title:~?) | size=10
+  count  total ms*  mean    p95    max    kind  shape
+     41      6,807   166    246    258  browse  q6:fe168406e702
+                                                logs-* | q=(@timestamp >= ? and @timestamp < ? and not status:? and service:?) | size=50 sort=@timestamp:desc
+      6      5,978   996  1,325  1,325  browse  q6:6b6fb17c6640
+                                                orders-* | q=(sku:(? or ? or ?)) | aggs=date_histogram(created,day)
+     12        730    61     86     86  browse  q6:810928290c12
+                                                catalog-* | q=(title:~?) | size=10
 ```
 
 **No application change, nothing to deploy, no index to create** — and the
 question the whole library exists for is answered on the file you already have.
+
+The `kind` column is the one word that says what a shape *is* — a type-ahead, a
+page of results, a bucket count. It is read off the parsed request, so it costs
+nothing and holds no literal, and it shows up as soon as the stream has one:
+`report` prints it once `--kind-key` names the field that carries it, and leaves
+it out otherwise rather than printing a column of `unknown`.
+[Kinds](../reference/kinds.md) has the six and how they are decided.
 
 **Ranked by total time, not by the slowest record.** A query that took 1.3
 seconds once is a bad afternoon; a query that takes 166 ms forty-one times is
