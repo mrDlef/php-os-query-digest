@@ -40,13 +40,13 @@ final class ReportCommand
      *
      * @var array<string,string>
      */
-    private const DEFAULT_KEYS = ['took' => 'took', 'time' => ''];
+    private const DEFAULT_KEYS = ['took' => 'took', 'time' => '', 'tenant' => ''];
 
     /** @var array<int,string> */
     private const VALUED = [
         '-s', '--sort', '-t', '--top',
         '--key-prefix', '--hash-key', '--sig-key', '--text-key',
-        '--kind-key', '--index-key', '--took-key', '--time-key',
+        '--kind-key', '--index-key', '--took-key', '--time-key', '--tenant-key',
     ];
 
     private string $name;
@@ -224,7 +224,12 @@ final class ReportCommand
                 }
 
                 $records++;
-                $report->record($record->digest(), $record->tookMillis(), $record->timestamp());
+                $report->record(
+                    $record->digest(),
+                    $record->tookMillis(),
+                    $record->timestamp(),
+                    $record->tenant(),
+                );
             }
 
             if ($file !== '-') {
@@ -260,11 +265,16 @@ final class ReportCommand
             return Command::OK;
         }
 
+        $tenants = $report->tenants();
+        $keptTenants = $top === null ? $tenants : array_slice($tenants, 0, $top);
+
         $this->write(
             $this->stdout,
             ReportPrinter::summary($lines, $records, $report, self::notes($report))
             . ReportPrinter::table($kept, $sort)
-            . ReportPrinter::footer(count($ranked), count($kept)),
+            . ReportPrinter::footer(count($ranked), count($kept))
+            . ($tenants === [] ? '' : ReportPrinter::tenantTable($keptTenants)
+                . ReportPrinter::footer(count($tenants), count($keptTenants), 'tenant')),
         );
 
         return Command::OK;
@@ -351,6 +361,8 @@ Where the fields are:
       --index-key=K        the index pattern
       --took-key=K         what the search cost, in ms (default: took)
       --time-key=K         when it happened, for the span each shape covers
+      --tenant-key=K       whose search it was — adds a tenants column, and a
+                           ranking of the tenants themselves
 
 A dotted key walks into a nested object, so `--key-prefix=dsl.` reads the
 records this library writes under one key.

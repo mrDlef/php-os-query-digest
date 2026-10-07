@@ -31,7 +31,7 @@ final class DigestRecord
      *
      * @var array<int,string>
      */
-    public const FIELDS = ['hash', 'sig', 'text', 'kind', 'index', 'took', 'time'];
+    public const FIELDS = ['hash', 'sig', 'text', 'kind', 'index', 'took', 'time', 'tenant'];
 
     private Digest $digest;
 
@@ -39,11 +39,14 @@ final class DigestRecord
 
     private ?string $timestamp;
 
-    private function __construct(Digest $digest, ?float $tookMillis, ?string $timestamp)
+    private ?string $tenant;
+
+    private function __construct(Digest $digest, ?float $tookMillis, ?string $timestamp, ?string $tenant)
     {
         $this->digest = $digest;
         $this->tookMillis = $tookMillis;
         $this->timestamp = $timestamp;
+        $this->tenant = $tenant;
     }
 
     /**
@@ -93,6 +96,7 @@ final class DigestRecord
             ),
             self::millis($decoded, $keys['took'] ?? ''),
             self::string($decoded, $keys['time'] ?? ''),
+            self::string($decoded, $keys['tenant'] ?? ''),
         );
     }
 
@@ -109,6 +113,12 @@ final class DigestRecord
     public function timestamp(): ?string
     {
         return $this->timestamp;
+    }
+
+    /** Whose search it was, when a key was named for it. */
+    public function tenant(): ?string
+    {
+        return $this->tenant;
     }
 
     /**

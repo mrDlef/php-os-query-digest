@@ -91,6 +91,7 @@ namespace MrDlef\OsQueryDigest\Analysis {
         public const MEAN = 'mean';
         public const P95 = 'p95';
         public const MAX = 'max';
+        public const TENANTS = 'tenants';
 
         /**
          * Every ranking key. Public because a configuration front — a CLI flag, a
@@ -99,10 +100,13 @@ namespace MrDlef\OsQueryDigest\Analysis {
          *
          * @var array<int,string>
          */
-        public const KEYS = [self::TOTAL, self::COUNT, self::P95, self::MAX, self::MEAN];
+        public const KEYS = [self::TOTAL, self::COUNT, self::P95, self::MAX, self::MEAN, self::TENANTS];
 
         /** @var array<string,Shape> keyed by fingerprint */
         private array $shapes = [];
+
+        /** @var array<string,Tenant> keyed by name */
+        private array $tenants = [];
 
         private int $records = 0;
 
@@ -115,13 +119,28 @@ namespace MrDlef\OsQueryDigest\Analysis {
          *                               field first format sorts correctly —
          *                               `2026-08-28T14:01:02,003` and an ISO 8601
          *                               both do
+         * @param string|null $tenant    whose search it was — the second axis a
+         *                               multi-tenant deployment reads a report
+         *                               along. Nothing is minted from it: it is
+         *                               read off the record beside the fingerprint
          */
-        public function record(Digest $digest, ?float $millis = null, ?string $timestamp = null): void
-        {
+        public function record(
+            Digest $digest,
+            ?float $millis = null,
+            ?string $timestamp = null,
+            ?string $tenant = null
+        ): void {
             $hash = $digest->hash();
             $this->shapes[$hash] ??= new Shape($digest);
-            $this->shapes[$hash]->record($digest, $millis, $timestamp);
+            $this->shapes[$hash]->record($digest, $millis, $timestamp, $tenant);
             $this->records++;
+
+            if ($tenant === null || $tenant === '') {
+                return;
+            }
+
+            $this->tenants[$tenant] ??= new Tenant($tenant);
+            $this->tenants[$tenant]->record($hash, $millis);
         }
 
         /** How many searches went in. */
@@ -150,6 +169,33 @@ namespace MrDlef\OsQueryDigest\Analysis {
         public function shape(string $hash): ?Shape
         {
             return $this->shapes[$hash] ?? null;
+        }
+
+        /**
+         * Every tenant the records named, costliest first — the same stream read
+         * along its other axis. Empty when no record carried a name, which is the
+         * default: the library never writes one, and a report asks for the key it
+         * lives under.
+         *
+         * Ties are broken by count and then by name, for the same reason the shape
+         * ranking is: a report you cannot diff cannot say what a deploy changed.
+         *
+         * @return array<int,Tenant>
+         */
+        public function tenants(): array
+        {
+            $ranked = array_values($this->tenants);
+
+            usort($ranked, static function (Tenant $a, Tenant $b): int {
+                $first = $b->total() <=> $a->total();
+                if ($first !== 0) {
+                    return $first;
+                }
+
+                return [$b->count(), $a->name()] <=> [$a->count(), $b->name()];
+            });
+
+            return $ranked;
         }
 
         /**
@@ -218,6 +264,8 @@ namespace MrDlef\OsQueryDigest\Analysis {
                     return $shape->p95() ?? 0.0;
                 case self::MAX:
                     return $shape->max() ?? 0.0;
+                case self::TENANTS:
+                    return (float) $shape->tenants();
                 default:
                     return $shape->total();
             }
@@ -261,6 +309,9 @@ namespace MrDlef\OsQueryDigest\Analysis {
 
         private string $slowestText;
 
+        /** @var array<string,true> the tenants this shape was seen under */
+        private array $tenants = [];
+
         private ?string $first = null;
 
         private ?string $last = null;
@@ -280,10 +331,22 @@ namespace MrDlef\OsQueryDigest\Analysis {
          *
          * @param float|null  $millis    what it cost, when that is known
          * @param string|null $timestamp when it happened, compared as text
+         * @param string|null $tenant    whose search it was, when the records say.
+         *                               Only the distinct names are kept — one more
+         *                               bound by how many tenants a stream has, not
+         *                               by how many searches
          */
-        public function record(Digest $digest, ?float $millis = null, ?string $timestamp = null): void
-        {
+        public function record(
+            Digest $digest,
+            ?float $millis = null,
+            ?string $timestamp = null,
+            ?string $tenant = null
+        ): void {
             $this->count++;
+
+            if ($tenant !== null && $tenant !== '') {
+                $this->tenants[$tenant] = true;
+            }
 
             if ($millis !== null) {
                 $this->durations[] = $millis;
@@ -337,6 +400,17 @@ namespace MrDlef\OsQueryDigest\Analysis {
         public function count(): int
         {
             return $this->count;
+        }
+
+        /**
+         * How many distinct tenants played this shape, zero when the records carry
+         * none. The number that tells an application's own query from one
+         * customer's: both can total twenty seconds, and only one of them is a bug
+         * in the product.
+         */
+        public function tenants(): int
+        {
+            return count($this->tenants);
         }
 
         /** How many of them carried a duration at all. */
@@ -395,6 +469,7 @@ namespace MrDlef\OsQueryDigest\Analysis {
                 'idx' => $this->digest->index(),
                 'kind' => $this->digest->kind()->name(),
                 'count' => $this->count,
+                'tenants' => count($this->tenants),
                 'measured' => count($this->durations),
                 'total_ms' => $this->durations === [] ? null : round($this->total(), 3),
                 'mean_ms' => self::rounded($this->mean()),
@@ -412,6 +487,113 @@ namespace MrDlef\OsQueryDigest\Analysis {
         private static function rounded(?float $value): ?float
         {
             return $value === null ? null : round($value, 3);
+        }
+    }
+}
+
+// src/Analysis/Tenant.php
+namespace MrDlef\OsQueryDigest\Analysis {
+    /**
+     * One tenant's share of a report: what it played, and what that cost.
+     *
+     * "Tenant" is this library's word for the second axis a multi-tenant
+     * deployment reads a report along — whatever the records themselves call it,
+     * customer, site, instance or service. Nothing here mints it: it is a value
+     * read off each record, beside the fingerprint that was already there.
+     *
+     * The shape table answers *which query is expensive*. This answers *whose*,
+     * and the two are not the same question: a shape totalling twenty seconds over
+     * a hundred customers is the application's, and the same twenty seconds under
+     * one customer is that customer's data.
+     *
+     * @api
+     */
+    final class Tenant implements \JsonSerializable
+    {
+        private string $name;
+
+        private int $count = 0;
+
+        /** @var array<string,true> the fingerprints seen under this name */
+        private array $shapes = [];
+
+        private float $total = 0.0;
+
+        private int $measured = 0;
+
+        public function __construct(string $name)
+        {
+            $this->name = $name;
+        }
+
+        /**
+         * One more search of this tenant's.
+         *
+         * @param float|null $millis what it cost, when that is known
+         */
+        public function record(string $hash, ?float $millis = null): void
+        {
+            $this->count++;
+            $this->shapes[$hash] = true;
+
+            if ($millis === null) {
+                return;
+            }
+
+            $this->measured++;
+            $this->total += $millis;
+        }
+
+        public function name(): string
+        {
+            return $this->name;
+        }
+
+        /** How many searches this tenant made. */
+        public function count(): int
+        {
+            return $this->count;
+        }
+
+        /** How many of them carried a duration at all. */
+        public function measured(): int
+        {
+            return $this->measured;
+        }
+
+        /**
+         * How many distinct fingerprints it played. The number that separates a
+         * tenant running one expensive report from one running a hundred pages.
+         */
+        public function shapes(): int
+        {
+            return count($this->shapes);
+        }
+
+        /** Milliseconds over every record that carried a duration. */
+        public function total(): float
+        {
+            return $this->total;
+        }
+
+        public function mean(): ?float
+        {
+            return $this->measured === 0 ? null : $this->total / $this->measured;
+        }
+
+        /**
+         * @return array<string,mixed>
+         */
+        public function jsonSerialize(): array
+        {
+            return [
+                'tenant' => $this->name,
+                'count' => $this->count,
+                'measured' => $this->measured,
+                'shapes' => count($this->shapes),
+                'total_ms' => $this->measured === 0 ? null : round($this->total, 3),
+                'mean_ms' => $this->measured === 0 ? null : round($this->total / $this->measured, 3),
+            ];
         }
     }
 }

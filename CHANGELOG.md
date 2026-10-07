@@ -32,13 +32,58 @@ characters are genuinely new. Every other query kept them. See
 ## v0.17.0 — unreleased
 
 _the image reads a pipe, the way the phar always did, a capped line ends where a
-clause does, and a facet list stops eating the rest of it_
+clause does, a facet list stops eating the rest of it, and a report can say
+whose searches these are_
 
 **Fingerprints:** `q6:` unchanged. Nothing in the rendering or the normalisation
-moved — this is the CLI deciding when to read standard input, and two display
-caps, both applied after the hash input has been rendered. `maxAggs` is a new
-option with a default of 3, so a faceted search **prints** differently from
-v0.16.0 while keeping the twelve hex characters it already had.
+moved — this is the CLI deciding when to read standard input, two display caps
+applied after the hash input has been rendered, and a report counting a field it
+reads rather than mints. `maxAggs` is a new option with a default of 3, so a
+faceted search **prints** differently from v0.16.0 while keeping the twelve hex
+characters it already had.
+
+### `report --tenant-key` — whose searches these are
+
+A shape totalling twenty seconds across a hundred customers is the
+application's. The same twenty seconds under one customer is that customer's
+data. Until now the table could not tell them apart, and neither could it tell a
+tenant running one expensive report from a tenant running a hundred pages: same
+rows, same numbers.
+
+`--tenant-key=K` names the field on your records that says who a search
+belonged to. Nothing is minted from it and nothing is validated — it is read
+beside the fingerprint, exactly as stored — and the report then reads the same
+stream twice:
+
+```
+  count  tenants  total ms*  mean  p95    max  shape
+    195       13     22,248   114  908  2,761  q6:…
+     14        1      2,379   170  888    888  q6:…
+
+  calls  shapes  total ms  mean  tenant
+    339     157    19,021    56  tenant-a
+     90       1      8,796    98  tenant-b
+```
+
+The first table's new column says how many distinct names play a shape: the
+first line is every customer's — an application query to fix in the application
+— and the second is one customer's data. The second table turns it around:
+`tenant-a` spreads nineteen seconds over 157 shapes, `tenant-b` spends nine on
+**one**.
+
+`--sort=tenants` ranks by that column, which asks "what is everybody doing"
+rather than "what is slow".
+
+Both tables respect `--top`. **The `--json` output is unchanged in shape** — it
+is still an array of shapes, because that is a published contract — and each
+shape now carries its `tenants` count. For the per-tenant numbers as data there
+is `Report::tenants()`.
+
+In PHP, `Report::record()` and `Shape::record()` take an optional tenant after
+the timestamp, `Shape::tenants()` counts the distinct names, and
+`Analysis\Tenant` is a new public class holding one name's calls, distinct
+shapes and total. Nothing changes for a caller that passes nothing: the column
+and the table appear only once records carry a name.
 
 ### `withMaxAggs()` — a facet list is a list, and nothing capped it
 

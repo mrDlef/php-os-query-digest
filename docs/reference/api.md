@@ -354,18 +354,19 @@ A fourth argument, `RecordLayout`, chooses where the digest's fields go.
 ### `Analysis\Report`
 
 ```php
-record(Digest $digest, ?float $millis = null, ?string $timestamp = null): void
+record(Digest $digest, ?float $millis = null, ?string $timestamp = null, ?string $tenant = null): void
 records(): int
 count(): int
 total(): float
 shape(string $hash): ?Shape
+tenants(): Tenant[]
 rank(string $by = Report::TOTAL): Shape[]
 top(int $count, string $by = Report::TOTAL): Shape[]
 ```
 
 Searches grouped by fingerprint and ranked by what they cost — what the
 `slowlog` command does with a cluster's slow log, on whatever stream you have.
-Constants: `TOTAL`, `COUNT`, `P95`, `MAX`, `MEAN`, and `KEYS`. An unknown key
+Constants: `TOTAL`, `COUNT`, `P95`, `MAX`, `MEAN`, `TENANTS`, and `KEYS`. An unknown key
 throws `InvalidOptionException` rather than falling back to the default.
 Implements `JsonSerializable`, which serialises to the ranked shapes.
 
@@ -386,7 +387,8 @@ total(): float
 mean(): ?float
 p95(): ?float
 max(): ?float
-record(Digest $digest, ?float $millis, ?string $timestamp): void
+tenants(): int
+record(Digest $digest, ?float $millis, ?string $timestamp, ?string $tenant): void
 ```
 
 Every search sharing one fingerprint, and what they cost. `count()` is all of
@@ -395,12 +397,40 @@ them, `measured()` only those that carried a duration — so a stream without
 `p95()` is nearest rank: on a handful of records it lands on the maximum, which
 is the honest answer.
 
+`tenants()` is how many distinct names played this shape, zero unless the
+records carried one. It is what separates the application's own query from one
+customer's: both can total twenty seconds, and only one of them is a product
+bug.
+
 Implements `JsonSerializable`. That object carries `slowest.text`, the slowest
 record's readable line, which is the **one field here that can hold a literal**
 — under [`withText(false)`](../guides/options.md#withtextfalse-and-what-it-does-not-promise)
 it holds the signature instead. Show the signature for the group and label the
 sample as a sample: under a count of twenty-eight, one record's values read as
 the group's, and they are not.
+
+### `Analysis\Tenant`
+
+```php
+name(): string
+count(): int
+measured(): int
+shapes(): int
+total(): float
+mean(): ?float
+record(string $hash, ?float $millis = null): void
+```
+
+The same stream along its other axis — one object per name
+`Report::record()` was given, ranked costliest first by `Report::tenants()`.
+"Tenant" is this library's word for it; the records may call it customer, site,
+instance or service, and nothing is minted from the value or validated against
+anything.
+
+`shapes()` is how many distinct fingerprints that name played — a tenant
+running one expensive report and a tenant running a hundred pages can cost the
+same milliseconds, and that number is the difference. Implements
+`JsonSerializable`; the object holds no literal.
 
 ---
 
