@@ -70,6 +70,28 @@ same hash** — like every limit on this page, this one is spent on the line, an
 the fingerprint is computed before any of them apply. Two searches over
 different field lists stay two fingerprints even when they print identically.
 
+## Where the character cap lands
+
+`withMaxLength()` is the limit of last resort, and the only one that knows
+nothing about what it is cutting. It does not stop at the character the budget
+ran out at — it backs off to the last separator before it, and keeps it:
+
+<!-- verified: options-max-length -->
+```
+q=(locale:? and published_at >= ? and status:? and …
+```
+
+Ending on `taxon_text_p…` instead would name a field no cluster has, and the one
+promise the readable line makes is that you can paste it into a search bar. So
+the line gives up whatever sat between that separator and the budget — at most
+one clause, and it is cut where it was when a single clause is longer than the
+whole budget, because the cap has to hold.
+
+This buys back a readable line, not a more precise one: two searches that differ
+only past the cut printed one line before and print one line now. Telling them
+apart is the hash's job, and the cap is lifted before the hash input is
+rendered.
+
 ## `withText(false)`, and what it does not promise
 
 It removes the readable line from the digest — never rendered, so no accessor on

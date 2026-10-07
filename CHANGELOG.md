@@ -31,10 +31,56 @@ characters are genuinely new. Every other query kept them. See
 
 ## v0.17.0 — unreleased
 
-_the image reads a pipe, the way the phar always did_
+_the image reads a pipe, the way the phar always did, and a capped line ends
+where a clause does_
 
 **Fingerprints:** `q6:` unchanged. Nothing in the rendering or the normalisation
-moved — this is the CLI deciding when to read standard input.
+moved — this is the CLI deciding when to read standard input, and a display cap
+that already applied after the hash input was rendered.
+
+### A capped line ends where a clause does
+
+`withMaxLength()` calls itself a last resort, and the class behind it said the
+structural limits did the real work. A day of real traffic — 1,406 searches, 14
+tenants — says otherwise: **48.6% of them were cut by the 512-character cap, and
+not one reached `maxClauses`.** With field names 26 characters long at the
+median, twelve clauses cost 648 characters, so the character cap always arrives
+first.
+
+Counting characters is all it did, so the line ended wherever the budget ran
+out:
+
+```
+q=(locale:? and published_at >= ? and status:? and taxon_text_p…
+```
+
+`taxon_text_p` is a field no cluster has. The one promise the readable line
+makes is that you can paste it into a search bar, and a field name cut in half
+is a different field name — one that matches nothing, silently.
+
+It backs off to the last separator now, the separator kept:
+
+```
+q=(locale:? and published_at >= ? and status:? and …
+```
+
+which is how a list capped at `maxClauses` has always ended. A separator is one
+of the four things the renderer writes between two whole ones: the comma between
+values, the `and` and the `or` between clauses, and the `|` between sections.
+All four are ASCII, so the back-off works on bytes without ever splitting a
+multibyte character.
+
+The line gives up whatever sat between that separator and the budget: on that
+same day, **24 characters of 511 at the median, 106 at the worst**. A single
+clause longer than the whole budget has nothing to fall back to and is still cut
+where it was, because the cap has to hold.
+
+What this does *not* do is make the line less ambiguous. Two queries that differ
+only past the cut printed one line before and print one line now — ending sooner
+can only merge more of them. Telling them apart is the hash's job, the cap never
+reaches it, and [the shipped
+dashboards](https://mrdlef.github.io/php-os-query-digest/guides/dashboards/)
+group on `dsl.hash` for exactly that reason.
 
 ### The phar and the image disagreed about stdin
 
