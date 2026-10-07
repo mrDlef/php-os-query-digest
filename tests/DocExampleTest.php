@@ -247,6 +247,7 @@ final class DocExampleTest extends TestCase
         'options-index-custom',
         'options-index-partial',
         'options-max-fields',
+        'options-max-length',
         'logging-line',
         'transport-record',
         'explain-output',
@@ -333,6 +334,34 @@ final class DocExampleTest extends TestCase
             self::lines(self::oneBlock('docs/guides/options.md', 'options-max-fields')),
         );
         self::assertSame($capped->hash(), $lifted->hash());
+    }
+
+    /**
+     * The capped line in the options guide. The page's claim is that the cut
+     * lands on a separator rather than inside the field name that follows it,
+     * so the cap is checked as well: a block that merely happened to end on a
+     * separator would prove nothing.
+     */
+    public function testTheCappedLineIsWhereTheBackOffLands(): void
+    {
+        $search = ['query' => ['bool' => ['filter' => [
+            ['term' => ['status' => 'published']],
+            ['term' => ['locale' => 'fr_FR']],
+            ['terms' => ['taxon_text_postal_code' => ['75001', '75002']]],
+            ['range' => ['published_at' => ['gte' => 'now-7d']]],
+        ]]]];
+
+        $capped = Formatter::create(Options::create()->withMaxLength(64))->describe($search);
+
+        self::assertSame(
+            [$capped->signature()],
+            self::lines(self::oneBlock('docs/guides/options.md', 'options-max-length')),
+        );
+        self::assertLessThanOrEqual(64, mb_strlen($capped->signature()));
+        self::assertSame(
+            Formatter::create(Options::create()->withMaxLength(null))->describe($search)->hash(),
+            $capped->hash(),
+        );
     }
 
     /**

@@ -187,15 +187,6 @@ final class MonologProcessorTest extends TestCase
     }
 
     /**
-     * Nothing is parsed inside the processor: a record a handler buffers and
-     * later discards — a FingersCrossed that never triggers — has to cost
-     * nothing, which is the reason the digest is lazy in the first place.
-     *
-     * Driven through a NullHandler rather than the TestHandler: that one
-     * formats every record as it stores it, so it would parse the digest during
-     * the log call and hide the very property under test.
-     */
-    /**
      * A flat layout has nowhere to put a sub-object, so the key that held the
      * request has to go rather than linger holding the raw body — which is the
      * wall of braces this library exists to keep out of a log line.
@@ -220,6 +211,15 @@ final class MonologProcessorTest extends TestCase
         self::assertSame('logs-2026.09.13', $context['index'], 'Nothing else in the context moves.');
     }
 
+    /**
+     * Nothing is parsed inside the processor: a record a handler buffers and
+     * later discards — a FingersCrossed that never triggers — has to cost
+     * nothing, which is the reason the digest is lazy in the first place.
+     *
+     * Driven through a NullHandler rather than the TestHandler: that one
+     * formats every record as it stores it, so it would parse the digest during
+     * the log call and hide the very property under test.
+     */
     public function testTheProcessorItselfNeverParses(): void
     {
         $spy = self::spy();
@@ -297,6 +297,48 @@ final class MonologProcessorTest extends TestCase
         self::assertIsString($value, $field . ' should have been a string.');
 
         return $value;
+    }
+
+    /**
+     * Monolog 3 makes a record's fields readonly, so putting a digest in the
+     * context means rebuilding the record around it. Everything the record was
+     * already carrying has to come through that untouched — a processor that
+     * reset a channel or dropped the `extra` another processor had just written
+     * could not be used beside anything else.
+     *
+     * The fields are read before and after rather than assumed, so this says
+     * nothing about which Monolog is installed.
+     */
+    public function testARecordKeepsEverythingButItsContext(): void
+    {
+        /** @var array<string,mixed> $before */
+        $before = [];
+
+        $this->logger->pushProcessor(new DigestProcessor());
+        $this->logger->pushProcessor(static function ($record) use (&$before) {
+            $record['extra'] = ['request_id' => 'r-42'];
+            $before = [
+                'datetime' => $record['datetime'],
+                'level_name' => $record['level_name'],
+                'channel' => $record['channel'],
+                'message' => $record['message'],
+            ];
+
+            return $record;
+        });
+
+        $this->logger->warning('opensearch.search', [
+            'query' => ['query' => ['match_all' => []]],
+        ]);
+
+        $records = $this->handler->getRecords();
+        self::assertCount(1, $records);
+
+        self::assertSame(['request_id' => 'r-42'], $records[0]['extra']);
+
+        foreach ($before as $field => $value) {
+            self::assertEquals($value, $records[0][$field], 'The record lost its ' . $field . '.');
+        }
     }
 
     /**
