@@ -87,12 +87,27 @@ final class DigestProcessor
         if ($record instanceof LogRecord) {
             $context = $this->rewrite($record->context);
 
-            // `context` is readonly in Monolog 3, so it cannot be assigned; the
-            // supported route is with(context: …). Named arguments are PHP 8
-            // syntax and this file has to parse on 7.4, so the same call is
-            // written as an unpack of a string-keyed array — which PHP 8.1
-            // turns into named arguments, and 8.1 is Monolog 3's own floor.
-            return $context === $record->context ? $record : $record->with(...['context' => $context]);
+            if ($context === $record->context) {
+                return $record;
+            }
+
+            // `context` is readonly in Monolog 3, so the record is rebuilt
+            // rather than assigned to. The route Monolog documents for that is
+            // with(context: …), which reads named arguments only — and this
+            // file has to parse on 7.4, which has no syntax for one, neither
+            // the named argument nor the string-keyed unpack PHP 8 turns into
+            // one, which is how it reads to a static analyser held at that
+            // floor. The constructor takes the same fields positionally, so
+            // every one of them is carried over here by hand.
+            return new LogRecord(
+                $record->datetime,
+                $record->channel,
+                $record->level,
+                $record->message,
+                $context,
+                $record->extra,
+                $record->formatted,
+            );
         }
 
         if (is_array($record) && isset($record['context']) && is_array($record['context'])) {
